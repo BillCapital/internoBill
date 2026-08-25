@@ -5,6 +5,8 @@ import { confirmDialog, alertDialog } from '../lib/ui'
 import { loadDeptNames, DEFAULT_DEPTS, deptIndentLabel } from '../lib/depts'
 import SortControl from '../components/SortControl'
 import FilterControl from '../components/FilterControl'
+import { Icon, sectionIconName } from '../lib/icons'
+import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
 // Secciones que son claves/credenciales
 const CRED_NAMES = ['Servicios y accesos admin', 'Redes WiFi', 'Correos y cuentas']
@@ -16,7 +18,7 @@ function PassCell({ value }) {
   return (
     <span className="pass-cell" style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem' }}>
       <span style={{ fontFamily: 'monospace', letterSpacing: show ? 0 : '.12em' }}>{show ? value : '••••••••'}</span>
-      <button type="button" className="pass-eye" title={show ? 'Ocultar' : 'Ver'} onClick={() => setShow((s) => !s)}>{show ? '🙈' : '👁'}</button>
+      <button type="button" className="pass-eye" title={show ? 'Ocultar' : 'Ver'} onClick={() => setShow((s) => !s)}><Icon n={show ? 'eyeOff' : 'eye'} /></button>
     </span>
   )
 }
@@ -24,6 +26,7 @@ const emptyCred = (section_id) => ({ name: '', condition: 'Bueno', antivirus: ''
 
 export default function AccesosClaves() {
   const [sections, setSections] = useState([])
+  const [loading, setLoading] = useState(true)
   const [items, setItems] = useState([])
   const [users, setUsers] = useState([])
   const [DEPTS, setDEPTS] = useState(DEFAULT_DEPTS)
@@ -61,6 +64,7 @@ export default function AccesosClaves() {
     setSections(cred)
     setItems((eq ?? []).filter((e) => credIds.has(e.section_id)))
     setUsers((us ?? []).filter((u) => u.app_access !== false))
+    setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
 
@@ -98,20 +102,21 @@ export default function AccesosClaves() {
 
   return (
     <div>
+      {loading && <><SkeletonKpis n={4} /><SkeletonRows n={3} /></>}
       {/* Resumen */}
-      <div className="kpi-grid compact">
+      {!loading && <div className="kpi-grid compact">
         <button className="kpi kpi-all" onClick={() => setOpen({})}>
-          <span className="ico" style={{ fontSize: '1.3rem' }}>🔐</span>
+          <span className="ico"><Icon n="lock" /></span>
           <div><div className="num">{items.length}</div><div className="lbl">Registros de claves</div></div>
         </button>
         {sections.map((s) => (
           <button key={s.id} className={`kpi ${open[s.id] ? 'active' : ''}`} onClick={() => setOpen({ [s.id]: true })}>
-            <div className="ico">{s.icon}</div>
+            <div className="ico"><Icon n={sectionIconName(s.name)} /></div>
             <div className="num">{(bySection[s.id] || []).length}</div>
             <div className="lbl">{s.name}</div>
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* Datos faltantes */}
       {credCards.length > 0 && (
@@ -120,7 +125,7 @@ export default function AccesosClaves() {
           <div className="kpi-grid compact">
             {credCards.map((c) => (
               <button key={c.key} className={`kpi ${credSel === c.key ? 'active' : ''}`} onClick={() => setCredSel(credSel === c.key ? null : c.key)}>
-                <div className="ico">⚠️</div><div className="num">{c.n}</div><div className="lbl">{c.label}</div>
+                <div className="ico"><Icon n="alert" /></div><div className="num">{c.n}</div><div className="lbl">{c.label}</div>
               </button>
             ))}
           </div>
@@ -128,7 +133,7 @@ export default function AccesosClaves() {
             const rows = [...(credGaps[credSel]?.items || [])].sort((a, b) => a.name.localeCompare(b.name, 'es'))
             return (
               <div className="section open" style={{ marginTop: '.5rem' }}><div className="sec-body">
-                <div className="row" style={{ marginBottom: '.4rem' }}><strong>{credGaps[credSel]?.label} · {rows.length}</strong><button className="btn-sm" onClick={() => setCredSel(null)}>✕ Cerrar</button></div>
+                <div className="row" style={{ marginBottom: '.4rem' }}><strong>{credGaps[credSel]?.label} · {rows.length}</strong><button className="btn-sm" onClick={() => setCredSel(null)}><Icon n="close" /> Cerrar</button></div>
                 <div className="table-wrap"><table className="tbl-compact">
                   <thead><tr><th>Nombre</th><th>Asignado a</th><th>Contraseña</th><th></th></tr></thead>
                   <tbody>{rows.map((e) => (
@@ -168,7 +173,7 @@ export default function AccesosClaves() {
         return (
           <div className={`section ${isOpen ? 'open' : ''}`} key={s.id} style={{ marginBottom: '.8rem' }}>
             <button className="sec-head compact" onClick={() => setOpen((o) => ({ ...o, [s.id]: !o[s.id] }))}>
-              <span className="ico">{s.icon}</span>
+              <span className="ico"><Icon n={sectionIconName(s.name)} /></span>
               <span className="t"><strong>{s.name}</strong><br /><span className="muted">{all.length} registro(s)</span></span>
               <span className="count">{all.length}</span><span className="chev">▾</span>
             </button>
@@ -207,7 +212,7 @@ export default function AccesosClaves() {
                           {showUser && <td>{e.attributes?.usuario || e.assigned_to_email || <span className="muted">—</span>}</td>}
                           <td><PassCell value={pass} /></td>
                           <td className="actions">
-                            <button className="btn-sm" onClick={() => copyCred(e)}>{copiedId === e.id ? '✓ Copiado' : '📋 Copiar'}</button>{' '}
+                            <button className="btn-sm" onClick={() => copyCred(e)}>{copiedId === e.id ? <><Icon n="check" /> Copiado</> : <><Icon n="copy" /> Copiar</>}</button>{' '}
                             <button className="btn-sm" onClick={() => setEdit({ ...emptyCred(s.id), ...e, attributes: e.attributes || {} })}>Editar</button>{' '}
                             <button className="btn-sm btn-danger" onClick={() => delCred(e)}>Eliminar</button>
                           </td>
@@ -247,8 +252,8 @@ export default function AccesosClaves() {
                 {s.name !== 'Redes WiFi' && (<>
                   <div style={{ gridColumn: '1 / -1' }}><label>¿A quién se asigna?</label>
                     <select value={assignMode} onChange={(e) => { setAssignMode(e.target.value); setManualAssign(false); setEdit({ ...edit, assigned_to_name: '', assigned_to_email: '' }) }}>
-                      <option value="user">👤 A un usuario</option>
-                      <option value="department">🏢 A un departamento</option>
+                      <option value="user">A un usuario</option>
+                      <option value="department">A un departamento</option>
                     </select>
                   </div>
                   {assignMode === 'department' ? (
@@ -270,7 +275,7 @@ export default function AccesosClaves() {
                         {users.map((u) => <option key={u.id} value={u.email}>{(u.full_name || 'Sin nombre')} — {u.email}</option>)}
                         {edit.assigned_to_email && !users.some((u) => u.email === edit.assigned_to_email) &&
                           <option value={edit.assigned_to_email}>{edit.assigned_to_name || 'Actual'} — {edit.assigned_to_email} (actual)</option>}
-                        <option value="__manual__">✎ Escribir manualmente (externo)…</option>
+                        <option value="__manual__">Escribir manualmente (externo)…</option>
                       </select>
                     </div>
                     {manualAssign && (<>

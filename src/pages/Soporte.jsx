@@ -5,10 +5,11 @@ import { useAuth } from '../context/AuthContext'
 import Chat from '../components/Chat'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, promptDialog, alertDialog } from '../lib/ui'
+import { Icon } from '../lib/icons'
 
 const ST = [
-  { key: 'open', label: 'Abiertos', ico: '📨' }, { key: 'in_progress', label: 'En proceso', ico: '⏳' },
-  { key: 'resolved', label: 'Resueltos', ico: '✅' }, { key: 'closed', label: 'Cerrados', ico: '📁' },
+  { key: 'open', label: 'Abiertos', ico: 'inbox' }, { key: 'in_progress', label: 'En proceso', ico: 'hourglass' },
+  { key: 'resolved', label: 'Resueltos', ico: 'check' }, { key: 'closed', label: 'Cerrados', ico: 'folder' },
 ]
 const cls = (k) => 's-' + ({ open: 'open', in_progress: 'prog', resolved: 'solved', closed: 'closed' }[k])
 const label = (k) => (ST.find((s) => s.key === k) || {}).label || k
@@ -46,13 +47,12 @@ export default function Soporte() {
         {!isAdmin && <button className="btn btn-lime" onClick={create}>＋ Nuevo ticket</button>}
       </div></div>
       <div className="kpi-grid compact">
-        <button className="kpi kpi-all" onClick={() => setStatus(null)}>
-          <span className="ico" style={{ fontSize: '1.3rem' }}>💬</span>
-          <div><div className="num">{rows.length}</div><div className="lbl">{isAdmin ? 'Tickets en total' : 'Tus tickets'}</div></div>
+        <button className={`kpi ${!status ? 'active' : ''}`} onClick={() => setStatus(null)}>
+          <div className="ico"><Icon n="chat" /></div><div className="num">{rows.length}</div><div className="lbl">{isAdmin ? 'Tickets en total' : 'Tus tickets'}</div>
         </button>
         {ST.map((s) => (
           <button key={s.key} className={`kpi ${status === s.key ? 'active' : ''}`} onClick={() => setStatus(status === s.key ? null : s.key)}>
-            <div className="ico">{s.ico}</div><div className="num">{rows.filter((t) => t.status === s.key).length}</div><div className="lbl">{s.label}</div>
+            <div className="ico"><Icon n={s.ico} /></div><div className="num">{rows.filter((t) => t.status === s.key).length}</div><div className="lbl">{s.label}</div>
           </button>
         ))}
       </div>
@@ -60,7 +60,7 @@ export default function Soporte() {
       {data.map((t) => (
         <div className={`conv ${open === t.id ? 'open' : ''}`} key={t.id}>
           <button className="cv-head" onClick={() => setOpen(open === t.id ? null : t.id)}>
-            <span className="ico">💬</span>
+            <span className="ico"><Icon n="chat" /></span>
             <span className="t"><strong>{t.subject}</strong><br /><span className="prev">{isAdmin ? (t.profiles?.full_name || t.profiles?.email) : ''}</span></span>
             <span className={`badge ${cls(t.status)}`}>{label(t.status)}</span><span className="chev">▾</span>
           </button>
@@ -72,7 +72,7 @@ export default function Soporte() {
                   <select value={t.status} onChange={(e) => changeStatus(t.id, e.target.value)}>
                     {ST.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                   </select>
-                  {isSuper && <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Eliminar el ticket por completo? No se puede deshacer.', { title: 'Eliminar ticket', danger: true, okText: 'Eliminar' })) { try { await api('ticket_delete', { p_id: t.id }); load() } catch (er) { alertDialog(er.message) } } }}>🗑 Eliminar</button>}
+                  {isSuper && <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Eliminar el ticket por completo? No se puede deshacer.', { title: 'Eliminar ticket', danger: true, okText: 'Eliminar' })) { try { await api('ticket_delete', { p_id: t.id }); load() } catch (er) { alertDialog(er.message) } } }}><Icon n="trash" /> Eliminar</button>}
                 </div>
               )}
             </div>

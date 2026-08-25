@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { confirmDialog, alertDialog } from '../lib/ui'
+import { Icon } from '../lib/icons'
 
 const initials = (n) => (n || '?').split(' ').slice(0, 2).map((x) => x[0]).join('').toUpperCase()
 const VIEW = 260   // tamaño del recuadro de recorte en pantalla
@@ -107,7 +108,7 @@ export default function Perfil() {
         <div className="pf-top">
           <div className="avatar-edit">
             {avatar ? <img className="big-avatar" src={avatar} alt="Foto de perfil" /> : <div className="big">{initials(name)}</div>}
-            <button className="avatar-cam" title="Cambiar foto" onClick={() => fileRef.current?.click()} disabled={avatarSaving}>{avatarSaving ? '…' : '📷'}</button>
+            <button className="avatar-cam" title="Cambiar foto" onClick={() => fileRef.current?.click()} disabled={avatarSaving}>{avatarSaving ? '…' : <Icon n="camera" />}</button>
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
           </div>
           <div>
@@ -129,7 +130,7 @@ export default function Perfil() {
               <button className="btn-sm btn-lime" onClick={savePhone} disabled={!dirty || saving}>{saving ? '…' : 'Guardar'}</button>
             </div>
           </div>
-          <div className="pf-field"><label>Departamento</label><div className="val">{profile?.department || '—'} {role !== 'admin' && <span className="lock">🔒 fijo</span>}</div></div>
+          <div className="pf-field"><label>Departamento</label><div className="val">{profile?.department || '—'} {role !== 'admin' && <span className="lock"><Icon n="lock" /> fijo</span>}</div></div>
           <div className="pf-field"><label>Rol</label><div className="val">{roleLabel}</div></div>
         </div>
         <p className="muted" style={{ marginTop: '.7rem' }}>Puedes actualizar tu teléfono y tu foto cuando quieras. El departamento lo asigna un administrador.</p>
@@ -161,7 +162,7 @@ export default function Perfil() {
       {!isAdmin && (
         <div className={`section ${open ? 'open' : ''}`} style={{ marginTop: '1.2rem' }}>
           <button className="sec-head compact" onClick={() => setOpen((v) => !v)}>
-            <span className="ico">🗂️</span><span className="t"><strong>Mis equipos asignados</strong><br /><span className="muted">{equipos.length} equipos · toca para {open ? 'ocultar' : 'ver'}</span></span><span className="chev">▾</span>
+            <span className="ico"><Icon n="monitor" /></span><span className="t"><strong>Mis equipos asignados</strong><br /><span className="muted">{equipos.length} equipos · toca para {open ? 'ocultar' : 'ver'}</span></span><span className="chev">▾</span>
           </button>
           {open && <div className="sec-body">
             {equipos.length === 0 ? <div className="empty">No tienes equipos asignados.</div> : (

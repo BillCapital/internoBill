@@ -3,8 +3,9 @@ import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { confirmDialog, alertDialog } from '../lib/ui'
+import { Icon } from '../lib/icons'
 
-const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 
 // Registro de actividad por área (últimos 31 días). Se muestra dentro de cada apartado de supervisión.
 export default function ActivityLog({ kinds, title = 'Registro de actividad' }) {
@@ -28,9 +29,9 @@ export default function ActivityLog({ kinds, title = 'Registro de actividad' }) 
   }
 
   return (
-    <div className={`section ${open ? 'open' : ''}`} style={{ marginTop: '1rem' }}>
+    <div className={`section log-foot ${open ? 'open' : ''}`}>
       <button className="sec-head compact" onClick={() => setOpen((v) => !v)}>
-        <span className="ico">🗂️</span><span className="t"><strong>{title}</strong><br /><span className="muted">Últimos 31 días · {rows.length} movimiento(s)</span></span>
+        <span className="ico"><Icon n="folder" /></span><span className="t"><strong>{title}</strong><br /><span className="muted">Últimos 31 días · {rows.length} movimiento(s)</span></span>
         <span className="count">{rows.length}</span><span className="chev">▾</span>
       </button>
       {open && <div className="sec-body"><div className="table-wrap"><table>

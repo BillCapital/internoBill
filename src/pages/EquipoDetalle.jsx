@@ -7,6 +7,7 @@ import { confirmDialog, alertDialog, viewImage } from '../lib/ui'
 import { fileToResizedDataURL, readClipboardImage } from '../lib/img'
 import ImagePicker from '../components/ImagePicker'
 import { loadDeptNames, DEFAULT_DEPTS, deptIndentLabel } from '../lib/depts'
+import { Icon } from '../lib/icons'
 
 // Campos sensibles (contraseñas / PIN): se muestran enmascarados con opción de revelar
 const isSecretField = (f) => /pass|contrasen|clave/i.test(f.key || '') || f.key === 'pin' || /contrase|pin\b/i.test(f.label || '')
@@ -17,7 +18,7 @@ function SecretField({ value, disabled, placeholder, onChange }) {
       <input type={show ? 'text' : 'password'} autoComplete="off" value={value} disabled={disabled} placeholder={placeholder}
         onChange={onChange} style={{ paddingRight: '2.1rem' }} />
       <button type="button" className="pass-eye" title={show ? 'Ocultar' : 'Ver'} onClick={() => setShow((s) => !s)}
-        style={{ position: 'absolute', right: '.55rem', top: '50%', transform: 'translateY(-50%)' }}>{show ? '🙈' : '👁'}</button>
+        style={{ position: 'absolute', right: '.55rem', top: '50%', transform: 'translateY(-50%)' }}><Icon n={show ? 'eyeOff' : 'eye'} /></button>
     </div>
   )
 }
@@ -28,15 +29,15 @@ function SecretRead({ value }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem' }}>
       <span style={{ fontFamily: 'monospace', letterSpacing: show ? 0 : '.12em' }}>{show ? value : '••••••••'}</span>
-      <button type="button" className="pass-eye" title={show ? 'Ocultar' : 'Ver'} onClick={() => setShow((s) => !s)}>{show ? '🙈' : '👁'}</button>
+      <button type="button" className="pass-eye" title={show ? 'Ocultar' : 'Ver'} onClick={() => setShow((s) => !s)}><Icon n={show ? 'eyeOff' : 'eye'} /></button>
     </span>
   )
 }
 
-const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
 const fmtD = (d) => new Date(d + 'T00:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })
 const EVENTS = ['Mantenimiento', 'Limpieza', 'Apertura / Revisión', 'Reparación', 'Instalación', 'Actualización', 'Reasignación', 'Cambio de estado', 'Alta', 'Nota']
-const STAT_ICON = { 'Mantenimiento': '🛠️', 'Limpieza': '🧼', 'Apertura / Revisión': '🔍', 'Reparación': '🔧', 'Instalación': '📦', 'Actualización': '⬆️', 'Reasignación': '🔄', 'Cambio de estado': '🏷️', 'Alta': '🆕', 'Nota': '📝' }
+const STAT_ICON = { 'Mantenimiento': 'wrench', 'Limpieza': 'refresh', 'Apertura / Revisión': 'search', 'Reparación': 'wrench', 'Instalación': 'box', 'Actualización': 'upload', 'Reasignación': 'refresh', 'Cambio de estado': 'tag', 'Alta': 'plus', 'Nota': 'edit' }
 // Tipos que no se muestran como tarjeta ni como opción manual (autogenerados o cubiertos por otro)
 const HIDDEN_TYPES = ['Cambio de estado', 'Alta', 'Apertura / Revisión']
 const MANUAL_EVENTS = EVENTS.filter((t) => !HIDDEN_TYPES.includes(t))
@@ -96,7 +97,7 @@ function PhotoCarousel({ photos, editable, onRemove }) {
           <div className="car-slide" key={k}>
             <img src={src} alt="" onClick={() => viewImage(src)} />
             {editable && k === 0 && <span className="photo-cover">Portada</span>}
-            {editable && <button type="button" className="car-del" title="Quitar" onClick={() => onRemove(k)}>✕</button>}
+            {editable && <button type="button" className="car-del" title="Quitar" onClick={() => onRemove(k)}><Icon n="close" /></button>}
           </div>
         ))}
       </div>
@@ -111,7 +112,7 @@ function AcctPicker({ value, onChange, users, placeholder, owner }) {
   const add = (v) => { const t = (v || '').trim(); if (!t) return; if (!value.includes(t)) onChange([...value, t]) }
   // El propietario del dispositivo se sugiere primero
   const opts = []
-  if (owner?.email && !value.includes(owner.email)) opts.push({ id: 'owner', email: owner.email, label: `⭐ Propietario · ${owner.name || owner.email} — ${owner.email}` })
+  if (owner?.email && !value.includes(owner.email)) opts.push({ id: 'owner', email: owner.email, label: `Propietario · ${owner.name || owner.email} — ${owner.email}` })
   users.filter((u) => u.email && !value.includes(u.email) && u.email !== owner?.email)
     .forEach((u) => opts.push({ id: u.id, email: u.email, label: `${u.full_name || 'Sin nombre'} — ${u.email}` }))
   return (
@@ -119,7 +120,7 @@ function AcctPicker({ value, onChange, users, placeholder, owner }) {
       {value.length > 0 && (
         <div className="chips">
           {value.map((v) => (
-            <span className="chip" key={v}>{v}<button type="button" title="Quitar" onClick={() => onChange(value.filter((x) => x !== v))}>✕</button></span>
+            <span className="chip" key={v}>{v}<button type="button" title="Quitar" onClick={() => onChange(value.filter((x) => x !== v))}><Icon n="close" /></button></span>
           ))}
         </div>
       )}
@@ -338,18 +339,18 @@ export default function EquipoDetalle() {
       {/* Resumen: mantenimiento + tipos de intervención (primero) */}
       <div className="stat-cards" style={{ marginBottom: '1rem' }}>
         <div className={`stat-card${nextMaint ? '' : ' zero'}`}>
-          <span className="sc-ico">📅</span>
+          <span className="sc-ico"><Icon n="calendar" /></span>
           <span className="sc-n" style={{ fontSize: '.95rem' }}>{nextMaint ? fmtD(nextMaint) : '—'}</span>
           <span className="sc-t">Próximo mantenimiento</span>
         </div>
         <div className={`stat-card${lastMaint ? '' : ' zero'}`}>
-          <span className="sc-ico">🛠️</span>
+          <span className="sc-ico"><Icon n="wrench" /></span>
           <span className="sc-n" style={{ fontSize: '.95rem' }}>{lastMaint ? new Date(lastMaint).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
           <span className="sc-t">Último mantenimiento</span>
         </div>
         {stats.map((s) => (
           <div className={`stat-card${s.n ? '' : ' zero'}`} key={s.t}>
-            <span className="sc-ico">{STAT_ICON[s.t] || '•'}</span>
+            <span className="sc-ico">{STAT_ICON[s.t] ? <Icon n={STAT_ICON[s.t]} /> : '•'}</span>
             <span className="sc-n">{s.n}</span>
             <span className="sc-t">{s.t}</span>
           </div>
@@ -366,7 +367,7 @@ export default function EquipoDetalle() {
                 <ImagePicker value="" onChange={(url) => { if (url) setPhotos([...fkPhotos(), url]) }} />
               </div>
 
-              {subHead('ident', '🏷️ Identificación')}
+              {subHead('ident', <><Icon n="tag" /> Identificación</>)}
               {openSec.ident && <div className="pf-fields">
                 <div><label>Tipo / Nombre</label><input value={fk.name} onChange={(e) => setFk({ ...fk, name: e.target.value })} /></div>
                 <div><label>Marca</label><input list="brand-list-det" placeholder="HP, Lenovo, Apple…" value={fk.brand} onChange={(e) => setFk({ ...fk, brand: e.target.value })} /></div>
@@ -382,7 +383,7 @@ export default function EquipoDetalle() {
               <datalist id="brand-list-det">{BRANDS.map((b) => <option key={b} value={b} />)}</datalist>
 
               {(section?.fields || []).length > 0 && (<>
-                {subHead('det', '🧩 Detalles')}
+                {subHead('det', <><Icon n="chip" /> Detalles</>)}
                 {openSec.det && <div className="pf-fields">
                   {(section.fields || []).map((f) => {
                     const dhcpOn = fk.attributes?.dhcp === 'Sí'
@@ -402,11 +403,11 @@ export default function EquipoDetalle() {
                 </div>}
               </>)}
 
-              {subHead('asig', '👤 Asignación')}
+              {subHead('asig', <><Icon n="user" /> Asignación</>)}
               {openSec.asig && <div className="pf-fields">
                 <div style={{ gridColumn: '1 / -1' }}><label>¿A quién se asigna?</label>
                   <select value={assignMode} onChange={(e) => { setAssignMode(e.target.value); setManualAssign(false); setFk({ ...fk, assigned_to_name: '', assigned_to_email: '' }) }}>
-                    <option value="user">👤 A un usuario</option><option value="department">🏢 A un departamento</option>
+                    <option value="user">A un usuario</option><option value="department">A un departamento</option>
                   </select>
                 </div>
                 {assignMode === 'department' ? (
@@ -425,7 +426,7 @@ export default function EquipoDetalle() {
                       <option value="">— Sin asignar</option>
                       {users.map((u) => <option key={u.id} value={u.email}>{(u.full_name || 'Sin nombre')} — {u.email}</option>)}
                       {fk.assigned_to_email && !users.some((u) => u.email === fk.assigned_to_email) && <option value={fk.assigned_to_email}>{fk.assigned_to_name || 'Actual'} — {fk.assigned_to_email} (actual)</option>}
-                      <option value="__manual__">✎ Escribir manualmente (externo)…</option>
+                      <option value="__manual__">Escribir manualmente (externo)…</option>
                     </select>
                   </div>
                   {manualAssign && (<>
@@ -434,7 +435,7 @@ export default function EquipoDetalle() {
                   </>)}
                 </>)}
               </div>}
-              {subHead('soft', '💽 Software y cuentas')}
+              {subHead('soft', <><Icon n="save" /> Software y cuentas</>)}
               {openSec.soft && <>
               <div className="sw-field sw-field-inline" style={{ marginBottom: '.5rem' }}>
                 <label>Antivirus</label>
@@ -458,7 +459,7 @@ export default function EquipoDetalle() {
               </div>
               </>}
 
-              {(dirty || savingFk) && <div className="save-bar"><button className="btn btn-primary" onClick={saveAll} disabled={savingFk}>{savingFk ? 'Guardando…' : '💾 Guardar cambios'}</button></div>}
+              {(dirty || savingFk) && <div className="save-bar"><button className="btn btn-primary" onClick={saveAll} disabled={savingFk}>{savingFk ? 'Guardando…' : <><Icon n="save" /> Guardar cambios</>}</button></div>}
             </>) : (<>
               {(() => {
                 const ph = (eq.attributes?.photos && eq.attributes.photos.length) ? eq.attributes.photos : (eq.image_url ? [eq.image_url] : [])
@@ -469,12 +470,12 @@ export default function EquipoDetalle() {
                   <div className="pf-field" key={k}><label>{k}</label><div className="val">{
                     secret ? <SecretRead value={v} />
                       : (type === 'url' && v && v !== '—')
-                        ? <a className="btn-sm btn-lime" style={{ textDecoration: 'none' }} href={/^https?:\/\//i.test(v) ? v : 'https://' + v} target="_blank" rel="noreferrer">⬇ Abrir enlace</a>
+                        ? <a className="btn-sm btn-lime" style={{ textDecoration: 'none' }} href={/^https?:\/\//i.test(v) ? v : 'https://' + v} target="_blank" rel="noreferrer"><Icon n="link" /> Abrir enlace</a>
                         : (v || <span className="muted">—</span>)
                   }</div></div>
                 ))}
               </div>
-              <h4 className="det-sub">💽 Software y cuentas</h4>
+              <h4 className="det-sub"><Icon n="save" /> Software y cuentas</h4>
               <div className="sw-field sw-field-inline"><label>Antivirus</label><div className="val">{eq.antivirus || <span className="muted">—</span>}</div></div>
               <div className="sw-apps-read">
                 {SW_APPS.map((a) => {
@@ -482,7 +483,7 @@ export default function EquipoDetalle() {
                   return (
                     <div className="sw-field" key={a.key}>
                       <label>{a.label}</label>
-                      <div className="val">{st.on ? '✅ Habilitado' : <span className="muted">— No habilitado</span>}
+                      <div className="val">{st.on ? <><Icon n="check" /> Habilitado</> : <span className="muted">— No habilitado</span>}
                         {a.accounts && (st.accounts || []).length ? <div className="chips" style={{ marginTop: '.3rem' }}>{(st.accounts || []).map((v) => <span className="chip" key={v}>{v}</span>)}</div> : null}</div>
                     </div>
                   )
@@ -494,7 +495,7 @@ export default function EquipoDetalle() {
           {/* Calendario de mantenimientos programados */}
           <div className={`section eq-cal${openCal ? ' open' : ''}`} style={{ marginTop: '1rem' }}>
             <button className="sec-head compact sec-toggle" onClick={() => setOpenCal((v) => !v)}>
-              <span className="ico">📅</span>
+              <span className="ico"><Icon n="calendar" /></span>
               <span className="t"><strong>Calendario de mantenimientos</strong><br /><span className="muted">{sched.length} programado(s) · aviso 2d / 1d / mismo día</span></span>
               <span className="chev">{openCal ? '▾' : '▸'}</span>
             </button>
@@ -555,8 +556,8 @@ export default function EquipoDetalle() {
                         <td><span className="badge">{m.event_type}</span></td>
                         <td>{m.note || <span className="muted">—</span>}</td>
                         {canManageInventory && <td className="actions" style={{ whiteSpace: 'nowrap' }}>
-                          <button className="btn-sm btn-lime" title="Marcar realizado" onClick={() => completeMaint(m.id)}>✓</button>
-                          <button className="btn-sm btn-danger" title="Cancelar" onClick={() => delMaint(m.id)}>✕</button>
+                          <button className="btn-sm btn-lime" title="Marcar realizado" onClick={() => completeMaint(m.id)}><Icon n="check" /></button>
+                          <button className="btn-sm btn-danger" title="Cancelar" onClick={() => delMaint(m.id)}><Icon n="close" /></button>
                         </td>}
                       </tr>
                     )
@@ -569,7 +570,7 @@ export default function EquipoDetalle() {
           {/* Bitácora de mantenimiento */}
           <div className={`section eq-events${openBita ? ' open' : ''}`} style={{ marginTop: '1rem' }}>
             <button className="sec-head compact sec-toggle" onClick={() => setOpenBita((v) => !v)}>
-              <span className="ico">🛠️</span>
+              <span className="ico"><Icon n="wrench" /></span>
               <span className="t"><strong>Bitácora de mantenimiento</strong><br /><span className="muted">{events.length} registro(s) realizados</span></span>
               <span className="chev">{openBita ? '▾' : '▸'}</span>
             </button>
@@ -578,10 +579,10 @@ export default function EquipoDetalle() {
                 <div className="cat-row" style={{ borderBottom: '1px solid var(--line)', paddingBottom: '.7rem', gap: '.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                   <select value={form.event_type} onChange={(e) => setForm({ ...form, event_type: e.target.value })}>{MANUAL_EVENTS.map((x) => <option key={x}>{x}</option>)}</select>
                   <input style={{ flex: 1, minWidth: 180 }} placeholder="Detalle (qué se hizo, quién, observaciones…)" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
-                  <label className="btn-sm" style={{ cursor: 'pointer' }}>📷 Fotos
+                  <label className="btn-sm" style={{ cursor: 'pointer' }}><Icon n="camera" /> Fotos
                     <input type="file" accept="image/*" multiple hidden onChange={(ev) => { addFormImages(ev.target.files); ev.target.value = '' }} />
                   </label>
-                  <button className="btn-sm" type="button" onClick={() => pasteImagesInto(addFormImages)}>📋 Pegar</button>
+                  <button className="btn-sm" type="button" onClick={() => pasteImagesInto(addFormImages)}><Icon n="clipboard" /> Pegar</button>
                   <button className="btn btn-lime btn-sm" onClick={addEvent}>Registrar</button>
                   {form.images.length > 0 && (
                     <div style={{ flexBasis: '100%', display: 'flex', gap: '.4rem', flexWrap: 'wrap', marginTop: '.4rem' }}>
@@ -589,7 +590,7 @@ export default function EquipoDetalle() {
                         <div key={k} style={{ position: 'relative' }}>
                           <img className="ins-thumb" src={src} alt="" />
                           <button type="button" title="Quitar" onClick={() => setForm((fm) => ({ ...fm, images: fm.images.filter((_, j) => j !== k) }))}
-                            style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'var(--danger)', color: '#fff', fontSize: '.7rem', lineHeight: 1, cursor: 'pointer' }}>✕</button>
+                            style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'var(--danger)', color: '#fff', fontSize: '.7rem', lineHeight: 1, cursor: 'pointer' }}><Icon n="close" /></button>
                         </div>
                       ))}
                     </div>
@@ -611,7 +612,7 @@ export default function EquipoDetalle() {
                       <td>{ev.actor_name}</td>
                       {canManageInventory && <td className="actions">{String(ev.id).startsWith('tmp-') ? <span className="muted">…</span> : <>
                         <button className="btn-sm" onClick={() => openEditEv(ev)}>Editar</button>
-                        <button className="btn-sm btn-danger" onClick={() => delEvent(ev.id)}>✕</button>
+                        <button className="btn-sm btn-danger" onClick={() => delEvent(ev.id)}><Icon n="close" /></button>
                       </>}</td>}
                     </tr>
                   ))}
@@ -626,8 +627,8 @@ export default function EquipoDetalle() {
           <img src={qr} alt="QR del equipo" />
           <p className="muted" style={{ fontSize: '.78rem', marginTop: '.5rem', maxWidth: 200 }}>Escanéalo para abrir esta ficha. Requiere sesión con acceso al inventario.</p>
           <div className="eq-qr-btns">
-            <button className="btn btn-sm" onClick={() => printQR(qr, `${eq.name} ${eq.brand || ''} ${eq.model || ''}`.trim(), eq.assigned_to_name || '')}>🖨 Imprimir</button>
-            <a className="btn btn-sm" href={qr} download={`qr-${eq.asset_tag || eq.serial_number || eq.id}.png`} target="_blank" rel="noreferrer">⬇ Descargar</a>
+            <button className="btn btn-sm" onClick={() => printQR(qr, `${eq.name} ${eq.brand || ''} ${eq.model || ''}`.trim(), eq.assigned_to_name || '')}><Icon n="printer" /> Imprimir</button>
+            <a className="btn btn-sm" href={qr} download={`qr-${eq.asset_tag || eq.serial_number || eq.id}.png`} target="_blank" rel="noreferrer"><Icon n="download" /> Descargar</a>
           </div>
         </div>
       </div>
@@ -646,13 +647,13 @@ export default function EquipoDetalle() {
                 <div key={k} style={{ position: 'relative' }}>
                   <img className="ins-thumb" src={src} alt="" onClick={() => viewImage(src)} />
                   <button type="button" title="Quitar" onClick={() => setEditEv((e) => ({ ...e, images: e.images.filter((_, j) => j !== k) }))}
-                    style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'var(--danger)', color: '#fff', fontSize: '.7rem', lineHeight: 1, cursor: 'pointer' }}>✕</button>
+                    style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'var(--danger)', color: '#fff', fontSize: '.7rem', lineHeight: 1, cursor: 'pointer' }}><Icon n="close" /></button>
                 </div>
               ))}
-              <label className="btn-sm" style={{ cursor: 'pointer' }}>📷 Agregar fotos
+              <label className="btn-sm" style={{ cursor: 'pointer' }}><Icon n="camera" /> Agregar fotos
                 <input type="file" accept="image/*" multiple hidden onChange={(ev) => { addEditImages(ev.target.files); ev.target.value = '' }} />
               </label>
-              <button className="btn-sm" type="button" onClick={() => pasteImagesInto(addEditImages)}>📋 Pegar</button>
+              <button className="btn-sm" type="button" onClick={() => pasteImagesInto(addEditImages)}><Icon n="clipboard" /> Pegar</button>
             </div>
             <div className="modal-actions"><button className="btn" onClick={() => setEditEv(null)}>Cancelar</button><button className="btn btn-primary" onClick={saveEditEv}>Guardar cambios</button></div>
           </div>

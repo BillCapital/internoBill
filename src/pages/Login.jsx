@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { Icon } from '../lib/icons'
 
 export default function Login() {
   const { user, loading, signInMicrosoft } = useAuth()
@@ -13,7 +14,7 @@ export default function Login() {
         <p className="muted">Inicia sesión con tu cuenta corporativa</p>
         <div className="role-btns">
           <button className="role-btn" style={{ borderColor: 'var(--lime)' }} onClick={signInMicrosoft}>
-            <span className="ico">🔐</span>
+            <span className="ico"><Icon n="lock" /></span>
             <span><strong>Continuar con Microsoft 365</strong><span className="muted">Con tu cuenta @billcapital.com</span></span>
           </button>
         </div>

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import Chat from '../components/Chat'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, alertDialog } from '../lib/ui'
+import { Icon } from '../lib/icons'
 
 const SLOTS = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '15:30', '16:00', '16:30', '17:00', '17:30']
 const LUNCH_AFTER = 8
@@ -248,7 +249,7 @@ export default function Rooms() {
               const nm = u ? (u.full_name || u.email) : v
               setForm((f) => (f.att || []).some((a) => a.email === v) ? f : { ...f, att: [...(f.att || []), { email: v, name: nm }] })
               const busy = await checkBusy([v], form)
-              if (busy.length) alertDialog(`⚠️ ${nm} ya tiene una reunión agendada el ${dayLong(calDay)} desde las ${SLOTS[form.slotIdx]} (${durLabel(form)}). Considera elegir otro horario.`, { title: 'Convocado ocupado' })
+              if (busy.length) alertDialog(`${nm} ya tiene una reunión agendada el ${dayLong(calDay)} desde las ${SLOTS[form.slotIdx]} (${durLabel(form)}). Considera elegir otro horario.`, { title: 'Convocado ocupado' })
             }}>
               <option value="">＋ Agregar convocado…</option>
               {users.filter((u) => u.email && !(form.att || []).some((a) => a.email === u.email)).map((u) => (
@@ -268,11 +269,11 @@ export default function Rooms() {
             </div>
             {(form.att || []).length > 0 && (
               <div className="cart-box" style={{ marginTop: '.5rem' }}>
-                <div className="cart-head"><span>👥 Convocados</span><span className="cart-count">{form.att.length}</span></div>
+                <div className="cart-head"><span><Icon n="users" /> Convocados</span><span className="cart-count">{form.att.length}</span></div>
                 <ul className="cart-list">
                   {form.att.map((a) => (
                     <li key={a.email}><span>{a.name && a.name !== a.email ? `${a.name} · ${a.email}` : a.email}</span>
-                      <button className="cart-x" title="Quitar" type="button" onClick={() => setForm((f) => ({ ...f, att: f.att.filter((x) => x.email !== a.email) }))}>✕</button></li>
+                      <button className="cart-x" title="Quitar" type="button" onClick={() => setForm((f) => ({ ...f, att: f.att.filter((x) => x.email !== a.email) }))}><Icon n="close" /></button></li>
                   ))}
                 </ul>
               </div>
@@ -318,7 +319,7 @@ export default function Rooms() {
                 <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Rechazar la reserva?', { title: 'Rechazar reserva', danger: true, okText: 'Rechazar' })) act('reject_reservation', openObj.id) }}>Rechazar</button>
               </>}
               <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Cancelar la reserva?', { title: 'Cancelar reserva', danger: true, okText: 'Cancelar reserva' })) act('cancel_reservation', openObj.id) }}>Cancelar reserva</button>
-              {isSuper && <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Eliminar la reserva por completo? No se puede deshacer.', { title: 'Eliminar reserva', danger: true, okText: 'Eliminar' })) act('reservation_delete', openObj.id) }}>🗑 Eliminar</button>}
+              {isSuper && <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Eliminar la reserva por completo? No se puede deshacer.', { title: 'Eliminar reserva', danger: true, okText: 'Eliminar' })) act('reservation_delete', openObj.id) }}><Icon n="trash" /> Eliminar</button>}
               <button className="btn" onClick={() => setOpenRes(null)}>Cerrar</button>
             </div>
           </div>

@@ -5,16 +5,16 @@ import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, alertDialog, viewImage } from '../lib/ui'
-import { fileToResizedDataURL } from '../lib/img'
 import ImagePicker from '../components/ImagePicker'
 import SortControl from '../components/SortControl'
 import FilterControl from '../components/FilterControl'
 import { loadDeptNames, DEFAULT_DEPTS, deptIndentLabel } from '../lib/depts'
+import { Icon, sectionIconName } from '../lib/icons'
+import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
 const CONDS = ['Bueno', 'Regular', 'Sin asignar', 'En mantenimiento', 'De baja']
 const LOCS = ['CM', 'Remoto', 'CM/Remoto']
-const COUNTRIES = [['Chile', '🇨🇱'], ['Perú', '🇵🇪'], ['Colombia', '🇨🇴']]
-const flagOf = (c) => (COUNTRIES.find((x) => x[0] === c) || [])[1] || '🌎'
+const COUNTRIES = [['Chile', 'CL'], ['Perú', 'PE'], ['Colombia', 'CO']]
 const normc = (s) => (s || '').trim().toLowerCase()
 const AV = ['', 'Activo', 'Inactivo', 'No aplica']
 const BRANDS = ['HP', 'Lenovo', 'Apple', 'Dell', 'Asus', 'Acer', 'Microsoft', 'Samsung', 'Huawei', 'LG', 'MSI', 'Brother', 'Epson', 'Canon', 'Xiaomi', 'Otra']
@@ -32,6 +32,7 @@ export default function Inventario() {
   const [DEPTS, setDEPTS] = useState(DEFAULT_DEPTS)
   useEffect(() => { loadDeptNames().then(setDEPTS) }, [])
   const [sections, setSections] = useState([])
+  const [loading, setLoading] = useState(true)
   const [items, setItems] = useState([])
   const [open, setOpen] = useState({})           // secciones desplegadas
   const [edit, setEdit] = useState(null)          // equipo en edición
@@ -93,6 +94,7 @@ export default function Inventario() {
     setPeriphs(per ?? []); setPeriphAssign(pa ?? [])
     const { data: mc } = await supabase.from('maint_config').select('*').maybeSingle()
     if (mc) setCfg(mc)
+    setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
   // Al abrir/cerrar el modal de equipo, parte con el selector (no modo manual)
@@ -189,14 +191,18 @@ export default function Inventario() {
     })
     return list
   }, [bySection, compSection])
-  // Lista de tarjetas de datos faltantes (personas + dispositivos + casos), ordenadas por cantidad
+  // Lista de tarjetas de datos faltantes (personas + dispositivos + casos), ordenadas por cantidad.
+  // Cada tarjeta lleva un nivel de severidad por color según la proporción de la flota afectada:
+  //   crit (rojo) ≥40% · warn (ámbar) ≥15% · info (azul) el resto. Así se ve de un vistazo qué apremia.
   const gapCards = useMemo(() => {
+    const devTotal = fItems.filter((e) => { const s = secById[e.section_id]; return s && !CRED.has(s.name) }).length || 1
+    const sev = (n, denom) => { const r = n / (denom || 1); return r >= 0.4 ? 'crit' : r >= 0.15 ? 'warn' : 'info' }
     const cards = []
-    if (noPc.length) cards.push({ key: 'no_pc', icon: '🚫', label: 'Sin computador', n: noPc.length, kind: 'people' })
-    Object.values(gaps).sort((a, b) => b.items.length - a.items.length).forEach((g) => cards.push({ key: g.key, icon: '⚠️', label: g.label, n: g.items.length, kind: 'dev' }))
-    if (cases.length) cards.push({ key: 'casos', icon: '🧾', label: 'Casos por revisar', n: cases.length, kind: 'cases' })
+    if (noPc.length) cards.push({ key: 'no_pc', icon: 'ban', label: 'Sin computador', n: noPc.length, kind: 'people', sev: sev(noPc.length, countryUsers.length) })
+    Object.values(gaps).sort((a, b) => b.items.length - a.items.length).forEach((g) => cards.push({ key: g.key, icon: 'alert', label: g.label, n: g.items.length, kind: 'dev', sev: sev(g.items.length, devTotal) }))
+    if (cases.length) cards.push({ key: 'casos', icon: 'folder', label: 'Casos por revisar', n: cases.length, kind: 'cases', sev: 'warn' })
     return cards
-  }, [noPc, gaps, cases])
+  }, [noPc, gaps, cases, fItems, secById, CRED, countryUsers])
   // Datos faltantes en Accesos y claves (contraseña, asignación, usuario)
   const credGaps = useMemo(() => {
     const map = {}
@@ -210,7 +216,7 @@ export default function Inventario() {
     })
     return map
   }, [items, secById, CRED])
-  const credCards = useMemo(() => Object.values(credGaps).sort((a, b) => b.items.length - a.items.length).map((g) => ({ key: g.key, icon: '⚠️', label: g.label, n: g.items.length })), [credGaps])
+  const credCards = useMemo(() => Object.values(credGaps).sort((a, b) => b.items.length - a.items.length).map((g) => ({ key: g.key, icon: 'alert', label: g.label, n: g.items.length })), [credGaps])
   // Secciones visibles según la carpeta seleccionada (Equipos vs Accesos y claves; vacío en Mantenimientos)
   const visibleSections = useMemo(
     () => ((view === 'mant' || view === 'perif' || view === 'stock') ? [] : sections.filter((s) => !CRED.has(s.name))),
@@ -323,7 +329,7 @@ export default function Inventario() {
       if (f.required) o.required = true
       return o
     })
-    try { await api('section_upsert', { p: { id: s.id, name: s.name.trim(), icon: s.icon || '📦', assign_to: s.assign_to || 'user', fields } }); setSchemaEdit(null); load() } catch (e) { alertDialog(e.message) }
+    try { await api('section_upsert', { p: { id: s.id, name: s.name.trim(), icon: s.icon || '', assign_to: s.assign_to || 'user', fields } }); setSchemaEdit(null); load() } catch (e) { alertDialog(e.message) }
   }
   const delSchema = async (s) => {
     if (!(await confirmDialog(`¿Eliminar el tipo "${s.name}"? Los equipos de este tipo quedarán sin categoría.`, { title: 'Eliminar tipo de equipo', danger: true, okText: 'Eliminar' }))) return
@@ -332,10 +338,10 @@ export default function Inventario() {
 
   const openSchema = (s) => setSchemaEdit(s
     ? { ...s, fields: (s.fields || []).map((f) => ({ ...f, optionsText: (f.options || []).join(', ') })) }
-    : { name: '', icon: '📦', assign_to: 'user', fields: [] })
+    : { name: '', icon: '', assign_to: 'user', fields: [] })
   // Duplica un tipo existente (sin id -> se crea uno nuevo)
   const dupSchema = (s) => setSchemaEdit({
-    name: `${s.name} (copia)`, icon: s.icon || '📦', assign_to: s.assign_to || 'user',
+    name: `${s.name} (copia)`, icon: s.icon || '', assign_to: s.assign_to || 'user',
     fields: (s.fields || []).map((f) => ({ ...f, optionsText: (f.options || []).join(', ') })),
   })
   const moveField = (i, dir) => setSchemaEdit((se) => {
@@ -349,7 +355,7 @@ export default function Inventario() {
     <div>
       <div className="page-head"><div className="row">
         <div><h2>Inventario de la empresa</h2><p className="muted">Cada tipo de equipo tiene su propio esquema de datos. Toca una tarjeta para desplegarla.</p></div>
-        <button className="btn" onClick={() => setShowSchemas((v) => !v)}>⚙️ Tipos de equipo</button>
+        <button className="btn" onClick={() => setShowSchemas((v) => !v)}><Icon n="gear" /> Tipos de equipo</button>
       </div></div>
 
       {/* ==== Sector por país ==== */}
@@ -371,10 +377,10 @@ export default function Inventario() {
       {/* ==== Carpetas: Equipos vs Accesos y claves ==== */}
       <div className="row" style={{ display: 'flex', alignItems: 'center', margin: '.4rem 0 .6rem', gap: '1rem', flexWrap: 'wrap', width: '100%' }}>
         <div className="seg">
-          <button className={`seg-btn ${view === 'equipos' ? 'on' : ''}`} onClick={() => switchView('equipos')}>🖥️ Equipos</button>
-          <button className={`seg-btn ${view === 'perif' ? 'on' : ''}`} onClick={() => switchView('perif')}>🖱️ Periféricos</button>
-          <button className={`seg-btn ${view === 'stock' ? 'on' : ''}`} onClick={() => switchView('stock')}>📦 Stock</button>
-          {canManageInventory && <button className={`seg-btn ${view === 'mant' ? 'on' : ''}`} onClick={() => switchView('mant')}>🔧 Mantenimientos</button>}
+          <button className={`seg-btn ${view === 'equipos' ? 'on' : ''}`} onClick={() => switchView('equipos')}><Icon n="monitor" /> Equipos</button>
+          <button className={`seg-btn ${view === 'perif' ? 'on' : ''}`} onClick={() => switchView('perif')}><Icon n="mouse" /> Periféricos</button>
+          <button className={`seg-btn ${view === 'stock' ? 'on' : ''}`} onClick={() => switchView('stock')}><Icon n="layers" /> Stock</button>
+          {canManageInventory && <button className={`seg-btn ${view === 'mant' ? 'on' : ''}`} onClick={() => switchView('mant')}><Icon n="wrench" /> Mantenimientos</button>}
         </div>
       </div>
 
@@ -395,17 +401,17 @@ export default function Inventario() {
         <div>
           {/* Tarjetas resumen — tocar una te lleva a su zona */}
           <div className="kpi-grid compact">
-            <button className="kpi kpi-all" onClick={() => focusZone(firstLote)} title="Todos los computadores · ir a los grupos"><span className="ico" style={{ fontSize: '1.3rem' }}>💻</span><div><div className="num">{comps.length}</div><div className="lbl">Computadores</div></div></button>
-            <button className="kpi" onClick={() => focusZone(firstLote)} title="Equipos ya incluidos en la programación de mantenimiento"><div className="ico">🔧</div><div className="num">{conLote}</div><div className="lbl">En mantenimiento</div></button>
-            <button className="kpi" onClick={() => focusZone(firstLote)} title="Próxima ventana de mantenimiento programada"><div className="ico">📅</div><div className="num" style={{ fontSize: '1rem' }}>{proximo}</div><div className="lbl">Próximo</div></button>
-            <button className="kpi" onClick={() => focusZone(1)} title="Ver los grupos de mantenimiento"><div className="ico">🗂️</div><div className="num">{nLotes}</div><div className="lbl">Grupos</div></button>
-            <button className={`kpi ${openLote.sin ? 'active' : ''}`} onClick={() => focusZone('sin')} title="Equipos que aún no entran en la programación"><div className="ico">⚠️</div><div className="num">{sinLote.length}</div><div className="lbl">Sin grupo</div></button>
+            <button className="kpi kpi-all" onClick={() => focusZone(firstLote)} title="Todos los computadores · ir a los grupos"><span className="ico"><Icon n="monitor" /></span><div><div className="num">{comps.length}</div><div className="lbl">Computadores</div></div></button>
+            <button className="kpi" onClick={() => focusZone(firstLote)} title="Equipos ya incluidos en la programación de mantenimiento"><div className="ico"><Icon n="wrench" /></div><div className="num">{conLote}</div><div className="lbl">En mantenimiento</div></button>
+            <button className="kpi" onClick={() => focusZone(firstLote)} title="Próxima ventana de mantenimiento programada"><div className="ico"><Icon n="calendar" /></div><div className="num" style={{ fontSize: '1rem' }}>{proximo}</div><div className="lbl">Próximo</div></button>
+            <button className="kpi" onClick={() => focusZone(1)} title="Ver los grupos de mantenimiento"><div className="ico"><Icon n="folder" /></div><div className="num">{nLotes}</div><div className="lbl">Grupos</div></button>
+            <button className={`kpi ${openLote.sin ? 'active' : ''}`} onClick={() => focusZone('sin')} title="Equipos que aún no entran en la programación"><div className="ico"><Icon n="alert" /></div><div className="num">{sinLote.length}</div><div className="lbl">Sin grupo</div></button>
           </div>
 
           {/* Configuración (desplegable) */}
           <div className={`section ${cfgOpen ? 'open' : ''}`} style={{ marginBottom: '.6rem' }}>
             <button className="sec-head compact" onClick={() => setCfgOpen((v) => !v)}>
-              <span className="ico">⚙️</span>
+              <span className="ico"><Icon n="gear" /></span>
               <span className="t"><strong>Configuración de la programación</strong><br /><span className="muted">cada {cfg?.freq_months || 3} meses · {cfg?.batch_size || 5} por grupo · {cfg?.window_days || 4} día(s) · {cfg?.horizon_years || 3} años</span></span>
               <span className="chev">▾</span>
             </button>
@@ -421,9 +427,9 @@ export default function Inventario() {
                 </div>
                 <div className="row" style={{ display: 'flex', marginTop: '.6rem', gap: '.5rem', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
                   <button className="btn btn-primary btn-sm" onClick={saveMaintCfg}>Guardar configuración</button>
-                  <button className="btn btn-sm" onClick={autoDistribute}>🎲 Auto-repartir en grupos</button>
-                  <button className="btn btn-lime btn-sm" onClick={genProgram}>▶ Generar programación ({cfg.horizon_years} años)</button>
-                  <button className="btn btn-danger btn-sm" onClick={clearProgram}>🗑 Limpiar programación</button>
+                  <button className="btn btn-sm" onClick={autoDistribute}><Icon n="dice" /> Auto-repartir en grupos</button>
+                  <button className="btn btn-lime btn-sm" onClick={genProgram}>Generar programación ({cfg.horizon_years} años)</button>
+                  <button className="btn btn-danger btn-sm" onClick={clearProgram}><Icon n="trash" /> Limpiar programación</button>
                 </div>
               </>) : <p className="muted">Cargando configuración…</p>}
             </div>}
@@ -433,7 +439,7 @@ export default function Inventario() {
           {sinLote.length > 0 && (
             <div className={`section ${openLote.sin ? 'open' : ''}`} ref={(el) => { mantRefs.current.sin = el }} style={{ marginBottom: '.6rem', borderColor: 'rgba(255,190,60,.45)' }}>
               <button className="sec-head compact" onClick={() => setOpenLote((o) => ({ ...o, sin: !o.sin }))}>
-                <span className="ico">⚠️</span>
+                <span className="ico"><Icon n="alert" /></span>
                 <span className="t"><strong>Equipos sin grupo</strong><br /><span className="muted">Aún no entran en la programación — asígnales un grupo</span></span>
                 <span className="count">{sinLote.length}</span><span className="chev">▾</span>
               </button>
@@ -460,7 +466,7 @@ export default function Inventario() {
             return (
               <div className={`section ${isOpen ? 'open' : ''}`} key={L} ref={(el) => { mantRefs.current[L] = el }} style={{ marginBottom: '.5rem' }}>
                 <button className="sec-head compact" onClick={() => setOpenLote((o) => ({ ...o, [L]: !o[L] }))}>
-                  <span className="ico">📦</span>
+                  <span className="ico"><Icon n="layers" /></span>
                   <span className="t"><strong>Grupo {L}</strong><br /><span className="muted">{loteWindow(L)} · {rows.length}/{cfg?.batch_size || 5} equipos</span></span>
                   <span className="count">{rows.length}</span><span className="chev">▾</span>
                 </button>
@@ -489,19 +495,19 @@ export default function Inventario() {
       {/* ==== Tipos de equipo (ventana) ==== */}
       {showSchemas && (
         <div className="backdrop open">
-          <div className="modal modal-lg">
+          <div className="modal modal-xl">
             <h3>Tipos de equipo</h3>
             <p className="muted" style={{ marginTop: 0 }}>Un “tipo” (Computadores, Impresoras, Celulares…) define qué datos se piden al registrar un equipo. Todos incluyen marca, modelo, serie, ubicación y estado; aquí puedes agregar datos extra propios de cada tipo.</p>
             <div style={{ margin: '.4rem 0 .6rem' }}>
               <button className="btn btn-lime btn-sm" onClick={() => openSchema(null)}>＋ Nuevo tipo de equipo</button>
             </div>
-            <div className="table-wrap"><table className="tbl-compact">
+            <div className="table-wrap"><table className="tbl-compact tipos-table">
               <thead><tr><th>Tipo</th><th>Se asigna a</th><th>Datos extra</th><th></th></tr></thead>
               <tbody>
                 {sections.filter((s) => !CRED.has(s.name)).map((s) => (
                   <tr key={s.id}>
-                    <td><span className="ico">{s.icon}</span> <strong>{s.name}</strong></td>
-                    <td>{s.assign_to === 'department' ? '🏢 Departamento' : '👤 Usuario'}</td>
+                    <td><span className="ico"><Icon n={sectionIconName(s.name)} /></span> <strong>{s.name}</strong></td>
+                    <td>{s.assign_to === 'department' ? 'Departamento' : 'Usuario'}</td>
                     <td><span className="muted">{(s.fields || []).map((f) => f.label).join(' · ') || 'Solo los datos comunes'}</span></td>
                     <td className="actions">
                       <button className="btn-sm" onClick={() => openSchema(s)}>Editar</button>{' '}
@@ -517,26 +523,29 @@ export default function Inventario() {
         </div>
       )}
 
+      {/* Carga: siluetas mientras llegan los datos */}
+      {loading && view === 'equipos' && <div style={{ marginTop: '.4rem' }}><SkeletonKpis n={8} /><SkeletonRows n={4} /></div>}
+
       {/* ==== Resumen (tarjetas de información) ==== */}
-      {view === 'equipos' && <div className="kpi-grid compact">
+      {!loading && view === 'equipos' && <div className="kpi-grid compact">
         <button className="kpi kpi-all" onClick={() => setOpen({})}>
-          <span className="ico" style={{ fontSize: '1.3rem' }}>{view === 'accesos' ? '🔐' : '📊'}</span>
+          <span className="ico"><Icon n={view === 'accesos' ? 'lock' : 'grid'} /></span>
           <div><div className="num">{viewCount}</div><div className="lbl">{view === 'accesos' ? 'Registros de claves' : 'Equipos en total'}</div></div>
         </button>
         {visibleSections.map((s) => (
           <button key={s.id} className={`kpi ${open[s.id] ? 'active' : ''}`} onClick={() => openOnlyAndScroll(s.id)}>
-            <div className="ico">{s.icon}</div>
+            <div className="ico"><Icon n={sectionIconName(s.name)} /></div>
             <div className="num">{(bySection[s.id] || []).length}</div>
             <div className="lbl">{s.name}</div>
           </button>
         ))}
         <button className={`kpi ${mantOpen ? 'active' : ''}`} onClick={() => setMantOpen((v) => !v)} title="Equipos con estado En mantenimiento">
-          <div className="ico">🔧</div>
+          <div className="ico"><Icon n="wrench" /></div>
           <div className="num">{enMantItems.length}</div>
           <div className="lbl">En mantenimiento</div>
         </button>
         <button className={`kpi ${sinAsigOpen ? 'active' : ''}`} onClick={() => setSinAsigOpen((v) => !v)} title="Equipos sin persona/departamento asignado">
-          <div className="ico">🚫</div>
+          <div className="ico"><Icon n="ban" /></div>
           <div className="num">{sinAsignarItems.length}</div>
           <div className="lbl">Sin asignar</div>
         </button>
@@ -547,10 +556,10 @@ export default function Inventario() {
         <div className="section open" style={{ marginBottom: '.8rem' }}><div className="sec-body">
           <div className="row" style={{ marginBottom: '.4rem' }}>
             <strong>En mantenimiento · {enMantItems.length}</strong>
-            <button className="btn-sm" onClick={() => setMantOpen(false)}>✕ Cerrar</button>
+            <button className="btn-sm" onClick={() => setMantOpen(false)}><Icon n="close" /> Cerrar</button>
           </div>
           {enMantItems.length === 0
-            ? <p className="muted" style={{ margin: '.2rem 0' }}>No hay equipos en mantenimiento. 🎉</p>
+            ? <p className="muted" style={{ margin: '.2rem 0' }}>No hay equipos en mantenimiento.</p>
             : <div className="table-wrap"><table className="tbl-compact">
                 <thead><tr><th>Equipo</th><th>Tipo</th><th>Asignado a</th><th></th></tr></thead>
                 <tbody>
@@ -574,10 +583,10 @@ export default function Inventario() {
         <div className="section open" style={{ marginBottom: '.8rem' }}><div className="sec-body">
           <div className="row" style={{ marginBottom: '.4rem' }}>
             <strong>Sin asignar · {sinAsignarItems.length}</strong>
-            <button className="btn-sm" onClick={() => setSinAsigOpen(false)}>✕ Cerrar</button>
+            <button className="btn-sm" onClick={() => setSinAsigOpen(false)}><Icon n="close" /> Cerrar</button>
           </div>
           {sinAsignarItems.length === 0
-            ? <p className="muted" style={{ margin: '.2rem 0' }}>No hay equipos sin asignar. 🎉</p>
+            ? <p className="muted" style={{ margin: '.2rem 0' }}>No hay equipos sin asignar.</p>
             : <div className="table-wrap"><table className="tbl-compact">
                 <thead><tr><th>Equipo</th><th>Tipo</th><th>Estado</th><th></th></tr></thead>
                 <tbody>
@@ -600,11 +609,18 @@ export default function Inventario() {
       {/* ==== Tarjetas de datos faltantes (solo vista Equipos) ==== */}
       {view === 'equipos' && gapCards.length > 0 && (
         <div style={{ marginBottom: '.8rem' }}>
-          <div className="muted" style={{ fontSize: '.8rem', margin: '0 0 .35rem' }}>Datos faltantes — toca una tarjeta para ver el detalle</div>
+          <div className="gap-head">
+            <span className="muted" style={{ fontSize: '.8rem' }}>Datos faltantes — toca una tarjeta para ver el detalle</span>
+            <span className="gap-legend">
+              <span className="gl crit"><span className="dot" />Crítico</span>
+              <span className="gl warn"><span className="dot" />Medio</span>
+              <span className="gl info"><span className="dot" />Leve</span>
+            </span>
+          </div>
           <div className="kpi-grid compact">
             {gapCards.map((c) => (
-              <button key={c.key} className={`kpi ${gapSel === c.key ? 'active' : ''}`} onClick={() => setGapSel(gapSel === c.key ? null : c.key)}>
-                <div className="ico">{c.icon}</div>
+              <button key={c.key} className={`kpi gap-${c.sev} ${gapSel === c.key ? 'active' : ''}`} onClick={() => setGapSel(gapSel === c.key ? null : c.key)}>
+                <div className="ico"><Icon n={c.icon} /></div>
                 <div className="num">{c.n}</div>
                 <div className="lbl">{c.label}</div>
               </button>
@@ -620,13 +636,13 @@ export default function Inventario() {
               <div className="section open" style={{ marginTop: '.5rem' }}><div className="sec-body">
                 <div className="row" style={{ marginBottom: '.4rem' }}>
                   <strong>{card.label} · {card.n}</strong>
-                  <button className="btn-sm" onClick={() => setGapSel(null)}>✕ Cerrar</button>
+                  <button className="btn-sm" onClick={() => setGapSel(null)}><Icon n="close" /> Cerrar</button>
                 </div>
                 {card.kind === 'cases' ? (
                   <div>
                     {cases.map((cs) => (
                       <div key={cs.key} style={{ marginBottom: '.8rem' }}>
-                        <div style={{ background: 'rgba(255,190,60,.1)', border: '1px solid rgba(255,190,60,.35)', borderRadius: 8, padding: '.5rem .7rem', marginBottom: '.4rem', fontSize: '.85rem' }}>📌 {cs.nota}</div>
+                        <div style={{ background: 'rgba(255,190,60,.1)', border: '1px solid rgba(255,190,60,.35)', borderRadius: 8, padding: '.5rem .7rem', marginBottom: '.4rem', fontSize: '.85rem', display: 'flex', gap: '.4rem', alignItems: 'flex-start' }}><Icon n="pin" /> <span>{cs.nota}</span></div>
                         <div className="table-wrap"><table className="tbl-compact">
                           <thead><tr><th>Equipo</th><th>Serie</th><th>Asignado a</th><th>Cuenta Windows</th><th></th></tr></thead>
                           <tbody>{cs.items.map((e) => (
@@ -670,14 +686,14 @@ export default function Inventario() {
       {view === 'stock' && (
         <div>
           <div className="muted" style={{ fontSize: '.82rem', margin: '0 0 .6rem' }}>Stock disponible — unidades que no están asignadas a nadie, listas para entregar.</div>
-          <h4 className="det-sub">🖥️ Equipos sin asignar</h4>
-          {stockEquip.length === 0 && <p className="muted">No hay equipos sin asignar. 🎉</p>}
+          <h4 className="det-sub">Equipos sin asignar</h4>
+          {stockEquip.length === 0 && <p className="muted">No hay equipos sin asignar.</p>}
           {stockEquip.map((g) => {
             const isOpen = !!openStock[g.id]
             return (
               <div className={`section ${isOpen ? 'open' : ''}`} key={g.id} style={{ marginBottom: '.5rem' }}>
                 <button className="sec-head compact" onClick={() => setOpenStock((o) => ({ ...o, [g.id]: !o[g.id] }))}>
-                  <span className="ico">{g.icon || '📦'}</span>
+                  <span className="ico"><Icon n={sectionIconName(g.name)} /></span>
                   <span className="t"><strong>{g.name}</strong><br /><span className="muted">{g.n} disponible(s) en stock</span></span>
                   <span className="count">{g.n}</span><span className="chev">▾</span>
                 </button>
@@ -697,7 +713,7 @@ export default function Inventario() {
               </div>
             )
           })}
-          <h4 className="det-sub" style={{ marginTop: '1rem' }}>🖱️ Periféricos disponibles</h4>
+          <h4 className="det-sub" style={{ marginTop: '1rem' }}>Periféricos disponibles</h4>
           {periphs.length === 0 && <p className="muted">No hay periféricos registrados.</p>}
           {periphs.length > 0 && <div className="table-wrap"><table className="tbl-compact">
             <thead><tr><th>Periférico</th><th>Total</th><th>Asignados</th><th>Disponibles</th></tr></thead>
@@ -734,14 +750,14 @@ export default function Inventario() {
             return (
               <div className={`section ${isOpen ? 'open' : ''}`} key={p.id} style={{ marginBottom: '.7rem' }}>
                 <button className="sec-head compact" onClick={() => setOpenPeriph((o) => ({ ...o, [p.id]: !o[p.id] }))}>
-                  <span className="ico">🖱️</span>
+                  <span className="ico"><Icon n="mouse" /></span>
                   <span className="t"><strong>{p.name}</strong>{p.model ? ` · ${p.model}` : ''}<br />
                     <span className="muted">Total {p.total_qty} · Asignados {asg} · <span style={{ color: disp > 0 ? 'var(--lime)' : 'var(--danger)' }}>Disponibles {disp}</span></span></span>
                   <span className="count">{p.total_qty}</span><span className="chev">▾</span>
                 </button>
                 {isOpen && <div className="sec-body">
                   <div className="row" style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem', alignItems: 'center' }}>
-                    {p.buy_link ? <a className="btn-sm" href={p.buy_link} target="_blank" rel="noreferrer">🔗 Link de compra</a> : null}
+                    {p.buy_link ? <a className="btn-sm" href={p.buy_link} target="_blank" rel="noreferrer"><Icon n="link" /> Link de compra</a> : null}
                     <button className="btn-sm" onClick={() => setPeriphForm({ ...p })}>Editar</button>
                     <button className="btn-sm btn-danger" onClick={() => delPeriph(p)}>Eliminar</button>
                   </div>
@@ -798,7 +814,7 @@ export default function Inventario() {
         return (
           <div className={`section ${isOpen ? 'open' : ''}`} key={s.id} style={{ marginBottom: '.8rem' }} ref={(el) => { secRefs.current[s.id] = el }}>
             <button className="sec-head compact" onClick={() => setOpen((o) => ({ ...o, [s.id]: !o[s.id] }))}>
-              <span className="ico">{s.icon}</span>
+              <span className="ico"><Icon n={sectionIconName(s.name)} /></span>
               <span className="t"><strong>{s.name}</strong><br /><span className="muted">{all.length} equipo(s) · {s.assign_to === 'department' ? 'asignado a departamento' : 'asignado a usuario'}</span></span>
               <span className="count">{all.length}</span><span className="chev">▾</span>
             </button>
@@ -844,7 +860,7 @@ export default function Inventario() {
                           <td>{e.serial_number}</td>
                           <td>{e.location}</td>
                           <td>{s.assign_to === 'department'
-                            ? <span className="badge">🏢 {e.assigned_to_name || '—'}</span>
+                            ? <span className="badge"><Icon n="building" /> {e.assigned_to_name || '—'}</span>
                             : <>{e.assigned_to_name || <span className="muted">Sin asignar</span>}<br /><span className="muted">{e.assigned_to_email}</span></>}</td>
                           <td><span className="badge">{e.condition}</span></td>
                           {showAV && <td>{e.antivirus ? <span className={`badge ${(e.antivirus || '').toLowerCase().includes('activo') ? 's-approved' : (e.antivirus || '').toLowerCase().includes('inactivo') ? 's-rejected' : ''}`}>{e.antivirus}</span> : <span className="muted">—</span>}</td>}
@@ -932,8 +948,8 @@ export default function Inventario() {
                 {/* Asignación: elegible por registro (usuario o departamento) */}
                 <div style={{ gridColumn: '1 / -1' }}><label>¿A quién se asigna?</label>
                   <select value={assignMode} onChange={(e) => { setAssignMode(e.target.value); setManualAssign(false); setEdit({ ...edit, assigned_to_name: '', assigned_to_email: '' }) }}>
-                    <option value="user">👤 A un usuario</option>
-                    <option value="department">🏢 A un departamento</option>
+                    <option value="user">A un usuario</option>
+                    <option value="department">A un departamento</option>
                   </select>
                 </div>
                 {assignMode === 'department' ? (
@@ -957,7 +973,7 @@ export default function Inventario() {
                       {countryUsers.map((u) => <option key={u.id} value={u.email}>{(u.full_name || 'Sin nombre')} — {u.email}</option>)}
                       {edit.assigned_to_email && !countryUsers.some((u) => u.email === edit.assigned_to_email) &&
                         <option value={edit.assigned_to_email}>{edit.assigned_to_name || 'Actual'} — {edit.assigned_to_email} (actual)</option>}
-                      <option value="__manual__">✎ Escribir manualmente (externo)…</option>
+                      <option value="__manual__">Escribir manualmente (externo)…</option>
                     </select>
                     {!manualAssign && edit.assigned_to_email && <p className="muted" style={{ fontSize: '.74rem', margin: '.3rem 0 0' }}>Correo: {edit.assigned_to_email}</p>}
                   </div>
@@ -980,11 +996,10 @@ export default function Inventario() {
             <h3>{schemaEdit.id ? 'Editar tipo de equipo' : 'Nuevo tipo de equipo'}</h3>
             <div className="pf-fields">
               <div><label>Nombre del tipo</label><input value={schemaEdit.name} onChange={(e) => setSchemaEdit({ ...schemaEdit, name: e.target.value })} placeholder="Ej: Tablets" /></div>
-              <div><label>Ícono (emoji)</label><input value={schemaEdit.icon} onChange={(e) => setSchemaEdit({ ...schemaEdit, icon: e.target.value })} placeholder="💻" /></div>
               <div><label>¿A quién se asigna?</label>
                 <select value={schemaEdit.assign_to} onChange={(e) => setSchemaEdit({ ...schemaEdit, assign_to: e.target.value })}>
-                  <option value="user">👤 A un usuario</option>
-                  <option value="department">🏢 A un departamento</option>
+                  <option value="user">A un usuario</option>
+                  <option value="department">A un departamento</option>
                 </select></div>
             </div>
 
@@ -1002,7 +1017,7 @@ export default function Inventario() {
                 </select>
                 {f.type === 'select' && <input style={{ flex: '1 1 160px' }} placeholder="Opciones separadas por coma" value={f.optionsText || ''} onChange={(e) => { const fs = [...schemaEdit.fields]; fs[i] = { ...f, optionsText: e.target.value }; setSchemaEdit({ ...schemaEdit, fields: fs }) }} />}
                 <label className="fld-req" title="Campo obligatorio"><input type="checkbox" checked={!!f.required} onChange={(e) => { const fs = [...schemaEdit.fields]; fs[i] = { ...f, required: e.target.checked }; setSchemaEdit({ ...schemaEdit, fields: fs }) }} /> Obligatorio</label>
-                <button className="btn-sm btn-danger" onClick={() => setSchemaEdit({ ...schemaEdit, fields: schemaEdit.fields.filter((_, j) => j !== i) })}>✕</button>
+                <button className="btn-sm btn-danger" onClick={() => setSchemaEdit({ ...schemaEdit, fields: schemaEdit.fields.filter((_, j) => j !== i) })}><Icon n="close" /></button>
               </div>
             ))}
             <div style={{ marginTop: '.5rem' }}><button className="btn-sm" onClick={() => setSchemaEdit({ ...schemaEdit, fields: [...(schemaEdit.fields || []), { label: '', type: 'text' }] })}>＋ Agregar dato</button></div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { _bindImage } from '../lib/ui'
+import { Icon } from '../lib/icons'
 
 // Lightbox global: muestra una imagen ampliada. Se cierra al hacer clic o con Escape.
 export default function ImageViewer() {
@@ -17,7 +18,7 @@ export default function ImageViewer() {
   return (
     <div className="img-viewer" onClick={() => setUrl(null)}>
       <img src={url} alt="" onClick={(e) => e.stopPropagation()} />
-      <button className="img-viewer-x" onClick={() => setUrl(null)} title="Cerrar">✕</button>
+      <button className="img-viewer-x" onClick={() => setUrl(null)} title="Cerrar"><Icon n="close" /></button>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { confirmDialog, alertDialog } from '../lib/ui'
+import { Icon } from '../lib/icons'
 
 const BUCKET = 'manuales'
 const fmtSize = (n) => {
@@ -12,12 +13,8 @@ const fmtSize = (n) => {
 }
 const iconFor = (m, name = '') => {
   const s = (m + ' ' + name).toLowerCase()
-  if (s.includes('pdf')) return '📕'
-  if (s.includes('word') || s.includes('doc')) return '📘'
-  if (s.includes('sheet') || s.includes('excel') || s.includes('xls') || s.includes('csv')) return '📗'
-  if (s.includes('presentation') || s.includes('ppt')) return '📙'
-  if (s.includes('image')) return '🖼️'
-  return '📄'
+  if (s.includes('image')) return 'image'
+  return 'file'
 }
 const safeName = (n) => (n || 'archivo').replace(/[^\w.\-]+/g, '_')
 
@@ -101,13 +98,12 @@ export default function Manuales() {
 
       {/* Filtro por categoría */}
       <div className="kpi-grid compact kpi-sm">
-        <button className={`kpi kpi-all ${!cat ? 'active' : ''}`} onClick={() => setCat('')}>
-          <span className="ico" style={{ fontSize: '1.3rem' }}>📚</span>
-          <div><div className="num">{rows.length}</div><div className="lbl">Todos</div></div>
+        <button className={`kpi ${!cat ? 'active' : ''}`} onClick={() => setCat('')}>
+          <div className="ico"><Icon n="book" /></div><div className="num">{rows.length}</div><div className="lbl">Todos</div>
         </button>
         {cats.map((c) => (
           <button key={c} className={`kpi ${cat === c ? 'active' : ''}`} onClick={() => setCat(cat === c ? '' : c)}>
-            <div className="ico">🗂️</div><div className="num">{rows.filter((r) => (r.category || 'General') === c).length}</div><div className="lbl">{c}</div>
+            <div className="ico"><Icon n="folder" /></div><div className="num">{rows.filter((r) => (r.category || 'General') === c).length}</div><div className="lbl">{c}</div>
           </button>
         ))}
       </div>
@@ -117,14 +113,14 @@ export default function Manuales() {
       <div className="man-grid">
         {data.map((m) => (
           <div className="man-card" key={m.id}>
-            <div className="man-ico">{iconFor(m.mime, m.file_name)}</div>
+            <div className="man-ico"><Icon n={iconFor(m.mime, m.file_name)} /></div>
             <div className="man-body">
               <strong>{m.title}</strong>
               {m.description ? <p className="muted">{m.description}</p> : null}
               <div className="man-meta"><span className="badge">{m.category || 'General'}</span>{m.size ? <span className="muted"> · {fmtSize(m.size)}</span> : null}</div>
               <div className="man-actions">
-                <a className="btn-sm" href={publicUrl(m.file_path)} target="_blank" rel="noreferrer">👁 Ver</a>
-                <button className="btn-sm btn-lime" type="button" onClick={() => downloadFile(m)}>⬇ Descargar</button>
+                <a className="btn-sm" href={publicUrl(m.file_path)} target="_blank" rel="noreferrer"><Icon n="eye" /> Ver</a>
+                <button className="btn-sm btn-lime" type="button" onClick={() => downloadFile(m)}><Icon n="download" /> Descargar</button>
                 {canManage && <button className="btn-sm btn-danger" onClick={() => del(m)}>Eliminar</button>}
               </div>
             </div>
@@ -145,7 +141,7 @@ export default function Manuales() {
             <textarea style={{ width: '100%', minHeight: 60 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Breve resumen del contenido." />
             <label style={{ marginTop: '.6rem' }}>Archivo <span className="muted">(PDF, Word, Excel, imagen…)</span></label>
             <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,image/*,application/pdf" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} />
-            {form.file && <p className="muted" style={{ margin: '.3rem 0 0' }}>{iconFor(form.file.type, form.file.name)} {form.file.name} · {fmtSize(form.file.size)}</p>}
+            {form.file && <p className="muted" style={{ margin: '.3rem 0 0' }}><Icon n={iconFor(form.file.type, form.file.name)} /> {form.file.name} · {fmtSize(form.file.size)}</p>}
             <div className="modal-actions">
               <button className="btn" onClick={() => setForm(null)} disabled={busy}>Cancelar</button>
               <button className="btn btn-primary" onClick={submit} disabled={busy}>{busy ? 'Subiendo…' : 'Subir'}</button>

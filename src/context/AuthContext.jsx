@@ -9,22 +9,23 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [perms, setPerms] = useState({})
   const [roleLabel, setRoleLabel] = useState('')
+  const [managedDepts, setManagedDepts] = useState([]) // departamentos donde el usuario es gerente de área
   const [loading, setLoading] = useState(true)
 
   const loadProfile = useCallback(async (uid) => {
-    if (!uid) { setProfile(null); setPerms({}); setRoleLabel(''); return }
+    if (!uid) { setProfile(null); setPerms({}); setRoleLabel(''); setManagedDepts([]); return }
     const { data } = await supabase.from('profiles')
       .select('id, role, full_name, email, department, phone, inventory_access, avatar_url, active, country, app_access').eq('id', uid).single()
     // Cuenta deshabilitada: sin acceso (persona que ya no forma parte de la empresa)
     if (data && data.active === false) {
-      setProfile(null); setPerms({}); setRoleLabel('')
+      setProfile(null); setPerms({}); setRoleLabel(''); setManagedDepts([])
       alertDialog('Tu cuenta está deshabilitada. Contacta con el administrador si crees que es un error.')
       await supabase.auth.signOut()
       return
     }
     // Cuenta solo de organización (sin acceso a la app): existe para inventario/directorio, no para iniciar sesión
     if (data && data.app_access === false) {
-      setProfile(null); setPerms({}); setRoleLabel('')
+      setProfile(null); setPerms({}); setRoleLabel(''); setManagedDepts([])
       alertDialog('Esta cuenta no tiene acceso a la aplicación.')
       await supabase.auth.signOut()
       return
@@ -36,6 +37,9 @@ export function AuthProvider({ children }) {
     const p = r?.permissions ?? (roleKey === 'admin' ? { full_admin: true } : {})
     setPerms(p)
     setRoleLabel(r?.label ?? ({ user: 'Usuario', pedidos: 'Gestora de pedidos', admin: 'Administrador' }[roleKey] || roleKey))
+    // Departamentos que gerencia (2ª/3ª llave de las compras de su área)
+    const { data: md } = await supabase.from('departments').select('name').eq('manager_id', uid)
+    setManagedDepts((md || []).map((d) => d.name))
   }, [])
 
   useEffect(() => {
@@ -69,6 +73,8 @@ export function AuthProvider({ children }) {
     canManageInventory: can('manage_inventory'),
     canManageUsers: can('manage_users'),
     canManageSupport: can('manage_support'),
+    managedDepts,
+    isAreaManager: managedDepts.length > 0,
     hasInventory: full || perms.manage_inventory === true || profile?.inventory_access === true,
     refreshProfile: () => loadProfile(session?.user?.id),
     signInMicrosoft: async () => {

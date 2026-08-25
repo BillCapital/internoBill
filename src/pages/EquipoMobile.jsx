@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { Icon } from '../lib/icons'
 
 const fmtD = (d) => new Date(d + 'T00:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })
 const fmtShort = (iso) => new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -80,8 +81,8 @@ export default function EquipoMobile() {
       {eq.image_url && <img className="m-photo" src={eq.image_url} alt="" />}
 
       <div className="m-cards">
-        <div className="m-card"><div className="m-k">📅 Próximo mantenimiento</div><div className="m-v">{nextMaint ? fmtD(nextMaint) : '—'}</div></div>
-        <div className="m-card"><div className="m-k">🛠️ Último mantenimiento</div><div className="m-v">{lastMaint ? fmtShort(lastMaint) : '—'}</div></div>
+        <div className="m-card"><div className="m-k"><Icon n="calendar" /> Próximo mantenimiento</div><div className="m-v">{nextMaint ? fmtD(nextMaint) : '—'}</div></div>
+        <div className="m-card"><div className="m-k"><Icon n="wrench" /> Último mantenimiento</div><div className="m-v">{lastMaint ? fmtShort(lastMaint) : '—'}</div></div>
       </div>
 
       <div className="m-sec">Datos del equipo</div>
@@ -100,7 +101,7 @@ export default function EquipoMobile() {
             <div className="m-row" key={a.key}>
               <span className="m-rk">{a.label}</span>
               <span className="m-rv">
-                {st.on ? '✅ Habilitado' : '—'}
+                {st.on ? <><Icon n="check" /> Habilitado</> : '—'}
                 {a.accounts && (st.accounts || []).length ? <span className="m-chips">{(st.accounts || []).map((x) => <span key={x}>{x}</span>)}</span> : null}
               </span>
             </div>

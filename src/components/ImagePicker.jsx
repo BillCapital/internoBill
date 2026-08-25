@@ -1,5 +1,6 @@
 import { fileToResizedDataURL, readClipboardImage, imageFromPasteEvent } from '../lib/img'
 import { alertDialog, viewImage } from '../lib/ui'
+import { Icon } from '../lib/icons'
 
 // Recuadro para elegir/pegar una imagen. Soporta: archivo, botón "Pegar" (portapapeles)
 // y Ctrl+V directo sobre el recuadro. Llama onChange(dataUrl) o onChange('') al quitar.
@@ -19,9 +20,9 @@ export default function ImagePicker({ value, onChange, max = 480, zoom = false }
     <div className="img-pick" tabIndex={0} onPaste={onPaste} title="Puedes pegar una imagen con Ctrl+V">
       {value
         ? <img className="img-thumb" src={value} alt="" onClick={zoom ? () => viewImage(value) : undefined} style={zoom ? { cursor: 'zoom-in' } : undefined} />
-        : <div className="img-ph">📷</div>}
+        : <div className="img-ph"><Icon n="camera" /></div>}
       <input type="file" accept="image/*" onChange={(e) => { setFromFile(e.target.files?.[0]); e.target.value = '' }} />
-      <button className="btn-sm" type="button" onClick={pasteBtn}>📋 Pegar</button>
+      <button className="btn-sm" type="button" onClick={pasteBtn}><Icon n="clipboard" /> Pegar</button>
       {value && <button className="btn-sm btn-danger" type="button" onClick={() => onChange('')}>Quitar</button>}
     </div>
   )

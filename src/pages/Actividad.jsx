@@ -3,11 +3,12 @@ import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { confirmDialog, alertDialog } from '../lib/ui'
+import { Icon } from '../lib/icons'
 
-const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 const KINDS = ['Solicitud', 'Reserva', 'Equipo']
 const badgeFor = (k) => k === 'Reserva' ? 's-pending' : k === 'Equipo' ? 's-prog' : 's-approved'
-const ICON_FOR = { 'Reserva': '📅', 'Equipo': '💻', 'Solicitud': '📦' }
+const ICON_FOR = { 'Reserva': 'calendar', 'Equipo': 'monitor', 'Solicitud': 'box' }
 
 export default function Actividad() {
   const { isSuper } = useAuth()
@@ -35,11 +36,11 @@ export default function Actividad() {
       </div></div>
 
       <div className="kpi-grid compact">
-        <button className={`kpi kpi-all`} onClick={() => setKind(null)}><span className="ico" style={{ fontSize: '1.3rem' }}>🗂️</span>
+        <button className={`kpi kpi-all`} onClick={() => setKind(null)}><span className="ico"><Icon n="folder" /></span>
           <div><div className="num">{rows.length}</div><div className="lbl">Movimientos (31 días)</div></div></button>
         {KINDS.map((k) => (
           <button key={k} className={`kpi ${kind === k ? 'active' : ''}`} onClick={() => setKind(kind === k ? null : k)}>
-            <div className="ico">{ICON_FOR[k] || '📦'}</div><div className="num">{counts[k] || 0}</div><div className="lbl">{k === 'Equipo' ? 'Equipos' : k + 's'}</div>
+            <div className="ico"><Icon n={ICON_FOR[k] || 'box'} /></div><div className="num">{counts[k] || 0}</div><div className="lbl">{k === 'Equipo' ? 'Equipos' : k + 's'}</div>
           </button>
         ))}
       </div>

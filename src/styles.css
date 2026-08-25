@@ -1,6 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 :root{
-  --bg:#15171d; --panel:#1e222b; --panel2:#262b36; --soft:#20242e; --topbar:#1f2547; --sidebar:#181b22;
-  --line:#2c313d; --lime:#a6e04f; --lav:#b3a6ef; --text:#eef0f6; --muted:#9298a9; --danger:#ff6b6b; --radius:14px;
+  /* Rediseño 2026 · oscuro (colores BillCapital, oficio Adminator) */
+  --bg:#0f1118; --panel:#181b24; --panel2:#20242f; --soft:#1e222d; --topbar:#181b24; --sidebar:#161922;
+  --line:#282d3a; --lime:#a6e04f; --accent-ink:#12210a; --lav:#b3a6ef; --text:#eef0f6; --muted:#8b91a4; --danger:#ff6b6b; --radius:14px;
+  --ok:#34d399; --warn:#f5b13d; --bad:#ff6b6b; --info:#5b9bd5;
 }
 *{box-sizing:border-box}
 html,body{overflow-x:clip}
@@ -38,8 +42,8 @@ button{font-family:inherit;cursor:pointer}
 .notif-item:hover{background:var(--panel2)}
 .role-badge{padding:.3rem .7rem;border-radius:999px;font-size:.76rem;font-weight:600;white-space:nowrap}
 .role-badge.admin{background:var(--lime);color:#12210a}.role-badge.pedidos{background:#f4cd78;color:#3a2c08}.role-badge.user{background:var(--lav);color:#231b45}
-.linkbtn{background:transparent;border:1px solid #3a4266;color:#e7e9f4;border-radius:10px;padding:.45rem .7rem;font-size:.82rem}
-.linkbtn:hover{background:#28305a}
+.linkbtn{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:.45rem .7rem;font-size:.82rem}
+.linkbtn:hover{background:var(--soft)}
 
 /* Layout */
 .layout{display:flex;align-items:flex-start}
@@ -60,7 +64,12 @@ button{font-family:inherit;cursor:pointer}
 .side-foot{margin-top:auto;padding-top:.6rem}
 .sb-backdrop{display:none}
 
-.content{flex:1;min-width:0;padding:1.4rem 1.4rem 3rem}
+.content{flex:1;min-width:0;padding:1.4rem 1.4rem 3rem;display:flex;flex-direction:column;min-height:calc(100vh - 57px)}
+/* Los paneles de "Registro" (ActivityLog) se anclan al pie de la página.
+   Se usa una clase (no :has()) para no recalcular estilos en cada frame de
+   la animación de la barra lateral. */
+.content > div{flex:1 0 auto;display:flex;flex-direction:column;min-width:0}
+.log-foot{margin-top:auto}
 .page-head h2{font-size:1.35rem;margin-bottom:.1rem}
 .page-head .row{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap}
 
@@ -75,11 +84,34 @@ button{font-family:inherit;cursor:pointer}
 .kpi-all{grid-column:1/-1;display:flex;align-items:center;gap:1rem;background:linear-gradient(100deg,#232a52,#2f3873);border:1px solid #35407a;color:#fff}
 .kpi-all .num{font-size:2rem}.kpi-all .lbl{color:#c9cee6}
 /* Inventario compacto */
-.kpi-grid.compact{grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:.55rem;margin:.8rem 0 1rem}
-.kpi-grid.compact .kpi{padding:.5rem .65rem}
-.kpi-grid.compact .kpi .ico{font-size:1.05rem}
-.kpi-grid.compact .kpi .num{font-size:1.25rem;margin-top:.05rem}
-.kpi-grid.compact .kpi .lbl{font-size:.75rem}
+.kpi-grid.compact{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:.45rem;margin:.8rem 0 1rem}
+.kpi-grid.compact .kpi{padding:.4rem .5rem}
+.kpi-grid.compact .kpi .ico{font-size:.95rem}
+.kpi-grid.compact .kpi .num{font-size:1.05rem;margin-top:.02rem}
+.kpi-grid.compact .kpi .lbl{font-size:.66rem;line-height:1.2;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+
+/* Datos faltantes — tarjetas coloreadas por severidad (proporción de flota afectada) */
+.gap-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin:0 0 .35rem}
+.gap-legend{display:inline-flex;gap:.7rem;font-size:.7rem;color:var(--muted)}
+.gap-legend .gl{display:inline-flex;align-items:center;gap:.3rem}
+.gap-legend .dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block}
+.gap-legend .crit .dot{background:var(--bad)}
+.gap-legend .warn .dot{background:var(--warn)}
+.gap-legend .info .dot{background:var(--info)}
+.kpi.gap-crit,.kpi.gap-warn,.kpi.gap-info{padding-left:.65rem}
+.kpi.gap-crit::before,.kpi.gap-warn::before,.kpi.gap-info::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+.kpi.gap-crit{border-color:color-mix(in srgb,var(--bad) 55%,var(--line));background:color-mix(in srgb,var(--bad) 9%,var(--panel))}
+.kpi.gap-crit::before{background:var(--bad)}
+.kpi.gap-crit .num,.kpi.gap-crit .ico{color:var(--bad)}
+.kpi.gap-warn{border-color:color-mix(in srgb,var(--warn) 50%,var(--line));background:color-mix(in srgb,var(--warn) 8%,var(--panel))}
+.kpi.gap-warn::before{background:var(--warn)}
+.kpi.gap-warn .num,.kpi.gap-warn .ico{color:var(--warn)}
+.kpi.gap-info{border-color:color-mix(in srgb,var(--info) 45%,var(--line))}
+.kpi.gap-info::before{background:var(--info)}
+.kpi.gap-info .num,.kpi.gap-info .ico{color:var(--info)}
+/* El estado activo (selección) manda por encima del color de severidad */
+.kpi.gap-crit.active,.kpi.gap-warn.active,.kpi.gap-info.active{border-color:var(--lime)}
+.kpi.gap-crit.active::before,.kpi.gap-warn.active::before,.kpi.gap-info.active::before{background:var(--lime)}
 .kpi-grid.compact .kpi .sub{display:none}
 .kpi-grid.compact .kpi-all{padding:.55rem .8rem}
 .kpi-grid.compact .kpi-all .num{font-size:1.4rem}
@@ -135,8 +167,8 @@ button{font-family:inherit;cursor:pointer}
 .mini.ok{background:var(--lime);color:#12210a}.mini.no{background:#4a1f1f;color:#ff9b9b}
 body.light .slot.pending{background:#fff2d6;color:#a5741a}
 /* Sidebar colapsable */
-.hamb{width:40px;height:40px;border-radius:11px;background:transparent;border:1px solid #3a4266;color:#e7e9f4;font-size:1.2rem;margin-right:.2rem;flex:none}
-.hamb:hover{background:#28305a}
+.hamb{width:40px;height:40px;border-radius:11px;background:transparent;border:1px solid var(--line);color:var(--text);font-size:1.2rem;margin-right:.2rem;flex:none}
+.hamb:hover{background:var(--soft)}
 body.sb-collapsed .sidebar{width:64px;padding:1rem .5rem}
 body.sb-collapsed .menu-item{justify-content:center;padding:.6rem}
 body.sb-collapsed .mlbl,body.sb-collapsed .side-user .nm,body.sb-collapsed .side-user .rl,body.sb-collapsed .side-user .arrow{display:none}
@@ -248,7 +280,7 @@ tr:last-child td{border-bottom:none}
 .err{color:var(--danger);font-size:.85rem;margin-top:.5rem}
 
 /* MODO CLARO */
-body.light{ --bg:#f4f5fa; --panel:#ffffff; --panel2:#eef0f6; --soft:#eef0f6; --sidebar:#fbfbfe; --line:#e4e6f0; --text:#1c2342; --muted:#6b7290; --danger:#dc2626; }
+body.light{ --bg:#d5d9e3; --panel:#e9ecf3; --panel2:#dce0ea; --soft:#dce0ea; --topbar:#e6e9f1; --sidebar:#e6e9f1; --line:#c7cdda; --text:#141720; --muted:#535a6c; --danger:#b5302a; --lime:#436c17; --accent-ink:#ffffff; --ok:#2b8154; --warn:#8f5d12; --bad:#b5302a; --info:#2f6fb0; }
 body.light .login-wrap{background:radial-gradient(1000px 500px at 50% -10%, #dfe3f2 0%, #eef0f8 55%, #f4f5fa 100%)}
 body.light .role-btn{background:#f7f8fc}
 body.light .menu-item:hover,body.light .menu-item.active{background:#eef0f6}
@@ -403,7 +435,8 @@ body.light input:not([type=checkbox]):not([type=radio]),body.light select,body.l
 .country-tab:hover:not(:disabled){color:var(--text);border-color:var(--lime)}
 .country-tab.on{background:linear-gradient(180deg,rgba(183,239,78,.16),rgba(183,239,78,.06));border-color:var(--lime);color:var(--text)}
 .country-tab:disabled{opacity:.4;cursor:not-allowed}
-.country-tab .cflag{font-size:1.2rem;line-height:1}
+.country-tab .cflag{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600;letter-spacing:.03em;line-height:1;padding:.16rem .32rem;border-radius:5px;background:var(--soft);color:var(--muted)}
+.country-tab.on .cflag{background:var(--lime);color:var(--accent-ink)}
 /* Botón para revelar/ocultar contraseña en la sección de credenciales */
 .pass-eye{border:none;background:none;cursor:pointer;padding:0 .1rem;font-size:.9rem;line-height:1;opacity:.7}
 .pass-eye:hover{opacity:1}
@@ -1026,6 +1059,26 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .req-tech-tag{display:inline-block;font-size:.7rem;background:rgba(245,158,11,.15);color:#b45309;
   border:1px solid rgba(245,158,11,.4);border-radius:.4rem;padding:0 .35rem;margin-left:.35rem}
 
+/* Panel de firmas — vista total de autorizaciones (admin/gestión) */
+.signers-panel{border:1px solid var(--line);border-radius:.6rem;background:var(--soft);margin:.3rem 0 .6rem;overflow:hidden}
+.sp-head{display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;border-bottom:1px solid var(--line)}
+.sp-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.sp-count{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.8rem;font-weight:700;color:var(--text)}
+.sp-list{display:flex;flex-direction:column}
+.sp-row{display:flex;align-items:center;gap:.55rem;padding:.45rem .75rem;font-size:.85rem}
+.sp-row + .sp-row{border-top:1px solid var(--line)}
+.sp-ico{display:inline-flex;width:1.4rem;height:1.4rem;align-items:center;justify-content:center;border-radius:999px;flex:0 0 auto}
+.sp-row .sp-ico .licon{width:.9rem;height:.9rem}
+.sp-name{flex:1;color:var(--text)}
+.sp-state{font-size:.72rem;font-weight:600;padding:.1rem .5rem;border-radius:999px;white-space:nowrap}
+.sp-row.ok .sp-ico{background:rgba(34,197,94,.16);color:var(--ok)}
+.sp-row.ok .sp-state{background:rgba(34,197,94,.14);color:var(--ok)}
+.sp-row.bad .sp-ico{background:rgba(220,80,80,.16);color:var(--bad)}
+.sp-row.bad .sp-state{background:rgba(220,80,80,.14);color:var(--bad)}
+.sp-row.wait .sp-ico{background:var(--panel2);color:var(--muted)}
+.sp-row.wait .sp-state{background:var(--panel2);color:var(--muted)}
+.sp-row.wait .sp-name{color:var(--muted)}
+
 /* Sección "Información faltante" en Usuarios */
 .miss-block{margin:.2rem 0 .4rem}
 .miss-title{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin:.1rem 0 .35rem}
@@ -1040,3 +1093,167 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .man-meta{display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;margin-bottom:.45rem}
 .man-actions{display:flex;gap:.4rem;flex-wrap:wrap}
 .man-actions a.btn-sm{text-decoration:none}
+
+/* ================= REDISEÑO 2026 · tipografía + componentes ================= */
+body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif}
+h1,h2,h3{font-family:'Inter Tight','Inter',sans-serif;letter-spacing:-.02em}
+.page-head h2{font-size:1.8rem;font-weight:800}
+.num,.stat-row .num{font-family:'Inter Tight','Inter',sans-serif;font-variant-numeric:tabular-nums}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+
+/* Topbar plano (sin degradado índigo) + marca legible en ambos temas */
+.topbar{background:var(--topbar);border-bottom:1px solid var(--line);box-shadow:none}
+.brand,.brand-name{color:var(--text)}
+.brand-mark{color:var(--accent-ink)}
+.iconbtn{background:var(--panel2);color:var(--text)}
+.iconbtn:hover{background:var(--soft)}
+
+/* Sidebar · ítem activo con realce redondeado en acento (estilo Adminator) */
+.menu-item{border-radius:11px}
+.menu-item:hover{background:var(--panel2);color:var(--text)}
+.menu-item.active{background:color-mix(in srgb,var(--lime) 15%, transparent);color:var(--lime);font-weight:600}
+
+/* KPI · números grandes Inter Tight, borde fino de 1px, sin barra lateral */
+.kpi{border-width:1px}
+.kpi:hover{transform:none;border-color:color-mix(in srgb,var(--lime) 55%, var(--line))}
+.kpi .num{font-family:'Inter Tight','Inter',sans-serif;font-weight:800}
+.kpi-grid .kpi .num{font-size:2.2rem}
+.kpi-grid.compact .kpi .num{font-size:1.35rem}
+.kpi-grid.kpi-sm .kpi .num{font-size:1.35rem}
+.kpi.active{box-shadow:inset 0 0 0 1px var(--lime)}
+.kpi.active::after{display:none}
+.kpi-all{background:var(--panel);border:1px solid var(--line);color:var(--text)}
+.kpi-all .lbl{color:var(--muted)}
+/* La antigua barra ancha (kpi-all) ahora es una tarjeta normal, del mismo tamaño que el resto */
+.kpi-grid .kpi-all{grid-column:auto;display:block;gap:0}
+.kpi-grid .kpi-all>div{display:block}
+.kpi-grid .kpi-all .ico{display:block;font-size:.95rem !important}
+.kpi-grid .kpi-all .num{font-size:1.35rem;margin-top:.02rem;background:none;-webkit-text-fill-color:var(--text);color:var(--text)}
+body.light .kpi-grid .kpi-all .num{-webkit-text-fill-color:var(--text);color:var(--text);background:none}
+.kpi-grid .kpi-all .lbl{font-size:.66rem;line-height:1.2}
+.kpi.kpi-warn .num{color:var(--warn)}
+/* Íconos de línea reutilizables (componente Icon) · sin emojis */
+.licon{width:1.25rem;height:1.25rem;display:block;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.kpi .ico{color:var(--muted)}
+.kpi .ico .licon{width:1.15rem;height:1.15rem}
+.kpi.active .ico,.kpi.active .ico .licon{color:var(--lime)}
+.kpi.kpi-warn .ico,.kpi.kpi-warn .ico .licon{color:var(--warn)}
+.act-card .ico .licon{width:1.6rem;height:1.6rem;stroke:var(--lime)}
+.miss-title .licon,.pending-head .licon{display:inline-block;vertical-align:-.15em;width:1rem;height:1rem}
+
+/* Cabeceras de tabla · mono mayúsculas (eyebrow) */
+.usr-cards thead th{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+/* Botón primario · texto de acento según tema */
+.btn{border-radius:10px}
+.btn-primary,.btn-lime{background:var(--lime);color:var(--accent-ink);border-color:var(--lime)}
+.role-badge.admin{color:var(--accent-ink)}
+
+/* Tarjetas de acción del Inicio · borde fino */
+.act-card{border-width:1px}
+.act-card:hover{transform:none;border-color:color-mix(in srgb,var(--lime) 55%, var(--line))}
+.act-card .ico svg{width:26px;height:26px;stroke:var(--lime);stroke-width:1.75;fill:none;stroke-linecap:round;stroke-linejoin:round;display:block}
+
+/* Íconos de línea del menú lateral */
+.menu-item .mi{display:inline-flex;align-items:center;justify-content:center;width:1.4rem}
+.menu-item .mi svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.75;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.menu-item.active .mi svg{stroke:var(--lime)}
+/* Íconos de línea en la barra superior */
+.iconbtn svg,.hamb svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.75;fill:none;stroke-linecap:round;stroke-linejoin:round;display:block}
+.hamb svg{width:22px;height:22px}
+@media (max-width:760px){.iconbtn svg,.hamb svg{width:18px;height:18px}}
+
+/* ================= SEGUNDO PASE · componentes de todos los apartados ================= */
+
+/* Menús desplegables (select) con flecha propia y radio consistente */
+select{appearance:none;-webkit-appearance:none;-moz-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b91a4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right .65rem center;padding-right:2.1rem}
+input:not([type=checkbox]):not([type=radio]),select,textarea{border-radius:10px}
+
+/* Pills de estado con punto de color (como el prototipo) */
+.badge{display:inline-flex;align-items:center;gap:.42rem;line-height:1.45}
+.s-open::before,.s-pending::before,.s-prog::before,.s-review::before,
+.s-solved::before,.s-approved::before,.s-delivered::before,.s-closed::before,.s-rejected::before{
+  content:"";width:.44rem;height:.44rem;border-radius:50%;background:currentColor;flex:none}
+
+/* Tarjetas y listas · borde fino de 1px, hover y contadores por token */
+.conv,.section{border-width:1px}
+.sec-head:hover,.cv-head:hover{background:var(--soft)}
+.sec-head .count{background:var(--soft)}
+.sec-head .t strong,.cv-head .t strong{font-family:'Inter Tight','Inter',sans-serif}
+
+/* Segmentos / pestañas · texto de acento correcto en ambos temas */
+.seg-btn.on{color:var(--accent-ink)}
+.slot:hover{color:var(--accent-ink)}
+.country-tab.on{color:var(--text)}
+/* Pestañas con ícono de línea */
+.seg-btn{display:inline-flex;align-items:center;gap:.4rem}
+.seg-btn .licon{width:1rem;height:1rem}
+.btn .licon,.btn-sm .licon{width:1rem;height:1rem;display:inline-block;vertical-align:-.15em}
+/* Íconos de línea dentro de botones/celdas de acción */
+.notif-item .ni{display:inline-flex;align-items:center;justify-content:center}
+.notif-item .ni .licon{width:1.1rem;height:1.1rem;color:var(--muted)}
+.notif-x{display:inline-flex;align-items:center;justify-content:center}
+.notif-x .licon{width:.95rem;height:.95rem}
+td.actions .licon,.actions .licon{width:1rem;height:1rem;display:inline-block;vertical-align:-.15em}
+/* Íconos de línea inline (badges, chips, etiquetas, subtítulos, opciones de menú, tarjetas) */
+.badge .licon,.chip .licon,label .licon,.det-sub .licon,.req-tech-tag .licon,.twokey-note .licon,.cart-head .licon,.man-meta .licon,.sc-t .licon,.m-k .licon,.pf-field .lock .licon{width:.95rem;height:.95rem;display:inline-block;vertical-align:-.15em}
+.man-ico .licon{width:1.6rem;height:1.6rem}
+.sc-ico .licon{width:1.3rem;height:1.3rem}
+.emo .licon{width:1rem;height:1rem;display:block}
+.pass-eye .licon,.cart-x .licon,.car-del .licon,.notif-x .licon{width:1rem;height:1rem}
+.img-ph .licon,.prod-ph .licon{width:1.8rem;height:1.8rem;opacity:.6}
+.stat-card .sc-ico .licon,.det-toggle .licon{width:1.2rem;height:1.2rem}
+
+/* Modal ancho (Tipos de equipo) y columnas que respiran */
+.modal.modal-xl{max-width:920px}
+.tipos-table{table-layout:auto;width:100%;border-collapse:separate;border-spacing:0}
+.tipos-table th{text-align:left;vertical-align:middle;padding:.5rem .8rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;font-size:.66rem;letter-spacing:.06em;color:var(--muted)}
+.tipos-table td{vertical-align:middle;padding:.75rem .8rem;border-top:1px solid var(--line)}
+.tipos-table td:first-child,.tipos-table th:first-child{white-space:nowrap;min-width:160px}
+.tipos-table td:first-child .ico{display:inline-flex;vertical-align:middle;color:var(--muted);margin-right:.5rem}
+.tipos-table td:first-child .ico .licon{width:1.1rem;height:1.1rem}
+.tipos-table td:first-child strong{vertical-align:middle}
+.tipos-table td:first-child strong{font-family:'Inter Tight','Inter',sans-serif}
+.tipos-table td:nth-child(2),.tipos-table th:nth-child(2){white-space:nowrap;min-width:120px}
+.tipos-table td:nth-child(3){min-width:260px;line-height:1.55}
+.tipos-table td.actions{white-space:nowrap;text-align:right}
+.tipos-table td.actions .btn-sm{margin-left:.35rem}
+
+/* ================= TERCER PASE · pills de rol y avatares en tablas ================= */
+/* Tintes por rol (roles con nombre del sistema) */
+.role-badge.gerente_general,.role-badge.gerente-general{background:linear-gradient(90deg,#d9b23a,#f0d060);color:#2a2205}
+.role-badge.gerente_ti,.role-badge.gerente-ti{background:#9fd0ff;color:#0b2740}
+.role-badge.gerente_cobranza,.role-badge.gerente-cobranza{background:#f4cd78;color:#3a2c08}
+.role-badge.rrhh{background:#c7b6f5;color:#231b45}
+body.light .role-badge.gerente_ti{background:#2b6cb0;color:#fff}
+body.light .role-badge.rrhh{background:#6b4fd0;color:#fff}
+/* Avatar de iniciales · degradado sutil de marca (mismo en ambos temas) */
+.avatar{background:linear-gradient(135deg,#a6e04f,#b3a6ef);color:#14210a}
+.avatar.sm{background:linear-gradient(135deg,#a6e04f,#b3a6ef)}
+
+/* ================= Skeletons · estados de carga ================= */
+.sk{position:relative;overflow:hidden;background:var(--soft);border-radius:7px;display:block}
+.sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--line) 65%, transparent),transparent);
+  animation:sk-shimmer 1.25s infinite}
+@keyframes sk-shimmer{100%{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){.sk::after{animation:none}}
+.sk-ico{width:1.15rem;height:1.15rem;border-radius:6px}
+.sk-num{width:2.2rem;height:1.35rem;margin:.3rem 0 .35rem;border-radius:6px}
+.sk-lbl{width:70%;height:.6rem}
+.sk-line{height:.7rem;border-radius:6px}
+.sk-pill{width:5.5rem;height:1.5rem;border-radius:999px}
+.sk-row{display:flex;align-items:center;gap:.8rem}
+.sk-row .sk-txt{flex:1;display:flex;flex-direction:column;gap:.45rem}
+
+/* Resumen de filtros activos (Usuarios) */
+.filter-summary{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.2rem 0 .7rem .1rem;font-size:.85rem}
+.filter-summary .fs-label{color:var(--muted);text-transform:uppercase;font-size:.7rem;letter-spacing:.06em}
+.filter-summary .fs-chip{background:var(--lime);color:var(--accent-ink);border-radius:999px;padding:.2rem .65rem;font-weight:600;font-size:.78rem}
+.filter-summary .fs-count{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.78rem}
+.filter-summary .btn-sm{margin-left:auto}
+
+/* Loader del área de contenido al cambiar de página (barra lateral queda fija) */
+.content-loader{padding:.4rem .1rem}

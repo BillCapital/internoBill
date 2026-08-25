@@ -5,6 +5,7 @@ import { confirmDialog, alertDialog } from '../lib/ui'
 import AccesosClaves from './AccesosClaves'
 import SortControl from '../components/SortControl'
 import { orderDeptTree } from '../lib/depts'
+import { Icon } from '../lib/icons'
 
 const PERMS = [
   { key: 'manage_orders', label: 'Gestionar solicitudes', desc: 'Aprobar, rechazar y entregar pedidos' },
@@ -209,9 +210,9 @@ export default function Roles() {
       </div></div>
 
       <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.4rem', margin: '.2rem 0 .8rem', flexWrap: 'wrap' }}>
-        <button className={`seg-btn ${tab === 'creds' ? 'on' : ''}`} onClick={() => setTab('creds')}>🔐 Accesos y claves</button>
-        <button className={`seg-btn ${tab === 'roles' ? 'on' : ''}`} onClick={() => setTab('roles')}>🛡️ Roles y permisos</button>
-        <button className={`seg-btn ${tab === 'depts' ? 'on' : ''}`} onClick={() => setTab('depts')}>🏢 Departamentos</button>
+        <button className={`seg-btn ${tab === 'creds' ? 'on' : ''}`} onClick={() => setTab('creds')}><Icon n="lock" /> Accesos y claves</button>
+        <button className={`seg-btn ${tab === 'roles' ? 'on' : ''}`} onClick={() => setTab('roles')}><Icon n="shield" /> Roles y permisos</button>
+        <button className={`seg-btn ${tab === 'depts' ? 'on' : ''}`} onClick={() => setTab('depts')}><Icon n="building" /> Departamentos</button>
       </div>
 
       {/* ===================== DEPARTAMENTOS ===================== */}
@@ -219,14 +220,14 @@ export default function Roles() {
         <div>
           {/* Tarjetas de conteo */}
           <div className="kpi-grid compact" style={{ marginBottom: '.8rem' }}>
-            <div className="kpi kpi-all"><span className="ico" style={{ fontSize: '1.3rem' }}>👥</span><div><div className="num">{activeUsers.length}</div><div className="lbl">Usuarios activos</div></div></div>
+            <div className="kpi kpi-all"><span className="ico"><Icon n="users" /></span><div><div className="num">{activeUsers.length}</div><div className="lbl">Usuarios activos</div></div></div>
             {depts.map((d) => (
               <button key={d.id} className={`kpi ${openF[d.name] ? 'active' : ''}`} onClick={() => openFolder(d.name)} title={d.parent ? `Subdepartamento de ${d.parent}` : undefined}>
-                <div className="ico">{d.depth ? '↳' : '🏢'}</div><div className="num">{(usersByDept[d.name] || []).length}</div><div className="lbl">{d.name}{d.parent ? <><br /><span className="muted" style={{ fontSize: '.66rem' }}>de {d.parent}</span></> : null}</div>
+                <div className="ico">{d.depth ? <span style={{ fontSize: '1rem' }}>↳</span> : <Icon n="building" />}</div><div className="num">{(usersByDept[d.name] || []).length}</div><div className="lbl">{d.name}{d.parent ? <><br /><span className="muted" style={{ fontSize: '.66rem' }}>de {d.parent}</span></> : null}</div>
               </button>
             ))}
             <button className={`kpi ${openF[NONE] ? 'active' : ''}`} onClick={() => openFolder(NONE)}>
-              <div className="ico">🚫</div><div className="num">{unassigned.length}</div><div className="lbl">Sin departamento</div>
+              <div className="ico"><Icon n="ban" /></div><div className="num">{unassigned.length}</div><div className="lbl">Sin departamento</div>
             </button>
           </div>
 
@@ -234,16 +235,16 @@ export default function Roles() {
 
           {/* Carpetas por departamento */}
           {depts.map((d) => renderFolder({
-            fkey: d.name, icon: d.depth ? '↳' : '🏢', title: d.parent ? `${d.parent} › ${d.name}` : d.name, list: usersByDept[d.name] || [], canRemove: true,
+            fkey: d.name, icon: d.depth ? <span style={{ fontSize: '1rem' }}>↳</span> : <Icon n="building" />, title: d.parent ? `${d.parent} › ${d.name}` : d.name, list: usersByDept[d.name] || [], canRemove: true,
             headExtra: (
               <div style={{ marginBottom: '.5rem' }}>
                 <div className="row" style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap' }}>
-                  <button className="btn-sm" onClick={() => openManage(d)}>👥 Asignar usuarios</button>
-                  <button className="btn-sm" onClick={() => setDEdit({ id: d.id, name: d.name, sort: d.sort, parent: d.parent || '', manager_id: d.manager_id || '' })}>⚙️ Ajustes del departamento</button>
+                  <button className="btn-sm" onClick={() => openManage(d)}><Icon n="users" /> Asignar usuarios</button>
+                  <button className="btn-sm" onClick={() => setDEdit({ id: d.id, name: d.name, sort: d.sort, parent: d.parent || '', manager_id: d.manager_id || '' })}><Icon n="gear" /> Ajustes del departamento</button>
                 </div>
                 <div className="muted" style={{ fontSize: '.72rem', marginTop: '.35rem' }}>
                   {d.manager_id
-                    ? <>👤 Responsable del área: <strong>{(users.find((u) => u.id === d.manager_id)?.full_name) || (users.find((u) => u.id === d.manager_id)?.email) || '—'}</strong>.</>
+                    ? <>Responsable del área: <strong>{(users.find((u) => u.id === d.manager_id)?.full_name) || (users.find((u) => u.id === d.manager_id)?.email) || '—'}</strong>.</>
                     : <>Sin responsable de área asignado.</>}
                   {' '}Las compras de insumos tecnológicos las autorizan los gerentes de tecnología.
                 </div>
@@ -252,7 +253,7 @@ export default function Roles() {
           }))}
 
           {/* Carpeta: sin departamento */}
-          {renderFolder({ fkey: NONE, icon: '🚫', title: 'Sin departamento', list: unassigned, canAssign: true })}
+          {renderFolder({ fkey: NONE, icon: <Icon n="ban" />, title: 'Sin departamento', list: unassigned, canAssign: true })}
         </div>
       )}
 
@@ -317,7 +318,7 @@ export default function Roles() {
             {dEdit.id && <p className="muted" style={{ margin: '.4rem 0 0' }}>Al renombrar se actualizarán los usuarios y los insumos que usen este departamento.</p>}
             <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
               {dEdit.id
-                ? <button className="btn btn-danger" onClick={() => { const d = { id: dEdit.id, name: dEdit.name }; setDEdit(null); deleteDept(d) }}>🗑 Eliminar departamento</button>
+                ? <button className="btn btn-danger" onClick={() => { const d = { id: dEdit.id, name: dEdit.name }; setDEdit(null); deleteDept(d) }}><Icon n="trash" /> Eliminar departamento</button>
                 : <span />}
               <div style={{ display: 'flex', gap: '.5rem' }}>
                 <button className="btn" onClick={() => setDEdit(null)}>Cancelar</button>

@@ -1,13 +1,36 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { confirmDialog, alertDialog } from '../lib/ui'
 
+import { Icon } from '../lib/icons'
+
 const ROLE_LABEL = { user: 'Usuario', pedidos: 'Gestora de pedidos', admin: 'Administrador' }
-const KIND_ICON = { ok: '✅', bad: '⛔', msg: '💬', info: '🔔' }
+const KIND_ICON = { ok: 'check', bad: 'ban', msg: 'chat', info: 'bell' }
 const initials = (n) => (n || '?').split(' ').slice(0, 2).map((x) => x[0]).join('').toUpperCase()
+// Íconos de línea del menú lateral (rediseño 2026)
+const NAV_ICONS = {
+  home: <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /><path d="M9.5 21v-6h5v6" /></svg>,
+  calendar: <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg>,
+  box: <svg viewBox="0 0 24 24"><path d="M21 8 12 3 3 8l9 5 9-5Z" /><path d="M3 8v8l9 5 9-5V8" /><path d="M12 13v8" /></svg>,
+  book: <svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2Z" /><path d="M8 3v18" /></svg>,
+  chat: <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2Z" /></svg>,
+  inbox: <svg viewBox="0 0 24 24"><path d="M3 12h5l2 3h4l2-3h5" /><path d="M5 5h14l2 7v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Z" /></svg>,
+  grid: <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>,
+  users: <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" /><path d="M3.5 20c.5-3.3 3-5 5.5-5s5 1.7 5.5 5" /><path d="M17 8.5a3 3 0 0 1 0 5" /><path d="M18.5 20c-.2-2-1-3.4-2.3-4.3" /></svg>,
+  lock: <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>,
+  logout: <svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="M10 17l-5-5 5-5" /><path d="M5 12h11" /></svg>,
+}
+// Íconos de línea de la barra superior (rediseño 2026)
+const TOP_ICONS = {
+  menu: <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" /></svg>,
+  moon: <svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 7 7 0 1 0 20 14.5Z" /></svg>,
+  sun: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>,
+  bell: <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>,
+  megaphone: <svg viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h2l9 5V5L6 10H4a1 1 0 0 0-1 1Z" /><path d="M18 9a3 3 0 0 1 0 6" /></svg>,
+}
 const ago = (iso) => { const s = (Date.now() - new Date(iso)) / 1000; if (s < 60) return 'recién'; if (s < 3600) return `hace ${Math.floor(s / 60)} min`; if (s < 86400) return `hace ${Math.floor(s / 3600)} h`; return `hace ${Math.floor(s / 86400)} d` }
 
 export default function Layout() {
@@ -74,23 +97,23 @@ export default function Layout() {
   const name = profile?.full_name || profile?.email || '—'
   // Sección de usuario (todos) y sección de administración (según permisos)
   const userMenu = [
-    { to: '/', end: true, icon: '🏠', label: 'Inicio' },
-    { to: '/salas', icon: '📅', label: 'Salas', pill: counts.sal },
-    { to: '/solicitudes', icon: '📦', label: 'Solicitudes', pill: counts.sol },
-    { to: '/manuales', icon: '📚', label: 'Manuales' },
-    { to: '/soporte', icon: '💬', label: 'Soporte' },
+    { to: '/', end: true, icon: 'home', label: 'Inicio' },
+    { to: '/salas', icon: 'calendar', label: 'Salas', pill: counts.sal },
+    { to: '/solicitudes', icon: 'box', label: 'Solicitudes', pill: counts.sol },
+    { to: '/manuales', icon: 'book', label: 'Manuales' },
+    { to: '/soporte', icon: 'chat', label: 'Soporte' },
   ]
   const adminMenu = [
-    ...(canManageSupplies ? [{ to: '/insumos', icon: '📥', label: 'Insumos' }] : []),
-    ...(canManageInventory ? [{ to: '/inventario', icon: '🗂️', label: 'Inventario' }] : []),
-    ...(canManageUsers ? [{ to: '/usuarios', icon: '👥', label: 'Usuarios' }] : []),
-    ...(canManageUsers ? [{ to: '/roles', icon: '🔐', label: 'Accesos' }] : []),
+    ...(canManageSupplies ? [{ to: '/insumos', icon: 'inbox', label: 'Insumos' }] : []),
+    ...(canManageInventory ? [{ to: '/inventario', icon: 'grid', label: 'Inventario' }] : []),
+    ...(canManageUsers ? [{ to: '/usuarios', icon: 'users', label: 'Usuarios' }] : []),
+    ...(canManageUsers ? [{ to: '/roles', icon: 'lock', label: 'Accesos' }] : []),
   ]
   const closeIfMobile = () => { if (window.innerWidth <= 760) setCollapsed(true) }
   const MenuLink = (m) => (
     <NavLink key={m.to} to={m.to} end={m.end} onClick={closeIfMobile}
       className={({ isActive }) => `menu-item${isActive ? ' active' : ''}`} style={{ textDecoration: 'none' }}>
-      <span className="mi">{m.icon}</span><span className="mlbl">{m.label}</span>
+      <span className="mi">{NAV_ICONS[m.icon] || m.icon}</span><span className="mlbl">{m.label}</span>
       {m.pill ? <span className="pill">{m.pill}</span> : null}
     </NavLink>
   )
@@ -101,14 +124,14 @@ export default function Layout() {
     <div className="app" style={{ display: 'block' }}>
       <div className="topbar"><div className="topbar-inner">
         <div className="brand">
-          <button className="hamb" title="Menú" onClick={() => setCollapsed((c) => !c)}>☰</button>
+          <button className="hamb" title="Menú" onClick={() => setCollapsed((c) => !c)}>{TOP_ICONS.menu}</button>
           <span className="brand-mark">B</span><span className="brand-name">Billcapital</span>
         </div>
         <div className="top-right">
-          <button className="iconbtn" title="Modo claro / oscuro" onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? '🌙' : '☀️'}</button>
+          <button className="iconbtn" title="Modo claro / oscuro" onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? TOP_ICONS.moon : TOP_ICONS.sun}</button>
           <div className="notif-wrap" ref={notifRef}>
             <button className="iconbtn" title="Notificaciones" onClick={() => { setAnnOpen(false); setNotifOpen((v) => !v); if (!notifOpen) loadNotifs() }}>
-              🔔{notifs.length > 0 && <span className="notif-dot">{notifs.length}</span>}
+              {TOP_ICONS.bell}{notifs.length > 0 && <span className="notif-dot">{notifs.length}</span>}
             </button>
             {notifOpen && (
               <div className="notif-panel">
@@ -117,12 +140,12 @@ export default function Layout() {
                   ? <div className="notif-empty">Sin novedades por ahora.</div>
                   : notifs.map((n) => (
                     <div key={n.id} className="notif-item">
-                      <span className="ni">{KIND_ICON[n.kind] || '🔔'}</span>
+                      <span className="ni"><Icon n={KIND_ICON[n.kind] || 'bell'} /></span>
                       <button className="notif-body" onClick={() => goNotif(n)}>
                         <strong>{n.title}</strong>{n.body ? <><br /><span className="muted">{n.body}</span></> : null}
                         {n.created_at ? <><br /><span className="notif-time">{ago(n.created_at)}</span></> : null}
                       </button>
-                      {!n.computed && <button className="notif-x" title="Terminar" onClick={() => dismiss(n)}>✓</button>}
+                      {!n.computed && <button className="notif-x" title="Terminar" onClick={() => dismiss(n)}><Icon n="check" /></button>}
                     </div>
                   ))}
               </div>
@@ -130,7 +153,7 @@ export default function Layout() {
           </div>
 
           <div className="notif-wrap" ref={annRef}>
-            <button className="iconbtn" title="Anuncios" onClick={() => { setNotifOpen(false); setAnnOpen((v) => !v); if (!annOpen) loadAnns() }}>📣</button>
+            <button className="iconbtn" title="Anuncios" onClick={() => { setNotifOpen(false); setAnnOpen((v) => !v); if (!annOpen) loadAnns() }}>{TOP_ICONS.megaphone}</button>
             {annOpen && (
               <div className="notif-panel">
                 <div className="notif-head"><span>Anuncios</span>{canManageAnn && <button className="notif-all" onClick={() => setAnnForm(annForm ? null : { title: '', body: '' })}>{annForm ? 'Cerrar' : '＋ Nuevo'}</button>}</div>
@@ -145,12 +168,12 @@ export default function Layout() {
                   ? <div className="notif-empty">No hay anuncios.</div>
                   : anns.map((a) => (
                     <div key={a.id} className="notif-item">
-                      <span className="ni">📌</span>
+                      <span className="ni"><Icon n="megaphone" /></span>
                       <div className="notif-body">
                         <strong>{a.title}</strong>{a.body ? <><br /><span className="muted">{a.body}</span></> : null}
                         <br /><span className="notif-time">{a.author_name} · {ago(a.created_at)}</span>
                       </div>
-                      {canManageAnn && <button className="notif-x" title="Eliminar" style={{ color: 'var(--danger)' }} onClick={() => delAnn(a.id)}>✕</button>}
+                      {canManageAnn && <button className="notif-x" title="Eliminar" style={{ color: 'var(--danger)' }} onClick={() => delAnn(a.id)}><Icon n="close" /></button>}
                     </div>
                   ))}
               </div>
@@ -179,10 +202,14 @@ export default function Layout() {
             </>}
           </div>
           <div className="side-foot"><div className="menu-line"></div>
-            <button className="menu-item logout" onClick={() => signOut()}><span className="mi">↩️</span><span className="mlbl">Cerrar sesión</span></button>
+            <button className="menu-item logout" onClick={() => signOut()}><span className="mi">{NAV_ICONS.logout}</span><span className="mlbl">Cerrar sesión</span></button>
           </div>
         </aside>
-        <main className="content"><Outlet /></main>
+        <main className="content">
+          <Suspense fallback={<div className="content-loader"><span className="sk sk-line" style={{ width: '40%', height: '1.4rem' }} /><div style={{ marginTop: '1rem' }}><span className="sk sk-line" style={{ width: '70%' }} /></div></div>}>
+            <Outlet />
+          </Suspense>
+        </main>
       </div>
     </div>
   )

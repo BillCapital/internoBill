@@ -3,12 +3,12 @@ import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, alertDialog, viewImage } from '../lib/ui'
-import { fileToResizedDataURL } from '../lib/img'
 import ImagePicker from '../components/ImagePicker'
 import { loadDeptNames, DEFAULT_DEPTS } from '../lib/depts'
 import { useAuth } from '../context/AuthContext'
+import { Icon } from '../lib/icons'
 
-const COUNTRIES = [['Chile', '🇨🇱'], ['Perú', '🇵🇪'], ['Colombia', '🇨🇴']]
+const COUNTRIES = [['Chile', 'CL'], ['Perú', 'PE'], ['Colombia', 'CO']]
 const emptyItem = { name: '', category: '', category_id: '', stock: 0, description: '', departments: [], image_url: '', country: 'Chile', requires_manager: false, purchase_url: '' }
 
 export default function Insumos() {
@@ -131,8 +131,8 @@ export default function Insumos() {
 
       <div className="row" style={{ display: 'flex', alignItems: 'center', margin: '.6rem 0 .2rem', gap: '1rem', flexWrap: 'wrap', width: '100%' }}>
         <div className="seg">
-          <button className={`seg-btn ${groupMode === 'cat' ? 'on' : ''}`} onClick={() => setGroupMode('cat')}>📁 Categorías</button>
-          <button className={`seg-btn ${groupMode === 'dept' ? 'on' : ''}`} onClick={() => setGroupMode('dept')}>🏢 Departamentos</button>
+          <button className={`seg-btn ${groupMode === 'cat' ? 'on' : ''}`} onClick={() => setGroupMode('cat')}><Icon n="folder" /> Categorías</button>
+          <button className={`seg-btn ${groupMode === 'dept' ? 'on' : ''}`} onClick={() => setGroupMode('dept')}><Icon n="building" /> Departamentos</button>
         </div>
         <label className="sort-ctl" style={{ marginLeft: 'auto' }}>Ordenar:
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
@@ -143,11 +143,11 @@ export default function Insumos() {
       </div>
 
       <div className="kpi-grid compact">
-        <button className="kpi kpi-all"><span className="ico" style={{ fontSize: '1.3rem' }}>📦</span>
+        <button className="kpi kpi-all"><span className="ico"><Icon n="box" /></span>
           <div><div className="num">{fItems.length}</div><div className="lbl">Insumos ({totalStock} en stock)</div></div></button>
         {orderedGroups.map(([g, arr]) => (
           <button key={g} className={`kpi ${open[g] ? 'active' : ''} ${g === 'Sin asignar' ? 'kpi-warn' : ''}`} onClick={() => openAndScroll(g)}>
-            <div className="ico">{groupMode === 'dept' ? (g === 'Sin asignar' ? '⚠️' : '🏢') : (g === 'Sin asignar' ? '⚠️' : '📁')}</div><div className="num">{arr.length}</div><div className="lbl">{g}</div></button>
+            <div className="ico"><Icon n={g === 'Sin asignar' ? 'alert' : (groupMode === 'dept' ? 'building' : 'folder')} /></div><div className="num">{arr.length}</div><div className="lbl">{g}</div></button>
         ))}
       </div>
 
@@ -158,13 +158,13 @@ export default function Insumos() {
         return (
           <div className={`section ${isOpen ? 'open' : ''}`} key={g} style={{ marginBottom: '.8rem' }} ref={(el) => { secRefs.current[g] = el }}>
             <button className="sec-head compact" onClick={() => setOpen((o) => ({ ...o, [g]: !o[g] }))}>
-              <span className="ico">📁</span><span className="t"><strong>{g}</strong><br /><span className="muted">{arr.length} insumo(s)</span></span>
+              <span className="ico"><Icon n={groupMode === 'dept' ? 'building' : 'folder'} /></span><span className="t"><strong>{g}</strong><br /><span className="muted">{arr.length} insumo(s)</span></span>
               <span className="count">{arr.reduce((a, i) => a + i.stock, 0)} u.</span><span className="chev">▾</span>
             </button>
             {isOpen && (
               <div className="sec-body">
                 <div className="ins-tools" style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '.6rem' }}>
-                  <button className="btn-sm" onClick={() => openDeptEdit(arr, `toda la carpeta "${g}" (${arr.length})`)}>🏢 Departamentos a toda la carpeta</button>
+                  <button className="btn-sm" onClick={() => openDeptEdit(arr, `toda la carpeta "${g}" (${arr.length})`)}><Icon n="building" /> Departamentos a toda la carpeta</button>
                   <button className="btn-sm btn-lime" disabled={selArr.length === 0} onClick={() => openDeptEdit(selArr, `${selArr.length} insumo(s) seleccionado(s)`)}>Asignar a seleccionados ({selArr.length})</button>
                   {selArr.length > 0 && <button className="btn-sm" onClick={() => setSel((s) => { const n = new Set(s); arr.forEach((i) => n.delete(i.id)); return n })}>Limpiar selección</button>}
                 </div>
@@ -178,9 +178,9 @@ export default function Insumos() {
                       <td><input type="checkbox" checked={sel.has(i.id)} onChange={() => toggleSel(i.id)} /></td>
                       <td><div style={{ display: 'flex', gap: '.55rem', alignItems: 'flex-start' }}>
                         {i.image_url ? <img className="ins-thumb" src={i.image_url} alt="" onClick={() => viewImage(i.image_url)} /> : null}
-                        <div><strong>{i.name}</strong>{i.requires_manager ? <span className="req-tech-tag" title="Requiere doble aprobación (gerente de área)">🔑 tecnológico</span> : null}{i.description ? <><br /><span className="muted">{i.description}</span></> : null}
+                        <div><strong>{i.name}</strong>{i.requires_manager ? <span className="req-tech-tag" title="Requiere doble aprobación (gerente de área)"><Icon n="key" /> tecnológico</span> : null}{i.description ? <><br /><span className="muted">{i.description}</span></> : null}
                           <br /><span className="muted">Destino: {(i.departments && i.departments.length) ? i.departments.join(', ') : <span style={{ color: 'var(--danger)' }}>Sin asignar — no aparece en solicitudes</span>}</span>
-                          {i.purchase_url ? <><br /><a className="btn-sm btn-lime" style={{ textDecoration: 'none', marginTop: '.25rem', display: 'inline-block' }} href={/^https?:\/\//i.test(i.purchase_url) ? i.purchase_url : 'https://' + i.purchase_url} target="_blank" rel="noreferrer">🛒 Comprar</a></> : null}</div>
+                          {i.purchase_url ? <><br /><a className="btn-sm btn-lime" style={{ textDecoration: 'none', marginTop: '.25rem', display: 'inline-block' }} href={/^https?:\/\//i.test(i.purchase_url) ? i.purchase_url : 'https://' + i.purchase_url} target="_blank" rel="noreferrer"><Icon n="cart" /> Comprar</a></> : null}</div>
                       </div></td>
                       <td><div className="qc" style={{ gap: '.4rem' }}>
                         <input type="number" min="0" style={{ width: 76 }} value={stockVals[i.id] ?? ''} onChange={(e) => setStockVals((v) => ({ ...v, [i.id]: e.target.value }))} />
@@ -215,7 +215,7 @@ export default function Insumos() {
                   {COUNTRIES.map(([c, flag]) => <option key={c} value={c}>{flag} {c}</option>)}
                 </select></div>
               <div><label>Descripción</label><input value={edit.description || ''} onChange={(e) => setEdit({ ...edit, description: e.target.value })} /></div>
-              <div style={{ gridColumn: '1 / -1' }}><label>🛒 Link de compra <span className="muted">(dónde comprarlo)</span></label>
+              <div style={{ gridColumn: '1 / -1' }}><label><Icon n="cart" /> Link de compra <span className="muted">(dónde comprarlo)</span></label>
                 <input type="url" value={edit.purchase_url || ''} onChange={(e) => setEdit({ ...edit, purchase_url: e.target.value })} placeholder="https://… (ej: página del proveedor)" /></div>
               <div style={{ gridColumn: '1 / -1' }}><label>Foto del producto</label>
                 <ImagePicker value={edit.image_url} onChange={(url) => setEdit((ed) => ({ ...ed, image_url: url }))} />
@@ -223,7 +223,7 @@ export default function Insumos() {
             </div>
             <label className="perm-row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginTop: '.6rem', background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.3)', borderRadius: '.5rem', padding: '.5rem .7rem' }}>
               <input type="checkbox" checked={!!edit.requires_manager} onChange={(e) => setEdit((ed) => ({ ...ed, requires_manager: e.target.checked }))} />
-              <span>🔑 <strong>Insumo tecnológico</strong> — requiere doble aprobación (gestora de pedidos y luego el gerente del área que lo solicita: computadores, mouse, pantallas, soportes, etc.)</span>
+              <span><Icon n="key" /> <strong>Insumo tecnológico</strong> — requiere doble aprobación (gestora de pedidos y luego el gerente del área que lo solicita: computadores, mouse, pantallas, soportes, etc.)</span>
             </label>
             <label style={{ display: 'block', marginTop: '.6rem' }}>Departamentos que pueden pedir este insumo <span className="muted">(si no marcas ninguno, no aparecerá en las solicitudes)</span></label>
             <div style={{ margin: '.3rem 0' }}>

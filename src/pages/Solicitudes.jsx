@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
@@ -6,20 +6,23 @@ import Chat from '../components/Chat'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, promptDialog, alertDialog, viewImage } from '../lib/ui'
 import { loadDepts, rootDeptOf } from '../lib/depts'
+import { Icon } from '../lib/icons'
+import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
 const ST = [
-  { key: 'pending', label: 'Pendientes', ico: '🕓' },
-  { key: 'manager_review', label: 'Por gerente', ico: '🔑' },
-  { key: 'approved', label: 'Aprobadas', ico: '✅' },
-  { key: 'rejected', label: 'Rechazadas', ico: '✖️' }, { key: 'delivered', label: 'Entregadas', ico: '📦' },
+  { key: 'pending', label: 'Pendientes', ico: 'clock' },
+  { key: 'manager_review', label: 'Por gerente', ico: 'key' },
+  { key: 'approved', label: 'Aprobadas', ico: 'check' },
+  { key: 'rejected', label: 'Rechazadas', ico: 'ban' }, { key: 'delivered', label: 'Entregadas', ico: 'box' },
 ]
 const cls = (k) => 's-' + ({ pending: 'pending', manager_review: 'pending', approved: 'approved', rejected: 'rejected', delivered: 'delivered' }[k])
 const label = (k) => (ST.find((s) => s.key === k) || {}).label || k
 const DEFAULT_DEPTS = ['Cobranza', 'Comercial', 'Operaciones', 'Producto', 'Gerencia']
 
 export default function Solicitudes() {
-  const { profile, canManageOrders, isSuper } = useAuth()
+  const { profile, canManageOrders } = useAuth()
   const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
   const [catalog, setCatalog] = useState([])
   const [status, setStatus] = useState(null)
   const [open, setOpen] = useState(null)
@@ -39,6 +42,7 @@ export default function Solicitudes() {
       .select('id, status, note, custom, department, needs_manager, l1_by, mgr_by, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock))')
       .order('created_at', { ascending: false })
     setRows(data ?? [])
+    setLoading(false)
   }, [])
   const loadCat = useCallback(async () => {
     const { data } = await supabase.from('inventory_items').select('id,name,category,stock,departments,is_active,image_url').eq('is_active', true).order('category').order('name')
@@ -54,22 +58,40 @@ export default function Solicitudes() {
     if (roots.length) setTopDepts(roots)
   })() }, [])
 
-  // Aprobadores de tecnología: para insumos tecnológicos, TODOS ellos deben firmar la 2ª llave.
+  // Firmantes de una compra tecnológica: aprobadores de tecnología (TI+RRHH) + gerente del área que pide.
+  // El conjunto se des-duplica por persona (ej. Juan es RRHH y gerente de Operaciones = 1 firma).
   const [techApprovers, setTechApprovers] = useState([])   // [{id, full_name, email}]
   const [approvals, setApprovals] = useState([])           // [{request_id, approver_id, decision}]
+  const [deptMgrs, setDeptMgrs] = useState([])             // [{name, manager:{id,full_name,email}}]
+  const [people, setPeople] = useState({})                 // { id: 'Nombre' } para resolver l1_by/mgr_by
   const loadMgr = useCallback(async () => {
-    const [{ data: ta }, { data: ap }] = await Promise.all([
+    const [{ data: ta }, { data: ap }, { data: dm }, { data: pp }] = await Promise.all([
       supabase.from('profiles').select('id,full_name,email').eq('is_tech_approver', true).eq('active', true),
-      supabase.from('request_approvals').select('request_id, approver_id, decision'),
+      supabase.from('request_approvals').select('request_id, approver_id, decision, at'),
+      supabase.from('departments').select('name, manager:manager_id(id,full_name,email)'),
+      supabase.from('profiles').select('id,full_name,email'),
     ])
     setTechApprovers(ta || [])
     setApprovals(ap || [])
+    setDeptMgrs(dm || [])
+    setPeople(Object.fromEntries((pp || []).map((p) => [p.id, p.full_name || p.email])))
   }, [])
+  const nameById = (id) => (id ? (people[id] || '—') : null)
   useEffect(() => { loadMgr() }, [loadMgr])
-  const myIsTech = techApprovers.some((a) => a.id === profile?.id)
-  const hasTechApprovers = techApprovers.length > 0
+  // Gerente de área de un departamento (el guardado en la solicitud ya es el depto raíz)
+  const deptManagerOf = (dept) => (deptMgrs.find((d) => d.name === dept)?.manager) || null
+  // Conjunto de firmantes requeridos para una solicitud, des-duplicado por persona
+  const requiredSigners = (t) => {
+    const list = [...techApprovers]
+    const m = deptManagerOf(t.department)
+    if (m && m.id && !list.some((x) => x.id === m.id)) list.push(m)
+    return list
+  }
+  const myIsSigner = (t) => requiredSigners(t).some((s) => s.id === profile?.id)
   const signedFor = (reqId) => approvals.filter((a) => a.request_id === reqId && a.decision === 'approve').map((a) => a.approver_id)
   const iSigned = (reqId) => signedFor(reqId).includes(profile?.id)
+  // Decisión de un firmante concreto sobre una solicitud: 'approve' | 'reject' | null (pendiente)
+  const decisionFor = (reqId, approverId) => (approvals.find((a) => a.request_id === reqId && a.approver_id === approverId) || {}).decision || null
 
   // Paso 1 arranca en el departamento propio (usuarios) o a elección (gestora/admin)
   const canChooseDept = canManageOrders
@@ -134,13 +156,13 @@ export default function Solicitudes() {
 
           {/* Carrito del pedido */}
           <div className="cart-box">
-            <div className="cart-head"><span>🛒 Tu pedido</span><span className="cart-count">{cartCount} art.</span></div>
+            <div className="cart-head"><span><Icon n="cart" /> Tu pedido</span><span className="cart-count">{cartCount} art.</span></div>
             {cartList.length === 0
               ? <div className="muted" style={{ fontSize: '.85rem' }}>Aún no has agregado artículos. Elige la sección y suma lo que necesites.</div>
               : <ul className="cart-list">
                   {cartList.map(({ item, qty }) => (
                     <li key={item.id}><span>{qty} × {item.name}</span>
-                      <button className="cart-x" title="Quitar" onClick={() => setQty(item.id, 0, item.stock)}>✕</button></li>
+                      <button className="cart-x" title="Quitar" onClick={() => setQty(item.id, 0, item.stock)}><Icon n="close" /></button></li>
                   ))}
                 </ul>}
           </div>
@@ -152,7 +174,7 @@ export default function Solicitudes() {
                 <div className="kpi-grid compact">
                   {topDepts.map((d) => (
                     <button key={d} className={`kpi ${wDept === d ? 'active' : ''}`} onClick={() => { if (d !== wDept) setCart({}); setWDept(d); setWSection(''); setStep(2) }}>
-                      <div className="ico">🏢</div><div className="lbl">{d}</div>
+                      <div className="ico"><Icon n="building" /></div><div className="lbl">{d}</div>
                     </button>
                   ))}
                 </div>
@@ -173,7 +195,7 @@ export default function Solicitudes() {
                 : <div className="kpi-grid compact">
                   {sectionsFor(wDept).map((s) => (
                     <button key={s} className={`kpi ${wSection === s ? 'active' : ''}`} onClick={() => { setWSection(s); setStep(3) }}>
-                      <div className="ico">📁</div><div className="num">{itemsFor(wDept, s).length}</div><div className="lbl">{s}</div>
+                      <div className="ico"><Icon n="folder" /></div><div className="num">{itemsFor(wDept, s).length}</div><div className="lbl">{s}</div>
                     </button>
                   ))}
                 </div>}
@@ -189,7 +211,7 @@ export default function Solicitudes() {
               {itemsFor(wDept, wSection).map((i) => (
                 <div className="cat-row prod-row" key={i.id}>
                   <div className="prod-info">
-                    {i.image_url ? <img className="prod-thumb" src={i.image_url} alt="" onClick={() => viewImage(i.image_url)} /> : <div className="prod-ph">📦</div>}
+                    {i.image_url ? <img className="prod-thumb" src={i.image_url} alt="" onClick={() => viewImage(i.image_url)} /> : <div className="prod-ph"><Icon n="box" /></div>}
                     <div><strong>{i.name}</strong><br /><span className="muted">stock {i.stock}</span></div>
                   </div>
                   <div className="qc">
@@ -219,23 +241,26 @@ export default function Solicitudes() {
         </div>
       )}
 
-      {!creating && <div className="kpi-grid compact">
-        <button className="kpi kpi-all" onClick={() => setStatus(null)}>
-          <span className="ico" style={{ fontSize: '1.3rem' }}>📦</span>
-          <div><div className="num">{rows.length}</div><div className="lbl">{canManageOrders ? 'Solicitudes en total' : 'Tus solicitudes'}</div></div>
+      {!creating && loading && <SkeletonKpis n={6} />}
+      {!creating && !loading && <div className="kpi-grid compact">
+        <button className={`kpi ${!status ? 'active' : ''}`} onClick={() => setStatus(null)}>
+          <div className="ico"><Icon n="box" /></div>
+          <div className="num">{rows.filter((t) => t.status !== 'rejected').length}</div>
+          <div className="lbl">{canManageOrders ? 'En total' : 'Tus solicitudes'}</div>
         </button>
         {ST.map((s) => (
           <button key={s.key} className={`kpi ${status === s.key ? 'active' : ''}`} onClick={() => setStatus(status === s.key ? null : s.key)}>
-            <div className="ico">{s.ico}</div><div className="num">{rows.filter((t) => t.status === s.key).length}</div><div className="lbl">{s.label}</div>
+            <div className="ico"><Icon n={s.ico} /></div><div className="num">{rows.filter((t) => t.status === s.key).length}</div><div className="lbl">{s.label}</div>
           </button>
         ))}
       </div>}
 
-      {!creating && data.length === 0 && <div className="conv"><div className="empty">No hay solicitudes.</div></div>}
+      {!creating && loading && <SkeletonRows n={3} />}
+      {!creating && !loading && data.length === 0 && <div className="conv"><div className="empty">No hay solicitudes.</div></div>}
       {!creating && data.map((t) => (
         <div className={`conv ${open === t.id ? 'open' : ''}`} key={t.id}>
           <button className="cv-head" onClick={() => setOpen(open === t.id ? null : t.id)}>
-            <span className="ico">💬</span>
+            <span className="ico"><Icon n="box" /></span>
             <span className="t"><strong>Solicitud #{String(t.id).slice(0, 8)}</strong><br />
               <span className="prev">{canManageOrders && (t.profiles?.full_name || t.profiles?.email) ? (t.profiles.full_name || t.profiles.email) + ' · ' : ''}{t.note}</span></span>
             <span className={`badge ${cls(t.status)}`}>{label(t.status)}</span><span className="chev">▾</span>
@@ -247,61 +272,88 @@ export default function Solicitudes() {
                   {t.custom ? <li>{t.custom}</li> : null}</ul>
               </div>
               {/* Aviso de doble aprobación cuando la solicitud incluye insumos tecnológicos */}
-              {t.needs_manager && hasTechApprovers && (t.status === 'pending' || t.status === 'manager_review') && (
-                <div className="twokey-note">🔑 Insumo tecnológico: requiere el visto bueno de <strong>gestión de pedidos</strong> y luego la autorización de <strong>todos los gerentes de tecnología</strong> ({techApprovers.map((a) => a.full_name || a.email).join(' y ')}).</div>
+              {t.needs_manager && requiredSigners(t).length > 0 && (t.status === 'pending' || t.status === 'manager_review') && (
+                <div className="twokey-note"><Icon n="key" /> Insumo tecnológico: requiere la aprobación de <strong>gestión de pedidos</strong> y luego la autorización de <strong>{requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}</strong>.</div>
               )}
 
-              {/* Progreso de firmas de tecnología */}
-              {t.status === 'manager_review' && (
-                <div className="muted" style={{ fontSize: '.8rem', margin: '.2rem 0 .5rem' }}>
-                  Autorizaciones de tecnología: {techApprovers.map((a) => <span key={a.id} style={{ marginRight: '.6rem' }}>{signedFor(t.id).includes(a.id) ? '✔' : '⏳'} {a.full_name || a.email}</span>)}
+              {/* Panel de firmas — vista total: quién autorizó, quién rechazó y quién falta.
+                  Para gestión/admin queda visible en todo el ciclo (revisión, aprobada, rechazada);
+                  para los propios firmantes se muestra mientras está en revisión. */}
+              {t.needs_manager && requiredSigners(t).length > 0
+                && (canManageOrders || myIsSigner(t))
+                && ['manager_review', 'approved', 'rejected', 'delivered'].includes(t.status) && (() => {
+                const req = requiredSigners(t)
+                const ok = req.filter((s) => decisionFor(t.id, s.id) === 'approve').length
+                return (
+                <div className="signers-panel">
+                  <div className="sp-head"><span className="sp-title">Autorizaciones</span><span className="sp-count">{ok}/{req.length}</span></div>
+                  <div className="sp-list">
+                    <div className="sp-row ok">
+                      <span className="sp-ico"><Icon n="check" /></span>
+                      <span className="sp-name">Aprobación de gestión{t.l1_by ? ` · ${nameById(t.l1_by)}` : ''}</span>
+                      <span className="sp-state">Aprobada</span>
+                    </div>
+                    {req.map((a) => {
+                      const dec = decisionFor(t.id, a.id)
+                      const st = dec === 'approve' ? 'ok' : dec === 'reject' ? 'bad' : 'wait'
+                      return (
+                        <div key={a.id} className={`sp-row ${st}`}>
+                          <span className="sp-ico"><Icon n={dec === 'approve' ? 'check' : dec === 'reject' ? 'ban' : 'clock'} /></span>
+                          <span className="sp-name">{a.full_name || a.email}</span>
+                          <span className="sp-state">{dec === 'approve' ? 'Autorizó' : dec === 'reject' ? 'Rechazó' : 'Pendiente'}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
-              )}
+                )
+              })()}
 
               <Chat type="request" id={t.id} locked={t.status === 'rejected' || t.status === 'delivered'} />
 
               {/* 1ª llave: gestora / administración */}
               {canManageOrders && t.status === 'pending' && (() => {
-                const toTech = t.needs_manager && hasTechApprovers
+                const toTech = t.needs_manager && requiredSigners(t).length > 0
                 return (
                 <div className="adm-actions">
                   <button className="btn btn-lime" onClick={async () => {
                     const msg = toTech
-                      ? `¿Dar el visto bueno de gestión? Pasará a los gerentes de tecnología (${techApprovers.length}) para autorizar la compra; el stock se descuenta cuando todos autoricen.`
+                      ? `¿Dar la aprobación de gestión? Pasará a los firmantes (${requiredSigners(t).length}: ${requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}) para autorizar la compra; el stock se descuenta cuando todos autoricen.`
                       : '¿Aprobar la solicitud? Se descontará el stock.'
-                    if (await confirmDialog(msg, { title: toTech ? 'Visto bueno de gestión' : 'Aprobar solicitud', okText: toTech ? 'Dar visto bueno' : 'Aprobar' }))
+                    if (await confirmDialog(msg, { title: toTech ? 'Aprobación de gestión' : 'Aprobar solicitud', okText: toTech ? 'Dar aprobación' : 'Aprobar' }))
                       act('approve_request', t.id, {}, toTech ? 'manager_review' : 'approved')
-                  }}>{toTech ? 'Dar V°B° de gestión' : 'Aprobar'}</button>
+                  }}>{toTech ? 'Dar aprobación' : 'Aprobar'}</button>
                   <button className="btn btn-danger" onClick={async () => { const r = await promptDialog('Motivo del rechazo', { title: 'Rechazar solicitud', placeholder: 'Explica por qué se rechaza…' }); if (r !== null) act('reject_request', t.id, { p_reason: r || '' }) }}>Rechazar</button>
                 </div>
                 )
               })()}
 
-              {/* 2ª llave: gerentes de tecnología (deben firmar todos) */}
-              {t.status === 'manager_review' && myIsTech && !iSigned(t.id) && (
+              {/* Firma (2ª/3ª llave): gerente de área + tecnología, todos deben firmar */}
+              {t.status === 'manager_review' && myIsSigner(t) && !iSigned(t.id) && (
                 <div className="adm-actions">
                   <button className="btn btn-lime" onClick={async () => {
-                    const willComplete = (signedFor(t.id).length + 1) >= techApprovers.length
-                    if (await confirmDialog(willComplete ? '¿Autorizar la compra tecnológica? Con tu firma queda aprobada y se descuenta el stock.' : '¿Autorizar la compra tecnológica? Aún faltará la firma de otro gerente para completarla.', { title: 'Autorizar compra tecnológica', okText: 'Autorizar' })) {
+                    const signedReq = signedFor(t.id).filter((id) => requiredSigners(t).some((s) => s.id === id)).length
+                    const willComplete = (signedReq + 1) >= requiredSigners(t).length
+                    if (await confirmDialog(willComplete ? '¿Autorizar la compra? Con tu firma queda aprobada y se descuenta el stock.' : '¿Autorizar la compra? Aún faltará la firma de otro autorizador para completarla.', { title: 'Autorizar compra', okText: 'Autorizar' })) {
                       setApprovals((prev) => [...prev, { request_id: t.id, approver_id: profile.id, decision: 'approve' }])
                       act('tech_approve_request', t.id, {}, willComplete ? 'approved' : 'manager_review')
                     }
-                  }}>✔ Autorizar compra</button>
+                  }}><Icon n="check" /> Autorizar compra</button>
                   <button className="btn btn-danger" onClick={async () => { const r = await promptDialog('Motivo del rechazo', { title: 'Rechazar compra', placeholder: 'Explica por qué se rechaza…' }); if (r !== null) act('tech_reject_request', t.id, { p_reason: r || '' }, 'rejected') }}>Rechazar</button>
                 </div>
               )}
-              {t.status === 'manager_review' && myIsTech && iSigned(t.id) && (
-                <div className="muted" style={{ fontSize: '.85rem' }}>Ya diste tu autorización. Falta la firma del resto de gerentes de tecnología.</div>
+              {t.status === 'manager_review' && myIsSigner(t) && iSigned(t.id) && (
+                <div className="muted" style={{ fontSize: '.85rem' }}>Ya diste tu autorización. Falta la firma del resto de autorizadores.</div>
               )}
-              {canManageOrders && t.status === 'manager_review' && !myIsTech && (
-                <div className="muted" style={{ fontSize: '.85rem' }}>Esperando la autorización de los gerentes de tecnología.</div>
+              {canManageOrders && t.status === 'manager_review' && !myIsSigner(t) && (
+                <div className="muted" style={{ fontSize: '.85rem' }}>Esperando la autorización de los firmantes (gerente de área y tecnología).</div>
               )}
 
               {canManageOrders && t.status === 'approved' && (
                 <div className="adm-actions"><button className="btn btn-primary" onClick={async () => { if (await confirmDialog('¿Marcar la solicitud como entregada?', { title: 'Marcar entregada', okText: 'Marcar' })) act('deliver_request', t.id) }}>Marcar entregada</button></div>
               )}
-              {isSuper && t.status === 'rejected' && (
-                <div className="adm-actions"><button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Eliminar esta solicitud rechazada por completo? Esta acción no se puede deshacer.', { title: 'Eliminar solicitud', danger: true, okText: 'Eliminar' })) act('request_delete', t.id) }}>🗑 Eliminar solicitud</button></div>
+              {t.status === 'rejected' && (
+                <div className="muted" style={{ fontSize: '.82rem' }}>Solicitud rechazada · ticket cerrado.</div>
               )}
             </div>
           )}

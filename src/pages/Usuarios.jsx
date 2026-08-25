@@ -7,18 +7,20 @@ import { confirmDialog, alertDialog } from '../lib/ui'
 import { loadDeptNames, DEFAULT_DEPTS, deptIndentLabel } from '../lib/depts'
 import SortControl from '../components/SortControl'
 import FilterControl from '../components/FilterControl'
+import { Icon } from '../lib/icons'
+import { SkeletonKpis, SkeletonTableRows } from '../components/Skeleton'
 
 const initials = (n) => (n || '?').split(' ').slice(0, 2).map((x) => x[0]).join('').toUpperCase()
 const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 const VIEW = 220, OUT = 200
-const COUNTRIES = [['Chile', '🇨🇱'], ['Colombia', '🇨🇴'], ['Perú', '🇵🇪']]
+const COUNTRIES = [['Chile', 'CL'], ['Colombia', 'CO'], ['Perú', 'PE']]
 const flagOf = (c) => (COUNTRIES.find(([n]) => n === c) || [])[1] || ''
 // Dominio del correo (para agrupar por proveedor: @billcapital.com = Microsoft 365, etc.)
 const domainOf = (email) => ((email || '').split('@')[1] || 'sin dominio').toLowerCase()
 const isBillDomain = (dom) => dom === 'billcapital.com' || dom.endsWith('.billcapital.com')
 const isM365 = (email) => isBillDomain(domainOf(email))
 const domainLabel = (dom) => dom === '__sistema__' ? 'Cuentas de sistema / entidad (no personas)' : isBillDomain(dom) ? `Microsoft 365 · @${dom}` : dom === 'sin dominio' ? 'Sin correo' : `@${dom}`
-const domainIcon = (dom) => dom === '__sistema__' ? '🏛️' : isBillDomain(dom) ? '🟦' : dom === 'sin dominio' ? '❔' : '✉️'
+const domainIcon = (dom) => dom === '__sistema__' ? 'building' : isBillDomain(dom) ? 'mail' : dom === 'sin dominio' ? 'ban' : 'mail'
 // Nombres amigables de licencias M365 (skuPartNumber → nombre)
 const SKU_NAMES = {
   O365_BUSINESS_ESSENTIALS: 'Microsoft 365 Empresa Básico', O365_BUSINESS_PREMIUM: 'Microsoft 365 Empresa Estándar',
@@ -59,6 +61,7 @@ export default function Usuarios() {
   const { user, refreshProfile, isSuper } = useAuth()
   const nav = useNavigate()
   const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
   const [DEPTS, setDEPTS] = useState(DEFAULT_DEPTS)
   useEffect(() => { loadDeptNames().then(setDEPTS) }, [])
   const [roles, setRoles] = useState([])
@@ -76,6 +79,12 @@ export default function Usuarios() {
   const [deptFilter, setDeptFilter] = useState('')           // '' = todos
   const [countryFilter, setCountryFilter] = useState('')     // '' = todos
   const [missingFilter, setMissingFilter] = useState('')     // '' | 'pc' | 'perif' | 'phone' | 'dept'
+  const [mgmtFilter, setMgmtFilter] = useState(false)        // true = solo cargos de gestión (mayores a "Usuario")
+
+  // "Cargo de gestión" = tiene acceso a la app y su rol no es el común "Usuario".
+  // (Los sin acceso —Mic, Sistema— quedan por debajo de Usuario y no cuentan.)
+  const isMgmt = (u) => u.app_access !== false && u.role !== 'user'
+  const mgmtCount = useMemo(() => rows.filter((u) => u.active !== false && isMgmt(u)).length, [rows])
   const [edit, setEdit] = useState(null)
   const [newUser, setNewUser] = useState(null)        // modal crear usuario en Microsoft 365
   const [msBusy, setMsBusy] = useState(false)
@@ -132,6 +141,7 @@ export default function Usuarios() {
     setRows(profs ?? []); setRoles(rs ?? []); setLog(lg ?? [])
     setCompEquip((eq ?? []).filter((e) => compIds.has(e.section_id)))
     setPeriphs(pr ?? []); setPeriphAssign(pa ?? [])
+    setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
 
@@ -195,7 +205,7 @@ export default function Usuarios() {
     return false
   }, [compCount, periphCountByUser])
   const MISSING_CARDS = [
-    { key: 'dept', ico: '🏢', label: 'Sin departamento' },
+    { key: 'dept', ico: 'building', label: 'Sin departamento' },
   ]
   const missingCounts = useMemo(() => {
     const c = { pc: 0, perif: 0, phone: 0, dept: 0 }
@@ -377,7 +387,7 @@ export default function Usuarios() {
     const rank = (d) => d === 'billcapital.com' ? 0 : isBillDomain(d) ? 1 : d === 'sin dominio' ? 3 : 2
     return Object.keys(domainCounts).sort((a, b) => (rank(a) - rank(b)) || a.localeCompare(b))
   }, [domainCounts])
-  const data = rows.filter((u) => (statusFilter === 'all' || (statusFilter === 'disabled' ? u.active === false : u.active !== false)) && (!roleFilter || u.role === roleFilter) && (!deptFilter || (u.department || '') === deptFilter) && (!countryFilter || (u.country || '') === countryFilter) && (!domainFilter || domainOf(u.email) === domainFilter) && (!missingFilter || (isPerson(u) && lacks(u, missingFilter))) && (!q || (u.full_name || '').toLowerCase().includes(q.toLowerCase()) || (u.email || '').toLowerCase().includes(q.toLowerCase())))
+  const data = rows.filter((u) => (statusFilter === 'all' || (statusFilter === 'disabled' ? u.active === false : u.active !== false)) && (!roleFilter || u.role === roleFilter) && (!deptFilter || (u.department || '') === deptFilter) && (!countryFilter || (u.country || '') === countryFilter) && (!domainFilter || domainOf(u.email) === domainFilter) && (!missingFilter || (isPerson(u) && lacks(u, missingFilter))) && (!mgmtFilter || isMgmt(u)) && (!q || (u.full_name || '').toLowerCase().includes(q.toLowerCase()) || (u.email || '').toLowerCase().includes(q.toLowerCase())))
     .sort((a, b) => {
       let r = 0
       if (sortField === 'recent') r = new Date(a.last_sign_in_at || a.created_at || 0) - new Date(b.last_sign_in_at || b.created_at || 0)
@@ -425,53 +435,67 @@ export default function Usuarios() {
         <div><h2>Usuarios</h2><p className="muted">Edita el perfil de cualquier persona. Los roles y permisos se definen en la sección Roles.</p></div>
         <div className="row usr-controls" style={{ gap: '.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <input className="search" placeholder="Buscar por nombre o correo…" value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 260 }} />
-          <button className="btn" disabled={syncBusy} onClick={syncM365} title="Trae de Microsoft 365 los usuarios que aún no están en la app">{syncBusy ? 'Sincronizando…' : '🔄 Sincronizar M365'}</button>
+          <button className="btn" disabled={syncBusy} onClick={syncM365} title="Trae de Microsoft 365 los usuarios que aún no están en la app">{syncBusy ? 'Sincronizando…' : <><Icon n="refresh" /> Sincronizar M365</>}</button>
           <button className="btn btn-lime" onClick={() => setNewUser({ displayName: '', upnLocal: '', domain: 'billcapital.com', upnEdited: false, password: genPwd(), showPwd: true, jobTitle: '', department: '', phone: '', country: 'Chile', role: 'user', appAccess: true, forceChange: true })}>＋ Crear usuario (M365)</button>
         </div>
       </div></div>
 
-      <div className="kpi-grid compact kpi-sm">
-        <button className={`kpi kpi-all ${!roleFilter ? 'active' : ''}`} onClick={() => { setRoleFilter(null); setStatusFilter('active'); setMissingFilter('') }}>
-          <span className="ico" style={{ fontSize: '1.3rem' }}>👥</span>
-          <div><div className="num">{rows.length}</div><div className="lbl">Todos</div></div>
+      {loading && <SkeletonKpis n={10} />}
+      {!loading && <div className="kpi-grid compact kpi-sm">
+        <button className={`kpi ${!roleFilter && !mgmtFilter && statusFilter === 'active' && !countryFilter && !domainFilter && !missingFilter ? 'active' : ''}`} onClick={() => { setRoleFilter(null); setMgmtFilter(false); setCountryFilter(''); setDomainFilter(''); setStatusFilter('active'); setMissingFilter('') }}>
+          <div className="ico"><Icon n="users" /></div><div className="num">{rows.length}</div><div className="lbl">Todos</div>
+        </button>
+        <button className={`kpi ${mgmtFilter ? 'active' : ''}`} onClick={() => { setMgmtFilter((v) => !v); setRoleFilter(null); setStatusFilter('active'); setMissingFilter('') }} title="Todos los cargos por encima de Usuario (con acceso a la app). Se puede combinar con un país.">
+          <div className="ico"><Icon n="shield" /></div><div className="num">{mgmtCount}</div><div className="lbl">Cargos de gestión</div>
         </button>
         {roles.map((r) => (
-          <button className={`kpi ${roleFilter === r.key ? 'active' : ''}`} key={r.key} onClick={() => { setRoleFilter(roleFilter === r.key ? null : r.key); setStatusFilter('active'); setMissingFilter('') }}>
-            <div className="ico">{r.permissions?.full_admin ? '🛡️' : '🙋'}</div>
+          <button className={`kpi ${roleFilter === r.key ? 'active' : ''}`} key={r.key} onClick={() => { setRoleFilter(roleFilter === r.key ? null : r.key); setMgmtFilter(false); setStatusFilter('active'); setMissingFilter('') }}>
+            <div className="ico"><Icon n={r.permissions?.full_admin ? 'shield' : 'user'} /></div>
             <div className="num">{rows.filter((u) => u.role === r.key && u.active !== false).length}</div><div className="lbl">{r.label}</div>
           </button>
         ))}
-        {COUNTRIES.map(([name, flag]) => (
+        {COUNTRIES.map(([name]) => (
           <button className={`kpi ${countryFilter === name ? 'active' : ''}`} key={name} onClick={() => { setCountryFilter(countryFilter === name ? '' : name); setStatusFilter('active'); setMissingFilter('') }}>
-            <div className="ico">{flag}</div>
+            <div className="ico"><Icon n="pin" /></div>
             <div className="num">{rows.filter((u) => (u.country || '') === name && u.active !== false).length}</div><div className="lbl">{name}</div>
           </button>
         ))}
         {domainList.map((dom) => (
           <button className={`kpi ${domainFilter === dom ? 'active' : ''}`} key={dom} onClick={() => { setDomainFilter(domainFilter === dom ? '' : dom); setStatusFilter('active'); setMissingFilter('') }} title={domainLabel(dom)}>
-            <div className="ico">{domainIcon(dom)}</div>
+            <div className="ico"><Icon n={domainIcon(dom)} /></div>
             <div className="num">{domainCounts[dom]}</div><div className="lbl">{dom === 'sin dominio' ? 'Sin correo' : `@${dom}`}</div>
           </button>
         ))}
         <button className={`kpi ${statusFilter === 'disabled' ? 'active' : ''}`} onClick={() => { setStatusFilter(statusFilter === 'disabled' ? 'active' : 'disabled'); setRoleFilter(null); setCountryFilter(''); setDomainFilter(''); setMissingFilter('') }}>
-          <div className="ico">🔒</div>
+          <div className="ico"><Icon n="lock" /></div>
           <div className="num">{disabledCount}</div><div className="lbl">Deshabilitados</div>
         </button>
-      </div>
+      </div>}
 
       {/* Información faltante: tarjetas agregadas de lo que falta por completar (personas activas) */}
-      <div className="miss-block">
-        <div className="miss-title">⚠️ Información faltante <span className="muted">(personas activas)</span></div>
+      {!loading && <div className="miss-block">
+        <div className="miss-title"><Icon n="alert" /> Información faltante <span className="muted">(personas activas)</span></div>
         <div className="kpi-grid compact kpi-sm">
           {MISSING_CARDS.map((m) => (
             <button key={m.key} className={`kpi ${missingFilter === m.key ? 'active' : ''} ${missingCounts[m.key] > 0 ? 'kpi-warn' : ''}`}
               onClick={() => { const on = missingFilter === m.key; setMissingFilter(on ? '' : m.key); if (!on) { setStatusFilter('active'); setRoleFilter(null); setCountryFilter(''); setDomainFilter(''); setDeptFilter('') } }}>
-              <div className="ico">{m.ico}</div>
+              <div className="ico"><Icon n={m.ico} /></div>
               <div className="num">{missingCounts[m.key]}</div><div className="lbl">{m.label}</div>
             </button>
           ))}
         </div>
-      </div>
+      </div>}
+
+      {!loading && (countryFilter || mgmtFilter || roleFilter) && (
+        <div className="filter-summary">
+          <span className="fs-label">Mostrando:</span>
+          {countryFilter && <span className="fs-chip">{countryFilter}</span>}
+          {mgmtFilter && <span className="fs-chip">Cargos de gestión</span>}
+          {roleFilter && <span className="fs-chip">{(roles.find((r) => r.key === roleFilter) || {}).label || roleFilter}</span>}
+          <span className="fs-count">{data.length} persona{data.length === 1 ? '' : 's'}</span>
+          <button className="btn-sm" onClick={() => { setCountryFilter(''); setMgmtFilter(false); setRoleFilter(null); setDomainFilter(''); setMissingFilter('') }}>Limpiar</button>
+        </div>
+      )}
 
       <div className="section open"><div className="sec-body"><div className="table-wrap"><table className="usr-cards">
         <thead><tr>{thSort('name', 'Persona')}{thSort('dept', 'Departamento')}{thSort('country', 'País')}{thSort('role', 'Rol')}{thSort('comp', 'Computadores')}{thSort('recent', 'Último ingreso')}
@@ -495,20 +519,21 @@ export default function Usuarios() {
             </FilterControl>
           </th></tr></thead>
         <tbody>
-          {data.length === 0 && <tr><td colSpan={7} className="muted" style={{ padding: '.8rem' }}>Sin usuarios.</td></tr>}
-          {groups.map(([dom, us]) => (
+          {loading && <SkeletonTableRows rows={8} cols={7} />}
+          {!loading && data.length === 0 && <tr><td colSpan={7} className="muted" style={{ padding: '.8rem' }}>Sin usuarios.</td></tr>}
+          {!loading && groups.map(([dom, us]) => (
             <Fragment key={dom}>
               {groupByDomain && <tr className="grp-row"><td colSpan={7}><span className="grp-ico">{domainIcon(dom)}</span> {domainLabel(dom)} <span className="muted">· {us.length}</span></td></tr>}
               {us.map((u) => (
                 <tr key={u.id}>
                   <td><div className="row" style={{ justifyContent: 'flex-start', gap: '.5rem' }}>
                     {u.avatar_url ? <img className="avatar-img" src={u.avatar_url} alt="" /> : <div className="avatar sm">{initials(u.full_name || u.email)}</div>}
-                    <div><strong>{u.full_name || '—'}</strong>{u.id === user?.id && <span className="badge" style={{ marginLeft: 6 }}>tú</span>}{u.active === false && <span className="badge s-rejected" style={{ marginLeft: 6 }}>Deshabilitado</span>}{u.app_access === false && <span className="badge" style={{ marginLeft: 6 }} title="Solo para organización · sin acceso a la app">🗂️ Sin acceso</span>}<br /><span className="muted">{u.email}</span></div>
+                    <div><strong>{u.full_name || '—'}</strong>{u.id === user?.id && <span className="badge" style={{ marginLeft: 6 }}>tú</span>}{u.active === false && <span className="badge s-rejected" style={{ marginLeft: 6 }}>Deshabilitado</span>}{u.app_access === false && <span className="badge" style={{ marginLeft: 6 }} title="Solo para organización · sin acceso a la app"><Icon n="ban" /> Sin acceso</span>}<br /><span className="muted">{u.email}</span></div>
                   </div></td>
                   <td>{u.department || <span className="muted">—</span>}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{u.country ? <span>{flagOf(u.country)} {u.country}</span> : <span className="muted">—</span>}</td>
                   <td><span className="badge">{roleLabel[u.role] || (isSuper ? u.role : 'Administrador')}</span></td>
-                  <td>{compCount[u.id] ? <span className="badge comp-badge"><span className="emo">💻</span><span className="comp-n">{compCount[u.id]}</span></span> : <span className="muted comp-badge"><span className="emo">💻</span><span className="comp-n">0</span></span>}</td>
+                  <td>{compCount[u.id] ? <span className="badge comp-badge"><span className="emo"><Icon n="monitor" /></span><span className="comp-n">{compCount[u.id]}</span></span> : <span className="muted comp-badge"><span className="emo"><Icon n="monitor" /></span><span className="comp-n">0</span></span>}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{u.last_sign_in_at ? fmt(u.last_sign_in_at) : <span className="muted">Nunca</span>}</td>
                   <td className="actions">{(roleLabel[u.role] || isSuper) ? <>
                     <button className="btn-sm" onClick={() => setEdit({ ...u, full_name: u.full_name || '', phone: u.phone || '', avatar_url: u.avatar_url || '', _avatar0: u.avatar_url || '', admin_notes: u.admin_notes || '' })}>Editar</button>{' '}
@@ -527,7 +552,7 @@ export default function Usuarios() {
       {/* Registro de cambios (últimas 24h) */}
       <div className={`section ${logOpen ? 'open' : ''}`} style={{ marginTop: '1rem' }}>
         <button className="sec-head compact" onClick={() => setLogOpen((v) => !v)}>
-          <span className="ico">🧾</span><span className="t"><strong>Registro de cambios</strong><br /><span className="muted">Últimos 31 días · {log.length} cambio(s)</span></span>
+          <span className="ico"><Icon n="folder" /></span><span className="t"><strong>Registro de cambios</strong><br /><span className="muted">Últimos 31 días · {log.length} cambio(s)</span></span>
           <span className="count">{log.length}</span><span className="chev">▾</span>
         </button>
         {logOpen && <div className="sec-body"><div className="table-wrap"><table>
@@ -584,7 +609,7 @@ export default function Usuarios() {
                 <ul style={{ listStyle: 'none', padding: 0, margin: '.3rem 0', display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
                   {compsOf(edit).map((c) => (
                     <li key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '.5rem', background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: 8, padding: '.35rem .5rem', fontSize: '.8rem' }}>
-                      <span>💻 {[c.name, c.brand, c.model].filter(Boolean).join(' ') || 'Computador'}{c.serial_number ? ` · ${c.serial_number}` : ''}</span>
+                      <span><Icon n="monitor" /> {[c.name, c.brand, c.model].filter(Boolean).join(' ') || 'Computador'}{c.serial_number ? ` · ${c.serial_number}` : ''}</span>
                       <span style={{ display: 'flex', gap: '.3rem', flex: 'none' }}>
                         <button type="button" className="btn-sm" onClick={() => nav(`/equipo/${c.id}`)}>Ver ficha</button>
                         <button type="button" className="btn-sm btn-danger" disabled={compBusy} onClick={() => unassignComp(c)}>Quitar</button>
@@ -614,7 +639,7 @@ export default function Usuarios() {
                 <ul style={{ listStyle: 'none', padding: 0, margin: '.3rem 0', display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
                   {myPeriphs.map((a) => (
                     <li key={a.peripheral_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '.5rem', background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: 8, padding: '.35rem .5rem', fontSize: '.8rem' }}>
-                      <span>🖱️ {periphById[a.peripheral_id]?.name || 'Periférico'}{periphById[a.peripheral_id]?.model ? ` · ${periphById[a.peripheral_id].model}` : ''} <span className="badge">{a.qty}</span></span>
+                      <span><Icon n="mouse" /> {periphById[a.peripheral_id]?.name || 'Periférico'}{periphById[a.peripheral_id]?.model ? ` · ${periphById[a.peripheral_id].model}` : ''} <span className="badge">{a.qty}</span></span>
                       <button type="button" className="btn-sm btn-danger" disabled={compBusy} onClick={() => removePeriphUser(a.peripheral_id)}>Quitar</button>
                     </li>
                   ))}
@@ -642,7 +667,7 @@ export default function Usuarios() {
                         const nm = skuName(sku?.skuPartNumber) || l.skuId
                         return (
                           <li key={l.skuId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '.5rem', background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: 8, padding: '.35rem .5rem', fontSize: '.8rem' }}>
-                            <span>📄 {nm}</span>
+                            <span><Icon n="file" /> {nm}</span>
                             <button type="button" className="btn-sm btn-danger" disabled={licBusy} onClick={() => removeLic(l.skuId, nm)}>Quitar</button>
                           </li>
                         )
@@ -666,7 +691,7 @@ export default function Usuarios() {
             <textarea value={edit.admin_notes || ''} onChange={(e) => setEdit({ ...edit, admin_notes: e.target.value })} placeholder="Correo alterno, credenciales, notas internas…" style={{ minHeight: 70 }} />
             <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
               {isM365(edit.email)
-                ? <button className="btn" disabled={msBusy} onClick={() => resetMsPassword(edit)} title="Establece una contraseña temporal en Microsoft 365">🔑 Restablecer contraseña (M365)</button>
+                ? <button className="btn" disabled={msBusy} onClick={() => resetMsPassword(edit)} title="Establece una contraseña temporal en Microsoft 365"><Icon n="key" /> Restablecer contraseña (M365)</button>
                 : <span />}
               <span style={{ display: 'flex', gap: '.5rem' }}>
                 <button className="btn" onClick={() => setEdit(null)}>Cancelar</button>
@@ -722,8 +747,8 @@ export default function Usuarios() {
                 <div style={{ display: 'flex', gap: '.35rem' }}>
                   <input type={newUser.showPwd ? 'text' : 'password'} value={newUser.password} placeholder="mínimo 8 caracteres" style={{ flex: 1, minWidth: 0 }}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
-                  <button type="button" className="btn-sm" title={newUser.showPwd ? 'Ocultar' : 'Ver'} onClick={() => setNewUser({ ...newUser, showPwd: !newUser.showPwd })}>{newUser.showPwd ? '🙈' : '👁'}</button>
-                  <button type="button" className="btn-sm" title="Copiar" onClick={() => { try { navigator.clipboard?.writeText(newUser.password) } catch { /* noop */ } }}>📋</button>
+                  <button type="button" className="btn-sm" title={newUser.showPwd ? 'Ocultar' : 'Ver'} onClick={() => setNewUser({ ...newUser, showPwd: !newUser.showPwd })}><Icon n={newUser.showPwd ? 'eyeOff' : 'eye'} /></button>
+                  <button type="button" className="btn-sm" title="Copiar" onClick={() => { try { navigator.clipboard?.writeText(newUser.password) } catch { /* noop */ } }}><Icon n="copy" /></button>
                   <button type="button" className="btn-sm" onClick={() => setNewUser({ ...newUser, password: genPwd(), showPwd: true })}>Generar</button>
                 </div>
               </div>
@@ -745,8 +770,8 @@ export default function Usuarios() {
               </div>
               <div><label>Acceso a la app</label>
                 <select value={newUser.appAccess ? 'si' : 'no'} onChange={(e) => setNewUser({ ...newUser, appAccess: e.target.value === 'si' })}>
-                  <option value="si">✅ Con acceso</option>
-                  <option value="no">🗂️ Solo organización (sin acceso)</option>
+                  <option value="si">Con acceso</option>
+                  <option value="no">Solo organización (sin acceso)</option>
                 </select></div>
             </div>
             <label className="perm-row" style={{ marginTop: '.6rem' }}>
