@@ -1,7 +1,10 @@
 import { supabase } from './supabase'
 
 // Lista de respaldo por si la tabla aún no responde (mismo orden semilla)
-export const DEFAULT_DEPTS = ['Cobranza', 'Comercial', 'Operaciones', 'Producto', 'Gerencia', 'Gerencia TI']
+export const DEFAULT_DEPTS = ['Cobranza', 'Comercial', 'Operaciones', 'Producto', 'Gerencia']
+
+// Departamentos que NO pueden solicitar insumos (no aparecen al pedir).
+export const NON_REQUESTING_DEPTS = ['Mic']
 
 const bySortName = (a, b) => (a.sort - b.sort) || (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' })
 
@@ -54,6 +57,17 @@ export async function loadDeptNames() {
   setDepthCache(tree)
   const names = tree.map((d) => d.name).filter(Boolean)
   return names.length ? names : DEFAULT_DEPTS
+}
+
+// Solo los nombres de departamento de NIVEL SUPERIOR (sin subdepartamentos).
+// Se usa donde se pide "por departamento" (ej: quién puede solicitar un insumo).
+export async function loadRootDeptNames() {
+  const { data } = await supabase.from('departments').select('name,sort,parent')
+  const tree = orderDeptTree(data ?? [])
+  setDepthCache(tree)
+  const roots = tree.filter((d) => (d.depth || 0) === 0).map((d) => d.name)
+    .filter(Boolean).filter((n) => !NON_REQUESTING_DEPTS.includes(n))
+  return roots.length ? roots : DEFAULT_DEPTS
 }
 
 // Devuelve las filas completas (id, name, sort, parent) en orden jerárquico con profundidad

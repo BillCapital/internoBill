@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, alertDialog, viewImage } from '../lib/ui'
 import ImagePicker from '../components/ImagePicker'
-import { loadDeptNames, DEFAULT_DEPTS } from '../lib/depts'
+import { loadRootDeptNames, DEFAULT_DEPTS } from '../lib/depts'
 import { useAuth } from '../context/AuthContext'
 import { Icon } from '../lib/icons'
 
@@ -21,7 +21,7 @@ export default function Insumos() {
   const fixedCountry = !isAdmin
   const effCountry = fixedCountry ? myCountry : country
   const [DEPTS, setDEPTS] = useState(DEFAULT_DEPTS)
-  useEffect(() => { loadDeptNames().then(setDEPTS) }, [])
+  useEffect(() => { loadRootDeptNames().then(setDEPTS) }, [])
   const [cats, setCats] = useState([])
   const [open, setOpen] = useState({})
   const [stockVals, setStockVals] = useState({})
@@ -168,27 +168,44 @@ export default function Insumos() {
                   <button className="btn-sm btn-lime" disabled={selArr.length === 0} onClick={() => openDeptEdit(selArr, `${selArr.length} insumo(s) seleccionado(s)`)}>Asignar a seleccionados ({selArr.length})</button>
                   {selArr.length > 0 && <button className="btn-sm" onClick={() => setSel((s) => { const n = new Set(s); arr.forEach((i) => n.delete(i.id)); return n })}>Limpiar selección</button>}
                 </div>
-                <div className="table-wrap"><table>
+                <div className="table-wrap"><table className="ins-table">
+                <colgroup><col className="c-chk" /><col className="c-name" /><col className="c-stock" /><col className="c-act" /></colgroup>
                 <thead><tr>
-                  <th style={{ width: 28 }}><input type="checkbox" checked={allSel} onChange={() => setSel((s) => { const n = new Set(s); if (allSel) arr.forEach((i) => n.delete(i.id)); else arr.forEach((i) => n.add(i.id)); return n })} /></th>
-                  <th>Insumo</th><th>Stock</th><th></th></tr></thead>
+                  <th><input type="checkbox" checked={allSel} onChange={() => setSel((s) => { const n = new Set(s); if (allSel) arr.forEach((i) => n.delete(i.id)); else arr.forEach((i) => n.add(i.id)); return n })} /></th>
+                  <th>Insumo</th><th>Stock</th><th aria-label="Acciones"></th></tr></thead>
                 <tbody>
                   {arr.map((i) => (
                     <tr key={i.id} className={sel.has(i.id) ? 'row-sel' : ''}>
                       <td><input type="checkbox" checked={sel.has(i.id)} onChange={() => toggleSel(i.id)} /></td>
-                      <td><div style={{ display: 'flex', gap: '.55rem', alignItems: 'flex-start' }}>
-                        {i.image_url ? <img className="ins-thumb" src={i.image_url} alt="" loading="lazy" decoding="async" onClick={() => viewImage(i.image_url)} /> : null}
-                        <div><strong>{i.name}</strong>{i.requires_manager ? <span className="req-tech-tag" title="Requiere doble aprobación (gerente de área)"><Icon n="key" /> tecnológico</span> : null}{i.description ? <><br /><span className="muted">{i.description}</span></> : null}
-                          <br /><span className="muted">Destino: {(i.departments && i.departments.length) ? i.departments.join(', ') : <span style={{ color: 'var(--danger)' }}>Sin asignar — no aparece en solicitudes</span>}</span>
-                          {i.purchase_url ? <><br /><a className="btn-sm btn-lime" style={{ textDecoration: 'none', marginTop: '.25rem', display: 'inline-block' }} href={/^https?:\/\//i.test(i.purchase_url) ? i.purchase_url : 'https://' + i.purchase_url} target="_blank" rel="noreferrer"><Icon n="cart" /> Comprar</a></> : null}</div>
+                      <td><div className="ins-cell">
+                        {i.image_url
+                          ? <img className="ins-thumb" src={i.image_url} alt="" loading="lazy" decoding="async" onClick={() => viewImage(i.image_url)} />
+                          : <span className="ins-thumb ph"><Icon n="box" /></span>}
+                        <div className="ins-info">
+                          <div className="ins-name"><strong>{i.name}</strong>{i.requires_manager ? <span className="req-tech-tag" title="Requiere doble aprobación (gerente de área)"><Icon n="key" /> tecnológico</span> : null}</div>
+                          {i.description ? <span className="ins-desc muted">{i.description}</span> : null}
+                          <div className="ins-depts">
+                            {(i.departments && i.departments.length)
+                              ? i.departments.map((d) => <span key={d} className="dept-chip">{d}</span>)
+                              : <span className="dept-chip danger"><Icon n="alert" /> Sin asignar — no aparece en solicitudes</span>}
+                          </div>
+                          {i.purchase_url ? <a className="btn-sm btn-lime ins-buy" href={/^https?:\/\//i.test(i.purchase_url) ? i.purchase_url : 'https://' + i.purchase_url} target="_blank" rel="noreferrer"><Icon n="cart" /> Comprar</a> : null}
+                        </div>
                       </div></td>
-                      <td><div className="qc" style={{ gap: '.4rem' }}>
-                        <input type="number" min="0" style={{ width: 76 }} value={stockVals[i.id] ?? ''} onChange={(e) => setStockVals((v) => ({ ...v, [i.id]: e.target.value }))} />
-                        <button className="btn-sm btn-lime" onClick={() => saveStock(i.id)} disabled={Number(stockVals[i.id]) === i.stock}>Guardar</button>
-                      </div></td>
+                      <td>{(() => {
+                        const dirty = String(stockVals[i.id] ?? '') !== String(i.stock)
+                        const cur = Number(stockVals[i.id]) || 0
+                        return (
+                          <div className="stock-cell">
+                            <span className={`stock-dot ${cur === 0 ? 'zero' : cur <= 5 ? 'low' : 'ok'}`} />
+                            <input type="number" min="0" className="stock-in" value={stockVals[i.id] ?? ''} onChange={(e) => setStockVals((v) => ({ ...v, [i.id]: e.target.value }))} />
+                            {dirty && <button className="btn-sm btn-lime" onClick={() => saveStock(i.id)}>Guardar</button>}
+                          </div>
+                        )
+                      })()}</td>
                       <td className="actions">
-                        <button className="btn-sm" onClick={() => setEdit({ ...emptyItem, ...i, category_id: i.category_id || '', departments: i.departments || [] })}>Editar</button>{' '}
-                        <button className="btn-sm btn-danger" onClick={() => delItem(i)}>Eliminar</button>
+                        <button className="icon-btn" title="Editar" onClick={() => setEdit({ ...emptyItem, ...i, category_id: i.category_id || '', departments: i.departments || [] })}><Icon n="edit" /></button>
+                        <button className="icon-btn danger" title="Eliminar" onClick={() => delItem(i)}><Icon n="trash" /></button>
                       </td>
                     </tr>
                   ))}

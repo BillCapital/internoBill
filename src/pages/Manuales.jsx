@@ -26,6 +26,16 @@ export default function Manuales() {
   const [q, setQ] = useState('')
   const [form, setForm] = useState(null)       // { title, description, category, file }
   const [busy, setBusy] = useState(false)
+  const [viewer, setViewer] = useState(null)   // manual que se está viendo dentro de la app
+
+  // Tipo de previsualización según el archivo
+  const previewKind = (m) => {
+    const s = ((m.mime || '') + ' ' + (m.file_name || '')).toLowerCase()
+    if (s.includes('pdf')) return 'pdf'
+    if (s.includes('image') || /\.(png|jpe?g|gif|webp|bmp|svg)$/.test(s)) return 'image'
+    if (/\.(docx?|xlsx?|pptx?)$|word|excel|powerpoint|officedocument/.test(s)) return 'office'
+    return 'other'
+  }
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('manuals').select('*').order('category').order('created_at', { ascending: false })
@@ -119,7 +129,7 @@ export default function Manuales() {
               {m.description ? <p className="muted">{m.description}</p> : null}
               <div className="man-meta"><span className="badge">{m.category || 'General'}</span>{m.size ? <span className="muted"> · {fmtSize(m.size)}</span> : null}</div>
               <div className="man-actions">
-                <a className="btn-sm" href={publicUrl(m.file_path)} target="_blank" rel="noreferrer"><Icon n="eye" /> Ver</a>
+                <button className="btn-sm" type="button" onClick={() => setViewer(m)}><Icon n="eye" /> Ver</button>
                 <button className="btn-sm btn-lime" type="button" onClick={() => downloadFile(m)}><Icon n="download" /> Descargar</button>
                 {canManage && <button className="btn-sm btn-danger" onClick={() => del(m)}>Eliminar</button>}
               </div>
@@ -127,6 +137,35 @@ export default function Manuales() {
           </div>
         ))}
       </div>
+
+      {viewer && (() => {
+        const url = publicUrl(viewer.file_path)
+        const kind = previewKind(viewer)
+        return (
+          <div className="backdrop open" onClick={() => setViewer(null)}>
+            <div className="man-viewer" onClick={(e) => e.stopPropagation()}>
+              <div className="mv-head">
+                <span className="mv-ico"><Icon n={iconFor(viewer.mime, viewer.file_name)} /></span>
+                <div className="mv-title"><strong>{viewer.title}</strong><span className="muted">{viewer.category || 'General'}{viewer.size ? ` · ${fmtSize(viewer.size)}` : ''}</span></div>
+                <button className="btn-sm btn-lime" type="button" onClick={() => downloadFile(viewer)}><Icon n="download" /> Descargar</button>
+                <button className="btn-sm" type="button" onClick={() => setViewer(null)}><Icon n="close" /> Cerrar</button>
+              </div>
+              <div className="mv-body">
+                {kind === 'pdf' && <iframe title={viewer.title} src={url} className="mv-frame" />}
+                {kind === 'image' && <div className="mv-img"><img src={url} alt={viewer.title} /></div>}
+                {kind === 'office' && <iframe title={viewer.title} src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`} className="mv-frame" />}
+                {kind === 'other' && (
+                  <div className="mv-fallback">
+                    <span className="mv-ico-lg"><Icon n="file" /></span>
+                    <p>Este tipo de archivo no se puede previsualizar en el navegador.</p>
+                    <button className="btn btn-lime" type="button" onClick={() => downloadFile(viewer)}><Icon n="download" /> Descargar para abrirlo</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {form && (
         <div className="backdrop open">

@@ -516,9 +516,12 @@ body.light input:not([type=checkbox]):not([type=radio]),body.light select,body.l
 .pf-field .qc input{flex:1}
 
 /* ==== Editor de permisos de roles ==== */
-.perm-list{display:grid;grid-template-columns:1fr;gap:.4rem;margin-top:.3rem}
-.perm-row{display:flex;gap:.6rem;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:.55rem .65rem;cursor:pointer}
-.perm-row input{margin-top:.2rem;width:16px;height:16px}
+.perm-list{display:grid;grid-template-columns:1fr;gap:.45rem;margin-top:.3rem}
+.perm-row{display:flex;gap:.6rem;align-items:center;border:1px solid var(--line);border-radius:10px;padding:.6rem .7rem;cursor:pointer;background:var(--soft);transition:border-color .12s,background .12s}
+.perm-row:hover{border-color:color-mix(in srgb,var(--lime) 55%,var(--line))}
+.perm-row:has(input:checked){border-color:var(--lime);background:color-mix(in srgb,var(--lime) 12%,var(--panel))}
+.perm-row input{width:17px;height:17px;flex:0 0 auto;accent-color:var(--lime)}
+.perm-row span{line-height:1.2}
 .perm-row.off{opacity:.55}
 
 /* ==== Salas: calendario más grande + horario más compacto ==== */
@@ -578,7 +581,60 @@ body.light tr.row-sel{background:#eefbe0}
 .img-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1.5px solid var(--line)}
 .img-ph{width:64px;height:64px;border-radius:10px;border:1.5px dashed var(--line);display:grid;place-items:center;font-size:1.4rem;color:var(--muted)}
 .ins-thumb{width:40px;height:40px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex:0 0 auto;cursor:pointer}
+.ins-thumb.ph{display:grid;place-items:center;background:color-mix(in srgb,var(--line) 14%,transparent);cursor:default}
+.ins-thumb.ph .licon{width:1.2rem;height:1.2rem;opacity:.45}
+
+/* ===== Tabla de insumos: compacta (tamaño similar a Usuarios) ===== */
+.ins-table{table-layout:fixed;font-size:.82rem}
+.ins-table col.c-chk{width:38px}
+.ins-table col.c-stock{width:180px}
+.ins-table col.c-act{width:78px}
+.ins-table th,.ins-table td{padding:.4rem .45rem;vertical-align:middle}
+.ins-table thead th{font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+.ins-table td:first-child,.ins-table th:first-child{text-align:center}
+.ins-table input[type=checkbox]{width:15px;height:15px;margin:0;cursor:pointer}
+.ins-table td.actions{text-align:right;white-space:nowrap}
+
+/* Fila de insumo compacta */
+.ins-cell{display:flex;gap:.5rem;align-items:center}
+.ins-thumb,.ins-thumb.ph{width:32px;height:32px}
+.ins-thumb.ph .licon{width:1rem;height:1rem}
+.ins-info{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.ins-name{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;line-height:1.15}
+.ins-name strong{font-size:.86rem}
+.ins-desc{font-size:.72rem;line-height:1.1}
+.ins-depts{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.05rem}
+.dept-chip{display:inline-flex;align-items:center;gap:.2rem;font-size:.66rem;line-height:1;padding:.16rem .4rem;border-radius:999px;background:color-mix(in srgb,var(--line) 40%,transparent);color:var(--muted);border:1px solid var(--line)}
+.dept-chip.danger{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 32%,transparent)}
+.dept-chip.danger .licon{width:.72rem;height:.72rem}
+.ins-buy{align-self:flex-start;text-decoration:none;margin-top:.15rem}
+
+/* Control de stock compacto: punto de nivel + input + guardar solo si cambió */
+.stock-cell{display:flex;align-items:center;gap:.4rem}
+.stock-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.stock-dot.ok{background:var(--lime)}
+.stock-dot.low{background:var(--warn,#f59e0b)}
+.stock-dot.zero{background:var(--danger)}
+.stock-in{width:60px;padding:.25rem .4rem;font-size:.8rem}
+.ins-table .stock-cell .btn-sm{padding:.2rem .5rem;font-size:.72rem}
+
+/* Botones de acción compactos (ícono) */
+.icon-btn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.icon-btn+.icon-btn{margin-left:.3rem}
+.icon-btn .licon{width:.9rem;height:.9rem}
+.icon-btn:hover{border-color:var(--lime);background:color-mix(in srgb,var(--lime) 10%,transparent)}
+.icon-btn.danger:hover{border-color:var(--danger);color:var(--danger);background:color-mix(in srgb,var(--danger) 10%,transparent)}
 .eq-photo{display:block;width:100%;max-height:220px;object-fit:cover;border-radius:12px;border:1.5px solid var(--line);margin-bottom:.9rem}
+
+/* Selector de imagen mejorado: zona para soltar/subir + acciones */
+.img-pick2{display:flex;flex-direction:column;gap:.5rem;max-width:100%;outline:none}
+.img-pick2 .ip-drop{padding:0;border:1.5px dashed var(--line);border-radius:12px;background:color-mix(in srgb,var(--line) 12%,transparent);cursor:pointer;overflow:hidden;display:block;width:100%;min-height:120px;transition:border-color .15s,background .15s}
+.img-pick2 .ip-drop:hover{border-color:var(--lime);background:color-mix(in srgb,var(--lime) 8%,transparent)}
+.img-pick2.drag .ip-drop{border-color:var(--lime);border-style:solid;background:color-mix(in srgb,var(--lime) 14%,transparent)}
+.img-pick2 .ip-thumb{display:block;width:100%;max-height:200px;object-fit:contain;background:var(--panel)}
+.img-pick2 .ip-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;min-height:120px;color:var(--muted);font-size:.85rem}
+.img-pick2 .ip-ph .licon{width:1.8rem;height:1.8rem;opacity:.6}
+.img-pick2 .ip-actions{display:flex;gap:.4rem;flex-wrap:wrap}
 
 /* Lista de productos en el asistente de solicitud (foto + producto) */
 .prod-row{align-items:center}
@@ -717,8 +773,9 @@ input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{b
 .avatar-img{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;border:2px solid var(--lime)}
 .avatar-edit{position:relative;width:60px;height:60px;flex:none}
 .big-avatar{width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid var(--lime)}
-.avatar-cam{position:absolute;right:-4px;bottom:-4px;width:24px;height:24px;border-radius:50%;border:2px solid var(--panel);background:var(--lime);color:#12210a;display:grid;place-items:center;font-size:.7rem;box-shadow:var(--shadow-sm)}
+.avatar-cam{position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;padding:0;border-radius:50%;border:2px solid var(--panel);background:var(--lime);color:#12210a;display:inline-flex;align-items:center;justify-content:center;font-size:.62rem;line-height:1;box-shadow:var(--shadow-sm);cursor:pointer}
 .avatar-cam:hover{filter:brightness(1.05)}
+.avatar-cam .licon{width:.72rem;height:.72rem;display:block}
 
 .menu-group{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;padding:.6rem .75rem .25rem}
 body.sb-collapsed .menu-group{display:none}
@@ -1208,6 +1265,29 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .man-meta{display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;margin-bottom:.45rem}
 .man-actions{display:flex;gap:.4rem;flex-wrap:wrap}
 .man-actions a.btn-sm{text-decoration:none}
+/* Tarjeta de manual — pulida */
+.man-card{transition:transform .15s,border-color .15s;box-shadow:var(--shadow-sm)}
+.man-card:hover{border-color:var(--lime);transform:translateY(-2px)}
+.man-ico{flex:0 0 auto;width:2.6rem;height:2.6rem;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--lime) 14%,var(--panel2));color:var(--lime)}
+.man-card .man-ico .licon{width:1.35rem;height:1.35rem}
+.man-body strong{font-size:.98rem;line-height:1.25}
+
+/* Visor de manuales dentro de la app */
+.man-viewer{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:min(1000px,96vw);height:min(88vh,900px);
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,.6)}
+.mv-head{display:flex;align-items:center;gap:.7rem;padding:.7rem .9rem;border-bottom:1px solid var(--line);background:var(--panel2)}
+.mv-head .mv-ico{flex:0 0 auto;width:2.1rem;height:2.1rem;border-radius:9px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--lime) 14%,var(--panel));color:var(--lime)}
+.mv-title{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.mv-title strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv-title .muted{font-size:.78rem}
+.mv-body{flex:1;min-height:0;background:#0b0d12;display:flex}
+.mv-frame{width:100%;height:100%;border:none;background:#fff}
+.mv-img{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:1rem}
+.mv-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.mv-fallback{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.8rem;color:var(--muted);text-align:center;padding:2rem}
+.mv-fallback .mv-ico-lg{display:inline-flex;color:var(--muted)}
+.mv-fallback .mv-ico-lg .licon{width:3rem;height:3rem}
 
 /* ================= REDISEÑO 2026 · tipografía + componentes ================= */
 body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif}

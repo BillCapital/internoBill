@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import Chat from '../components/Chat'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, promptDialog, alertDialog, viewImage } from '../lib/ui'
-import { loadDepts, rootDeptOf } from '../lib/depts'
+import { loadDepts, rootDeptOf, NON_REQUESTING_DEPTS } from '../lib/depts'
 import { Icon } from '../lib/icons'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
@@ -55,6 +55,7 @@ export default function Solicitudes() {
   useEffect(() => { (async () => {
     const tree = await loadDepts()
     const roots = tree.filter((d) => (d.depth || 0) === 0).map((d) => d.name)
+      .filter((n) => !NON_REQUESTING_DEPTS.includes(n))
     if (roots.length) setTopDepts(roots)
   })() }, [])
 
