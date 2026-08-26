@@ -10,10 +10,11 @@ const VIEW = 260   // tamaño del recuadro de recorte en pantalla
 const OUT = 200    // tamaño final exportado (px)
 
 export default function Perfil() {
-  const { profile, role, roleLabel, isAdmin, refreshProfile } = useAuth()
+  const { profile, role, roleLabel, isAdmin, patchProfile } = useAuth()
   const [equipos, setEquipos] = useState([])
   const [form, setForm] = useState({ phone: '', work_mode: '', emergency_name: '', emergency_phone: '', birth_day: '', birth_month: '' })
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [avatarSaving, setAvatarSaving] = useState(false)
   const fileRef = useRef(null)
 
@@ -48,17 +49,24 @@ export default function Perfil() {
 
   const setF = (k, v) => setForm((f) => ({ ...f, [k]: v }))
   const saveProfile = async () => {
-    setSaving(true)
+    setSaving(true); setSaved(false)
+    const fields = {
+      phone: (form.phone || '').trim(),
+      work_mode: form.work_mode || '',
+      emergency_name: (form.emergency_name || '').trim(),
+      emergency_phone: (form.emergency_phone || '').trim(),
+      birth_day: form.birth_day ? Number(form.birth_day) : null,
+      birth_month: form.birth_month ? Number(form.birth_month) : null,
+    }
     try {
       await api('save_my_profile', {
-        p_phone: (form.phone || '').trim(),
-        p_work_mode: form.work_mode || '',
-        p_emergency_name: (form.emergency_name || '').trim(),
-        p_emergency_phone: (form.emergency_phone || '').trim(),
-        p_birth_day: form.birth_day ? Number(form.birth_day) : null,
-        p_birth_month: form.birth_month ? Number(form.birth_month) : null,
+        p_phone: fields.phone, p_work_mode: fields.work_mode,
+        p_emergency_name: fields.emergency_name, p_emergency_phone: fields.emergency_phone,
+        p_birth_day: fields.birth_day, p_birth_month: fields.birth_month,
       })
-      await refreshProfile()
+      // Actualización local instantánea (sin recargar roles/deptos)
+      patchProfile(fields)
+      setSaved(true); setTimeout(() => setSaved(false), 3000)
     } catch (e) { alertDialog(e.message) } finally { setSaving(false) }
   }
 
@@ -183,7 +191,8 @@ export default function Perfil() {
           <div className="pf-field"><label>Departamento</label><div className="val">{profile?.department || '—'} {role !== 'admin' && <span className="lock"><Icon n="lock" /> fijo</span>}</div></div>
           <div className="pf-field"><label>Rol</label><div className="val">{roleLabel}</div></div>
         </div>
-        <div className="row" style={{ marginTop: '.9rem', justifyContent: 'flex-end' }}>
+        <div className="row" style={{ marginTop: '.9rem', justifyContent: 'flex-end', alignItems: 'center', gap: '.7rem' }}>
+          {saved && <span className="save-ok"><Icon n="check" /> Guardado</span>}
           <button className="btn btn-lime" onClick={saveProfile} disabled={!dirty || saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
         </div>
         <p className="muted" style={{ marginTop: '.5rem' }}>Actualiza tus datos cuando quieras. El departamento y el rol los asigna un administrador.</p>

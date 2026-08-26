@@ -584,6 +584,11 @@ body.light tr.row-sel{background:#eefbe0}
 .ins-thumb.ph{display:grid;place-items:center;background:color-mix(in srgb,var(--line) 14%,transparent);cursor:default}
 .ins-thumb.ph .licon{width:1.2rem;height:1.2rem;opacity:.45}
 
+/* Aviso "Guardado" junto al botón de perfil */
+.save-ok{display:inline-flex;align-items:center;gap:.3rem;font-size:.82rem;font-weight:600;color:var(--ok);animation:saveok .2s ease-out}
+.save-ok .licon{width:1rem;height:1rem}
+@keyframes saveok{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
 /* ===== Tabla de insumos: compacta (tamaño similar a Usuarios) ===== */
 .ins-table{table-layout:fixed;font-size:.82rem}
 .ins-table col.c-chk{width:38px}

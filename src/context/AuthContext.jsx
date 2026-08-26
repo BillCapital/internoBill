@@ -77,6 +77,8 @@ export function AuthProvider({ children }) {
     isAreaManager: managedDepts.length > 0,
     hasInventory: full || perms.manage_inventory === true || profile?.inventory_access === true,
     refreshProfile: () => loadProfile(session?.user?.id),
+    // Actualiza campos del perfil en memoria (sin recargar roles/deptos): guardado instantáneo
+    patchProfile: (fields) => setProfile((p) => (p ? { ...p, ...fields } : p)),
     signInMicrosoft: async () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'azure',
