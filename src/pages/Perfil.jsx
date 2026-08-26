@@ -192,8 +192,10 @@ export default function Perfil() {
           <div className="pf-field"><label>Rol</label><div className="val">{roleLabel}</div></div>
         </div>
         <div className="row" style={{ marginTop: '.9rem', justifyContent: 'flex-end', alignItems: 'center', gap: '.7rem' }}>
-          {saved && <span className="save-ok"><Icon n="check" /> Guardado</span>}
-          <button className="btn btn-lime" onClick={saveProfile} disabled={!dirty || saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
+          {saved && <span className="save-ok"><Icon n="check" /> Cambios guardados</span>}
+          <button className={`btn ${saved ? 'btn-ok' : 'btn-lime'}`} onClick={saveProfile} disabled={saving || (!dirty && !saved)}>
+            {saving ? 'Guardando…' : saved ? '✓ Guardado' : 'Guardar cambios'}
+          </button>
         </div>
         <p className="muted" style={{ marginTop: '.5rem' }}>Actualiza tus datos cuando quieras. El departamento y el rol los asigna un administrador.</p>
       </div>
