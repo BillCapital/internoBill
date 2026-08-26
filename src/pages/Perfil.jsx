@@ -191,9 +191,9 @@ export default function Perfil() {
           <div className="pf-field"><label>Departamento</label><div className="val">{profile?.department || '—'} {role !== 'admin' && <span className="lock"><Icon n="lock" /> fijo</span>}</div></div>
           <div className="pf-field"><label>Rol</label><div className="val">{roleLabel}</div></div>
         </div>
-        <div className="row" style={{ marginTop: '.9rem', justifyContent: 'flex-end', alignItems: 'center', gap: '.7rem' }}>
-          {saved && <span className="save-ok"><Icon n="check" /> Cambios guardados</span>}
-          <button className={`btn ${saved ? 'btn-ok' : 'btn-lime'}`} onClick={saveProfile} disabled={saving || (!dirty && !saved)}>
+        <div className="row" style={{ marginTop: '.9rem', justifyContent: 'flex-end' }}>
+          <button className={`btn ${saved ? 'btn-ok' : 'btn-lime'}`} onClick={saveProfile}
+            disabled={saving || (!dirty && !saved)} style={{ minWidth: 170, justifyContent: 'center' }}>
             {saving ? 'Guardando…' : saved ? '✓ Guardado' : 'Guardar cambios'}
           </button>
         </div>
