@@ -9,6 +9,7 @@ import SortControl from '../components/SortControl'
 import FilterControl from '../components/FilterControl'
 import { Icon } from '../lib/icons'
 import { SkeletonKpis, SkeletonTableRows } from '../components/Skeleton'
+import { exportCsv } from '../lib/export'
 
 const initials = (n) => (n || '?').split(' ').slice(0, 2).map((x) => x[0]).join('').toUpperCase()
 const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
@@ -440,6 +441,15 @@ export default function Usuarios() {
         <div><h2>Usuarios</h2><p className="muted">Edita el perfil de cualquier persona. Los roles y permisos se definen en la sección Roles.</p></div>
         <div className="row usr-controls" style={{ gap: '.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <input className="search" placeholder="Buscar por nombre o correo…" value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 260 }} />
+          <button className="btn" onClick={() => exportCsv(`usuarios_${countryFilter || 'todos'}`, [
+            { label: 'Nombre', value: (u) => u.full_name || '' },
+            { label: 'Correo', value: 'email' },
+            { label: 'Departamento', value: (u) => u.department || '' },
+            { label: 'País', value: (u) => u.country || '' },
+            { label: 'Rol', value: (u) => roleLabel[u.role] || u.role || '' },
+            { label: 'Computadores', value: (u) => compCount[u.id] || 0 },
+            { label: 'Estado', value: (u) => u.active === false ? 'Deshabilitado' : 'Activo' },
+          ], data)} title="Descarga la lista visible (respeta filtros) a Excel/CSV"><Icon n="download" /> Exportar</button>
           <button className="btn" disabled={syncBusy} onClick={syncM365} title="Trae de Microsoft 365 los usuarios que aún no están en la app">{syncBusy ? 'Sincronizando…' : <><Icon n="refresh" /> Sincronizar M365</>}</button>
           <button className="btn btn-lime" onClick={() => setNewUser({ displayName: '', upnLocal: '', domain: 'billcapital.com', upnEdited: false, password: genPwd(), showPwd: true, jobTitle: '', department: '', phone: '', country: 'Chile', role: 'user', appAccess: true, forceChange: true })}>＋ Crear usuario (M365)</button>
         </div>

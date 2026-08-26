@@ -10,6 +10,7 @@ import SortControl from '../components/SortControl'
 import FilterControl from '../components/FilterControl'
 import { loadDeptNames, DEFAULT_DEPTS, deptIndentLabel } from '../lib/depts'
 import { Icon, sectionIconName } from '../lib/icons'
+import { exportCsv } from '../lib/export'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
 const CONDS = ['Bueno', 'Regular', 'Sin asignar', 'En mantenimiento', 'De baja']
@@ -133,6 +134,17 @@ export default function Inventario() {
     setTimeout(() => secRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
   }
   const secById = useMemo(() => Object.fromEntries(sections.map((s) => [s.id, s])), [sections])
+  // Selección múltiple para acciones masivas (ids de equipos)
+  const [sel, setSel] = useState(new Set())
+  const toggleSel = (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleMany = (ids, on) => setSel((s) => { const n = new Set(s); ids.forEach((id) => on ? n.add(id) : n.delete(id)); return n })
+  const clearSel = () => setSel(new Set())
+  const bulkApply = async (patch) => {
+    const ids = [...sel]
+    if (!ids.length) return
+    try { await api('equipment_bulk_update', { p_ids: ids, p_patch: patch }); clearSel(); load() }
+    catch (e) { alertDialog(e.message) }
+  }
   // Tarjeta de datos faltantes seleccionada
   const [gapSel, setGapSel] = useState(null)
   const [credSel, setCredSel] = useState(null)
@@ -355,7 +367,25 @@ export default function Inventario() {
     <div>
       <div className="page-head"><div className="row">
         <div><h2>Inventario de la empresa</h2><p className="muted">Cada tipo de equipo tiene su propio esquema de datos. Toca una tarjeta para desplegarla.</p></div>
-        <button className="btn" onClick={() => setShowSchemas((v) => !v)}><Icon n="gear" /> Tipos de equipo</button>
+        <div className="row" style={{ gap: '.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button className="btn" onClick={() => {
+            const rows = fItems.filter((e) => { const s = secById[e.section_id]; return s && !CRED.has(s.name) })
+            exportCsv(`inventario_${effCountry}`, [
+              { label: 'Equipo', value: 'name' },
+              { label: 'Tipo', value: (e) => secById[e.section_id]?.name || '' },
+              { label: 'Marca', value: (e) => e.brand || '' },
+              { label: 'Modelo', value: (e) => e.model || '' },
+              { label: 'Serie', value: (e) => e.serial_number || '' },
+              { label: 'Ubicación', value: (e) => e.location || '' },
+              { label: 'Asignado a', value: (e) => e.assigned_to_name || '' },
+              { label: 'Correo', value: (e) => e.assigned_to_email || '' },
+              { label: 'Estado', value: (e) => e.condition || '' },
+              { label: 'Antivirus', value: (e) => e.antivirus || '' },
+              { label: 'País', value: (e) => effCountry },
+            ], rows)
+          }} title="Descarga los equipos del país actual a Excel/CSV"><Icon n="download" /> Exportar</button>
+          <button className="btn" onClick={() => setShowSchemas((v) => !v)}><Icon n="gear" /> Tipos de equipo</button>
+        </div>
       </div></div>
 
       {/* ==== Sector por país ==== */}
@@ -849,13 +879,15 @@ export default function Inventario() {
                   return (
                   <div className="table-wrap"><table className="tbl-compact">
                     <thead><tr>
+                      {canManageInventory && <th style={{ width: '2rem' }}><input type="checkbox" title="Seleccionar todos los visibles" checked={rows.length > 0 && rows.every((e) => sel.has(e.id))} onChange={(ev) => toggleMany(rows.map((e) => e.id), ev.target.checked)} /></th>}
                       <th>Equipo</th><th>Serie</th><th>Ubicación</th>
                       <th>{s.assign_to === 'department' ? 'Departamento' : 'Asignado a'}</th><th>Estado</th>{showAV && <th>Antivirus</th>}<th></th>
                     </tr></thead>
                     <tbody>
-                      {rows.length === 0 && <tr><td colSpan={eqCols} className="muted" style={{ padding: '.7rem' }}>Sin equipos.</td></tr>}
+                      {rows.length === 0 && <tr><td colSpan={eqCols + (canManageInventory ? 1 : 0)} className="muted" style={{ padding: '.7rem' }}>Sin equipos.</td></tr>}
                       {rows.map((e) => (
-                        <tr key={e.id}>
+                        <tr key={e.id} className={sel.has(e.id) ? 'row-sel' : ''}>
+                          {canManageInventory && <td><input type="checkbox" checked={sel.has(e.id)} onChange={() => toggleSel(e.id)} /></td>}
                           <td><div style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>{e.image_url ? <img className="ins-thumb" src={e.image_url} alt="" loading="lazy" decoding="async" onClick={() => viewImage(e.image_url)} /> : null}<span><strong>{e.name}</strong> {e.brand} {e.model}</span></div></td>
                           <td>{e.serial_number}</td>
                           <td>{e.location}</td>
@@ -880,6 +912,28 @@ export default function Inventario() {
           </div>
         )
       })}
+
+      {/* ==== Barra de acciones masivas (aparece al seleccionar equipos) ==== */}
+      {view === 'equipos' && sel.size > 0 && (
+        <div className="bulk-bar">
+          <span className="bb-count"><b>{sel.size}</b> seleccionado{sel.size !== 1 ? 's' : ''}</span>
+          <span className="bb-sp" />
+          <label className="bb-act">Estado
+            <select value="" onChange={(e) => { if (e.target.value) bulkApply({ condition: e.target.value }); e.target.value = '' }}>
+              <option value="">Cambiar…</option>
+              {CONDS.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
+          <label className="bb-act">Grupo mant.
+            <select value="" onChange={(e) => { if (e.target.value) bulkApply({ maint_lote: e.target.value === '__none' ? '' : e.target.value }); e.target.value = '' }}>
+              <option value="">Asignar…</option>
+              {Array.from({ length: nLotes }).map((_, k) => <option key={k + 1} value={k + 1}>Grupo {k + 1}</option>)}
+              <option value="__none">Quitar del grupo</option>
+            </select>
+          </label>
+          <button className="btn-sm" onClick={clearSel}><Icon n="close" /> Quitar selección</button>
+        </div>
+      )}
 
       {/* ==== Modal editar / agregar equipo ==== */}
       {edit && (() => {

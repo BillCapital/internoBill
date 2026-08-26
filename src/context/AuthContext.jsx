@@ -84,6 +84,8 @@ export function AuthProvider({ children }) {
           scopes: 'email openid profile offline_access',
           redirectTo: window.location.origin,
           skipBrowserRedirect: true,
+          // Muestra siempre el selector de cuenta de Microsoft (para poder entrar con otra cuenta)
+          queryParams: { prompt: 'select_account' },
         },
       })
       if (error) { alertDialog('Error al iniciar sesión: ' + error.message); return }

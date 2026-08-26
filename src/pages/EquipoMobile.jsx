@@ -22,7 +22,7 @@ export default function EquipoMobile() {
   const signInHere = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'azure',
-      options: { scopes: 'email openid profile offline_access', redirectTo: window.location.href, skipBrowserRedirect: true },
+      options: { scopes: 'email openid profile offline_access', redirectTo: window.location.href, skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
     })
     if (!error && data?.url) window.location.href = data.url
   }

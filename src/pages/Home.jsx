@@ -28,9 +28,13 @@ export default function Home() {
       .then(({ data }) => setIsTech(!!data?.is_tech_approver)).catch(() => {}))
     // Solicitudes (RLS: gestora/admin ven todas; aprobador tec. ve las tecnológicas)
     if (canManage || true) {
-      tasks.push(supabase.from('requests').select('status').then(({ data }) => {
-        const c = { pending: 0, manager_review: 0, approved: 0, rejected: 0, delivered: 0, total: 0 }
-        ;(data || []).forEach((r) => { c[r.status] = (c[r.status] || 0) + 1; c.total++ })
+      tasks.push(supabase.from('requests').select('status, created_at').then(({ data }) => {
+        const c = { pending: 0, manager_review: 0, approved: 0, rejected: 0, delivered: 0, total: 0, oldPending: null, oldReview: null }
+        ;(data || []).forEach((r) => {
+          c[r.status] = (c[r.status] || 0) + 1; c.total++
+          if (r.status === 'pending' && (!c.oldPending || r.created_at < c.oldPending)) c.oldPending = r.created_at
+          if (r.status === 'manager_review' && (!c.oldReview || r.created_at < c.oldReview)) c.oldReview = r.created_at
+        })
         setReq(c)
       }).catch(() => {}))
     }
@@ -59,14 +63,34 @@ export default function Home() {
     </button>
   )
 
-  // Lista de "pendientes de acción"
+  // Saludo según la hora (hora local del navegador)
+  const hr = new Date().getHours()
+  const hi = hr < 12 ? 'Buenos días' : hr < 20 ? 'Buenas tardes' : 'Buenas noches'
+  // "hace X" para dar contexto de urgencia a la tarjeta
+  const agoTxt = (iso) => {
+    if (!iso) return ''
+    const ms = Date.now() - new Date(iso).getTime()
+    const d = Math.floor(ms / 86400000)
+    if (d >= 1) return `la más antigua hace ${d} día${d > 1 ? 's' : ''}`
+    const h = Math.floor(ms / 3600000)
+    if (h >= 1) return `la más antigua hace ${h} h`
+    return 'la más antigua hace minutos'
+  }
+
+  // Lista de "pendientes de acción" — cada uno se muestra como tarjeta con número, color por urgencia y contexto
   const todos = []
-  if (canManageOrders && req.pending > 0) todos.push({ k: 'p', ico: 'clock', txt: `${req.pending} solicitud(es) por revisar`, to: '/solicitudes' })
-  if ((isTech || isAdmin || isAreaManager) && req.manager_review > 0) todos.push({ k: 'm', ico: 'key', txt: `${req.manager_review} compra(s) esperando tu autorización`, to: '/solicitudes' })
-  else if (canManageOrders && req.manager_review > 0) todos.push({ k: 'm2', ico: 'key', txt: `${req.manager_review} compra(s) esperando autorización`, to: '/solicitudes' })
-  if (canManageOrders && req.approved > 0) todos.push({ k: 'a', ico: 'box', txt: `${req.approved} aprobada(s) por entregar`, to: '/solicitudes' })
-  if (canManageRooms && resPend > 0) todos.push({ k: 'r', ico: 'calendar', txt: `${resPend} reserva(s) de sala por aceptar`, to: '/salas' })
-  if (canManageInventory && equip.mant > 0) todos.push({ k: 'em', ico: 'wrench', txt: `${equip.mant} equipo(s) en mantenimiento`, to: '/inventario' })
+  if (canManageOrders && req.pending > 0) todos.push({ k: 'p', ico: 'clock', n: req.pending, txt: 'Solicitud(es) por revisar', sub: agoTxt(req.oldPending), tone: 'warn', to: '/solicitudes' })
+  if ((isTech || isAdmin || isAreaManager) && req.manager_review > 0) todos.push({ k: 'm', ico: 'key', n: req.manager_review, txt: 'Compra(s) esperando tu autorización', sub: agoTxt(req.oldReview), tone: 'warn', to: '/solicitudes' })
+  else if (canManageOrders && req.manager_review > 0) todos.push({ k: 'm2', ico: 'key', n: req.manager_review, txt: 'Compra(s) esperando autorización', sub: agoTxt(req.oldReview), tone: 'info', to: '/solicitudes' })
+  if (canManageOrders && req.approved > 0) todos.push({ k: 'a', ico: 'box', n: req.approved, txt: 'Aprobada(s) por entregar', sub: 'listas para coordinar entrega', tone: 'ok', to: '/solicitudes' })
+  if (canManageRooms && resPend > 0) todos.push({ k: 'r', ico: 'calendar', n: resPend, txt: 'Reserva(s) de sala por aceptar', sub: '', tone: 'info', to: '/salas' })
+  if (canManageInventory && equip.mant > 0) todos.push({ k: 'em', ico: 'wrench', n: equip.mant, txt: 'Equipo(s) en mantenimiento', sub: '', tone: '', to: '/inventario' })
+  // Prioridad: lo que requiere tu acción (ámbar) primero, luego en curso (azul), luego listo (verde) y neutro
+  const toneRank = { warn: 0, info: 1, ok: 2, '': 3 }
+  todos.sort((a, b) => (toneRank[a.tone] ?? 3) - (toneRank[b.tone] ?? 3))
+  // Resumen: total de pendientes y cuántos requieren acción del usuario (ámbar)
+  const totalPend = todos.reduce((s, t) => s + t.n, 0)
+  const needAction = todos.filter((t) => t.tone === 'warn').reduce((s, t) => s + t.n, 0)
 
   const opts = [
     ['/salas', 'calendar', 'Reservar sala', 'Agenda una sala'],
@@ -86,46 +110,36 @@ export default function Home() {
   return (
     <div>
       <div className="page-head">
-        <h2>Bienvenido{first ? `, ${first}` : ''}</h2>
+        <h2>{hi}{first ? `, ${first}` : ''}</h2>
         <p className="muted">{subtitle}</p>
       </div>
 
-      {/* Carga: silueta del panel mientras llegan los datos */}
-      {loading && (
+      {/* Carga: silueta del panel de pendientes mientras llegan los datos (solo para roles con panel) */}
+      {loading && showPanel && (
         <>
-          <div className="muted" style={{ fontSize: '.72rem', letterSpacing: '.08em', textTransform: 'uppercase', margin: '0 0 .5rem .2rem' }}>{showPanel ? 'Pendiente por aprobar' : 'Mis solicitudes'}</div>
-          {showPanel ? <SkeletonRows n={2} /> : <SkeletonKpis n={4} />}
-        </>
-      )}
-
-      {/* Vista de usuario común: un resumen de SUS solicitudes (RLS ya devuelve solo las propias) */}
-      {!loading && !showPanel && req.total > 0 && (
-        <>
-          <div className="muted" style={{ fontSize: '.72rem', letterSpacing: '.08em', textTransform: 'uppercase', margin: '0 0 .5rem .2rem' }}>Mis solicitudes</div>
-          <div className="kpi-grid compact kpi-sm" style={{ marginBottom: '.4rem' }}>
-            <Kpi ico="clock" num={req.pending} lbl="Pendientes" to="/solicitudes" />
-            {req.manager_review > 0 && <Kpi ico="key" num={req.manager_review} lbl="En autorización" tone="warn" to="/solicitudes" />}
-            <Kpi ico="check" num={req.approved} lbl="Aprobadas" to="/solicitudes" />
-            <Kpi ico="download" num={req.delivered} lbl="Entregadas" to="/solicitudes" />
-          </div>
+          <div className="muted" style={{ fontSize: '.72rem', letterSpacing: '.08em', textTransform: 'uppercase', margin: '0 0 .5rem .2rem' }}>Pendiente por aprobar</div>
+          <SkeletonRows n={2} />
         </>
       )}
 
       {!loading && showPanel && (
         <>
           {/* Pendientes de acción: el foco del inicio es lo que queda por aprobar/atender */}
-          <div className="muted" style={{ fontSize: '.72rem', letterSpacing: '.08em', textTransform: 'uppercase', margin: '0 0 .5rem .2rem' }}>Pendiente por aprobar</div>
+          <div className="todo-head">
+            <span className="th-eyebrow">Pendiente por aprobar</span>
+            {todos.length > 0 && (
+              <span className="th-summary">{totalPend} pendiente{totalPend !== 1 ? 's' : ''}{needAction > 0 && <> · <b>{needAction} requiere{needAction !== 1 ? 'n' : ''} tu acción</b></>}</span>
+            )}
+          </div>
           {todos.length > 0 ? (
-            <div className="conv" style={{ padding: '.9rem 1rem', marginBottom: '1rem', borderLeft: '3px solid var(--warn, #f5b13d)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '.35rem' }}>
-                {todos.map((t) => (
-                  <button key={t.k} onClick={() => nav(t.to)} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', background: 'transparent', border: '1px solid var(--line)', borderRadius: 10, padding: '.55rem .75rem', color: 'var(--text)', textAlign: 'left', cursor: 'pointer' }}>
-                    <span style={{ color: 'var(--warn, #f5b13d)', display: 'flex' }}><Icon n={t.ico} /></span>
-                    <span style={{ flex: 1, fontSize: '.9rem' }}>{t.txt}</span>
-                    <span className="muted" style={{ fontSize: '.8rem' }}>Ir ›</span>
-                  </button>
-                ))}
-              </div>
+            <div className="todo-cards">
+              {todos.map((t) => (
+                <button key={t.k} className={`todo-card ${t.tone || ''}`} onClick={() => nav(t.to)}>
+                  <span className="tc-ic"><Icon n={t.ico} /></span>
+                  <span className="tc-body"><span className="tc-n">{t.n}</span><span className="tc-t">{t.txt}</span>{t.sub ? <span className="tc-sub">{t.sub}</span> : null}</span>
+                  <span className="tc-go">›</span>
+                </button>
+              ))}
             </div>
           ) : (
             <div className="conv" style={{ padding: '1.1rem 1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '.7rem' }}>
@@ -136,10 +150,11 @@ export default function Home() {
         </>
       )}
 
-      <div className="act-grid three" style={{ marginTop: showPanel ? '1.4rem' : 0 }}>
+      {showPanel && <div className="th-eyebrow" style={{ margin: '1.4rem 0 .5rem .2rem' }}>Acciones rápidas</div>}
+      <div className={`act-grid three ${showPanel ? 'compact' : ''}`} style={{ marginTop: showPanel ? 0 : 0 }}>
         {opts.map((o) => (
           <button key={o[0]} className="act-card" onClick={() => nav(o[0])}>
-            <span className="ico"><Icon n={o[1]} /></span><strong>{o[2]}</strong><span className="muted">{o[3]}</span>
+            <span className="ico"><Icon n={o[1]} /></span><strong>{o[2]}</strong>{!showPanel && <span className="muted">{o[3]}</span>}
           </button>
         ))}
       </div>
