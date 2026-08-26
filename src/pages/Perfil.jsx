@@ -12,8 +12,7 @@ const OUT = 200    // tamaño final exportado (px)
 export default function Perfil() {
   const { profile, role, roleLabel, isAdmin, refreshProfile } = useAuth()
   const [equipos, setEquipos] = useState([])
-  const [open, setOpen] = useState(false)
-  const [phone, setPhone] = useState('')
+  const [form, setForm] = useState({ phone: '', work_mode: '', emergency_name: '', emergency_phone: '', birth_day: '', birth_month: '' })
   const [saving, setSaving] = useState(false)
   const [avatarSaving, setAvatarSaving] = useState(false)
   const fileRef = useRef(null)
@@ -25,16 +24,42 @@ export default function Perfil() {
   const [off, setOff] = useState({ x: 0, y: 0 })
   const drag = useRef(null)
 
-  useEffect(() => { setPhone(profile?.phone || '') }, [profile?.phone])
   useEffect(() => {
-    if (isAdmin) return
-    supabase.from('equipment').select('id,name,brand,model,serial_number,location,condition').is('returned_at', null)
-      .then(({ data }) => setEquipos(data ?? []))
-  }, [isAdmin])
+    setForm({
+      phone: profile?.phone || '',
+      work_mode: profile?.work_mode || '',
+      emergency_name: profile?.emergency_name || '',
+      emergency_phone: profile?.emergency_phone || '',
+      birth_day: profile?.birth_day || '',
+      birth_month: profile?.birth_month || '',
+    })
+  }, [profile?.phone, profile?.work_mode, profile?.emergency_name, profile?.emergency_phone, profile?.birth_day, profile?.birth_month])
+  // Equipos asignados a MÍ (por correo o por vínculo de usuario). El RLS ya limita a los propios
+  // cuando no eres admin; para admin, el filtro restringe a los tuyos en vez de traer todo el inventario.
+  useEffect(() => {
+    if (!profile?.id && !profile?.email) return
+    const conds = []
+    if (profile?.email) conds.push(`assigned_to_email.ilike.${profile.email}`)
+    if (profile?.id) conds.push(`user_id.eq.${profile.id}`)
+    let q = supabase.from('equipment').select('id,name,brand,model,serial_number,location,condition').is('returned_at', null).order('name')
+    if (conds.length) q = q.or(conds.join(','))
+    q.then(({ data }) => setEquipos(data ?? []))
+  }, [profile?.id, profile?.email])
 
-  const savePhone = async () => {
+  const setF = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+  const saveProfile = async () => {
     setSaving(true)
-    try { await api('set_my_phone', { p_phone: phone.trim() }); await refreshProfile() } catch (e) { alertDialog(e.message) } finally { setSaving(false) }
+    try {
+      await api('save_my_profile', {
+        p_phone: (form.phone || '').trim(),
+        p_work_mode: form.work_mode || '',
+        p_emergency_name: (form.emergency_name || '').trim(),
+        p_emergency_phone: (form.emergency_phone || '').trim(),
+        p_birth_day: form.birth_day ? Number(form.birth_day) : null,
+        p_birth_month: form.birth_month ? Number(form.birth_month) : null,
+      })
+      await refreshProfile()
+    } catch (e) { alertDialog(e.message) } finally { setSaving(false) }
   }
 
   const onPickFile = (e) => {
@@ -97,8 +122,10 @@ export default function Perfil() {
   }
 
   const name = profile?.full_name || profile?.email || '—'
-  const dirty = (phone || '') !== (profile?.phone || '')
+  const dirty = ['phone', 'work_mode', 'emergency_name', 'emergency_phone', 'birth_day', 'birth_month']
+    .some((k) => String(form[k] ?? '') !== String(profile?.[k] ?? ''))
   const avatar = profile?.avatar_url
+  const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
   const dispW = cropImg ? cropImg.width * scale : 0, dispH = cropImg ? cropImg.height * scale : 0
 
   return (
@@ -125,15 +152,41 @@ export default function Perfil() {
         <div className="pf-fields">
           <div className="pf-field"><label>Correo electrónico</label><div className="val">{profile?.email}</div></div>
           <div className="pf-field"><label>Teléfono</label>
-            <div className="qc phone-edit">
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+56 9 ..." />
-              <button className="btn-sm btn-lime" onClick={savePhone} disabled={!dirty || saving}>{saving ? '…' : 'Guardar'}</button>
+            <input value={form.phone} onChange={(e) => setF('phone', e.target.value)} placeholder="+56 9 ..." />
+          </div>
+          <div className="pf-field"><label>Modalidad de trabajo</label>
+            <select value={form.work_mode} onChange={(e) => setF('work_mode', e.target.value)}>
+              <option value="">— Sin definir</option>
+              <option>Presencial</option>
+              <option>Híbrido</option>
+              <option>Remoto</option>
+            </select>
+          </div>
+          <div className="pf-field"><label>Cumpleaños</label>
+            <div className="qc" style={{ gap: '.4rem' }}>
+              <select value={form.birth_day} onChange={(e) => setF('birth_day', e.target.value)} style={{ flex: '0 0 90px' }}>
+                <option value="">Día</option>
+                {Array.from({ length: 31 }).map((_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
+              </select>
+              <select value={form.birth_month} onChange={(e) => setF('birth_month', e.target.value)} style={{ flex: 1 }}>
+                <option value="">Mes</option>
+                {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+              </select>
             </div>
+          </div>
+          <div className="pf-field"><label>Contacto de emergencia · nombre</label>
+            <input value={form.emergency_name} onChange={(e) => setF('emergency_name', e.target.value)} placeholder="Ej: María Pérez (madre)" />
+          </div>
+          <div className="pf-field"><label>Contacto de emergencia · teléfono</label>
+            <input value={form.emergency_phone} onChange={(e) => setF('emergency_phone', e.target.value)} placeholder="+56 9 ..." />
           </div>
           <div className="pf-field"><label>Departamento</label><div className="val">{profile?.department || '—'} {role !== 'admin' && <span className="lock"><Icon n="lock" /> fijo</span>}</div></div>
           <div className="pf-field"><label>Rol</label><div className="val">{roleLabel}</div></div>
         </div>
-        <p className="muted" style={{ marginTop: '.7rem' }}>Puedes actualizar tu teléfono y tu foto cuando quieras. El departamento lo asigna un administrador.</p>
+        <div className="row" style={{ marginTop: '.9rem', justifyContent: 'flex-end' }}>
+          <button className="btn btn-lime" onClick={saveProfile} disabled={!dirty || saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
+        </div>
+        <p className="muted" style={{ marginTop: '.5rem' }}>Actualiza tus datos cuando quieras. El departamento y el rol los asigna un administrador.</p>
       </div>
 
       {/* Recortador circular */}
@@ -159,20 +212,32 @@ export default function Perfil() {
         </div>
       )}
 
-      {!isAdmin && (
-        <div className={`section ${open ? 'open' : ''}`} style={{ marginTop: '1.2rem' }}>
-          <button className="sec-head compact" onClick={() => setOpen((v) => !v)}>
-            <span className="ico"><Icon n="monitor" /></span><span className="t"><strong>Mis equipos asignados</strong><br /><span className="muted">{equipos.length} equipos · toca para {open ? 'ocultar' : 'ver'}</span></span><span className="chev">▾</span>
-          </button>
-          {open && <div className="sec-body">
-            {equipos.length === 0 ? <div className="empty">No tienes equipos asignados.</div> : (
-              <table><thead><tr><th>Equipo</th><th>Serie</th><th>Ubicación</th><th>Estado</th></tr></thead>
-                <tbody>{equipos.map((e) => <tr key={e.id}><td><strong>{e.name}</strong> {e.brand} {e.model}</td><td>{e.serial_number}</td><td>{e.location}</td><td><span className="badge">{e.condition}</span></td></tr>)}</tbody>
-              </table>
-            )}
-          </div>}
+      <div className="pf-card pf-eq" style={{ marginTop: '1.2rem' }}>
+        <div className="pf-eq-head">
+          <span className="ico"><Icon n="monitor" /></span>
+          <h3>Mis equipos asignados</h3>
+          <span className="pf-eq-count">{equipos.length}</span>
         </div>
-      )}
+        {equipos.length === 0 ? (
+          <div className="empty">No tienes equipos asignados.</div>
+        ) : (
+          <div className="pf-eq-list">
+            {equipos.map((e) => (
+              <div key={e.id} className="pf-eq-item">
+                <span className="pf-eq-ic"><Icon n="monitor" /></span>
+                <div className="pf-eq-body">
+                  <div className="pf-eq-name"><strong>{e.name}</strong> <span className="muted">{[e.brand, e.model].filter(Boolean).join(' ')}</span></div>
+                  <div className="pf-eq-meta">
+                    {e.serial_number && <span><span className="muted">Serie:</span> {e.serial_number}</span>}
+                    {e.location && <span><span className="muted">Ubicación:</span> {e.location}</span>}
+                  </div>
+                </div>
+                <span className="badge">{e.condition}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

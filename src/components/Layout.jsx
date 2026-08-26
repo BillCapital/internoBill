@@ -6,6 +6,7 @@ import { api } from '../lib/api'
 import { confirmDialog, alertDialog } from '../lib/ui'
 
 import { Icon } from '../lib/icons'
+import ProfilePrompt from './ProfilePrompt'
 
 const ROLE_LABEL = { user: 'Usuario', pedidos: 'Gestora de pedidos', admin: 'Administrador' }
 const KIND_ICON = { ok: 'check', bad: 'ban', msg: 'chat', info: 'bell' }
@@ -211,6 +212,7 @@ export default function Layout() {
           </Suspense>
         </main>
       </div>
+      <ProfilePrompt />
     </div>
   )
 }

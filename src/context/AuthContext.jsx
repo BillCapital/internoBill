@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
   const loadProfile = useCallback(async (uid) => {
     if (!uid) { setProfile(null); setPerms({}); setRoleLabel(''); setManagedDepts([]); return }
     const { data } = await supabase.from('profiles')
-      .select('id, role, full_name, email, department, phone, inventory_access, avatar_url, active, country, app_access').eq('id', uid).single()
+      .select('id, role, full_name, email, department, phone, inventory_access, avatar_url, active, country, app_access, work_mode, emergency_name, emergency_phone, birth_day, birth_month').eq('id', uid).single()
     // Cuenta deshabilitada: sin acceso (persona que ya no forma parte de la empresa)
     if (data && data.active === false) {
       setProfile(null); setPerms({}); setRoleLabel(''); setManagedDepts([])

@@ -27,3 +27,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Scripts / respaldos locales (no se suben al repo)
+subir.bat
+azure-workflow-ORIGINAL-respaldo.txt
