@@ -80,6 +80,7 @@ export default function Usuarios() {
   const [countryFilter, setCountryFilter] = useState('')     // '' = todos
   const [missingFilter, setMissingFilter] = useState('')     // '' | 'pc' | 'perif' | 'phone' | 'dept'
   const [mgmtFilter, setMgmtFilter] = useState(false)        // true = solo cargos de gestión (mayores a "Usuario")
+  const [rolesOpen, setRolesOpen] = useState(false)          // carpeta "Cargos de gestión": muestra una tarjeta por rol
 
   // "Cargo de gestión" = tiene acceso a la app y su rol no es el común "Usuario".
   // (Los sin acceso —Mic, Sistema— quedan por debajo de Usuario y no cuentan.)
@@ -212,6 +213,10 @@ export default function Usuarios() {
     rows.forEach((u) => { if (!isPerson(u)) return; MISSING_CARDS.forEach((m) => { if (lacks(u, m.key)) c[m.key]++ }) })
     return c
   }, [rows, isPerson, lacks])
+  // Total de personas activas: denominador para colorear la información faltante por severidad
+  const peopleCount = useMemo(() => rows.filter(isPerson).length, [rows, isPerson])
+  // Nivel de color según proporción de personas afectadas: crit ≥40% · warn ≥15% · info el resto (0 = neutro)
+  const missSev = (n) => { if (!n) return ''; const r = n / (peopleCount || 1); return r >= 0.4 ? 'gap-crit' : r >= 0.15 ? 'gap-warn' : 'gap-info' }
   const periphAvail = useMemo(() => {
     const asg = {}; periphAssign.forEach((a) => { asg[a.peripheral_id] = (asg[a.peripheral_id] || 0) + (a.qty || 0) })
     const m = {}; periphs.forEach((p) => { m[p.id] = (p.total_qty || 0) - (asg[p.id] || 0) }); return m
@@ -445,12 +450,13 @@ export default function Usuarios() {
         <button className={`kpi ${!roleFilter && !mgmtFilter && statusFilter === 'active' && !countryFilter && !domainFilter && !missingFilter ? 'active' : ''}`} onClick={() => { setRoleFilter(null); setMgmtFilter(false); setCountryFilter(''); setDomainFilter(''); setStatusFilter('active'); setMissingFilter('') }}>
           <div className="ico"><Icon n="users" /></div><div className="num">{rows.length}</div><div className="lbl">Todos</div>
         </button>
-        <button className={`kpi ${mgmtFilter ? 'active' : ''}`} onClick={() => { setMgmtFilter((v) => !v); setRoleFilter(null); setStatusFilter('active'); setMissingFilter('') }} title="Todos los cargos por encima de Usuario (con acceso a la app). Se puede combinar con un país.">
-          <div className="ico"><Icon n="shield" /></div><div className="num">{mgmtCount}</div><div className="lbl">Cargos de gestión</div>
+        <button className={`kpi mgmt-head ${mgmtFilter ? 'active' : ''} ${rolesOpen ? 'folder-open' : ''}`} onClick={() => { const willOpen = !rolesOpen; setRolesOpen(willOpen); setMgmtFilter(willOpen); setRoleFilter(null); setStatusFilter('active'); setMissingFilter('') }} title="Cargos por encima de Usuario (con acceso a la app). Ábrela para ver el detalle por rol; se puede combinar con un país.">
+          <div className="ico"><Icon n="shield" /></div><div className="num">{mgmtCount}</div><div className="lbl">Cargos</div>
+          <span className="chev">▾</span>
         </button>
-        {roles.map((r) => (
-          <button className={`kpi ${roleFilter === r.key ? 'active' : ''}`} key={r.key} onClick={() => { setRoleFilter(roleFilter === r.key ? null : r.key); setMgmtFilter(false); setStatusFilter('active'); setMissingFilter('') }}>
-            <div className="ico"><Icon n={r.permissions?.full_admin ? 'shield' : 'user'} /></div>
+        {roles.filter((r) => ['user', 'sistema', 'mic'].includes(r.key)).map((r) => (
+          <button className={`kpi ${roleFilter === r.key ? 'active' : ''}`} key={r.key} onClick={() => { setRoleFilter(roleFilter === r.key ? null : r.key); setMgmtFilter(false); setRolesOpen(false); setStatusFilter('active'); setMissingFilter('') }}>
+            <div className="ico"><Icon n={r.key === 'sistema' ? 'gear' : r.key === 'mic' ? 'building' : 'user'} /></div>
             <div className="num">{rows.filter((u) => u.role === r.key && u.active !== false).length}</div><div className="lbl">{r.label}</div>
           </button>
         ))}
@@ -472,12 +478,34 @@ export default function Usuarios() {
         </button>
       </div>}
 
+      {/* Carpeta "Cargos de gestión": detalle por rol, desplegable desde la tarjeta de arriba */}
+      {!loading && rolesOpen && (
+        <div className="mgmt-folder">
+          <div className="mgmt-folder-t"><Icon n="shield" /> Cargos · detalle por rol</div>
+          <div className="kpi-grid compact kpi-sm">
+            {roles.filter((r) => !['user', 'sistema', 'mic'].includes(r.key)).map((r) => (
+              <button className={`kpi ${roleFilter === r.key ? 'active' : ''}`} key={r.key} onClick={() => { setRoleFilter(roleFilter === r.key ? null : r.key); setMgmtFilter(false); setStatusFilter('active'); setMissingFilter('') }}>
+                <div className="ico"><Icon n={r.permissions?.full_admin ? 'shield' : 'user'} /></div>
+                <div className="num">{rows.filter((u) => u.role === r.key && u.active !== false && u.app_access !== false).length}</div><div className="lbl">{r.label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Información faltante: tarjetas agregadas de lo que falta por completar (personas activas) */}
       {!loading && <div className="miss-block">
-        <div className="miss-title"><Icon n="alert" /> Información faltante <span className="muted">(personas activas)</span></div>
+        <div className="gap-head">
+          <span className="miss-title"><Icon n="alert" /> Información faltante <span className="muted">(personas activas)</span></span>
+          <span className="gap-legend">
+            <span className="gl crit"><span className="dot" />Crítico</span>
+            <span className="gl warn"><span className="dot" />Medio</span>
+            <span className="gl info"><span className="dot" />Leve</span>
+          </span>
+        </div>
         <div className="kpi-grid compact kpi-sm">
           {MISSING_CARDS.map((m) => (
-            <button key={m.key} className={`kpi ${missingFilter === m.key ? 'active' : ''} ${missingCounts[m.key] > 0 ? 'kpi-warn' : ''}`}
+            <button key={m.key} className={`kpi ${missSev(missingCounts[m.key])} ${missingFilter === m.key ? 'active' : ''}`}
               onClick={() => { const on = missingFilter === m.key; setMissingFilter(on ? '' : m.key); if (!on) { setStatusFilter('active'); setRoleFilter(null); setCountryFilter(''); setDomainFilter(''); setDeptFilter('') } }}>
               <div className="ico"><Icon n={m.ico} /></div>
               <div className="num">{missingCounts[m.key]}</div><div className="lbl">{m.label}</div>
@@ -490,7 +518,7 @@ export default function Usuarios() {
         <div className="filter-summary">
           <span className="fs-label">Mostrando:</span>
           {countryFilter && <span className="fs-chip">{countryFilter}</span>}
-          {mgmtFilter && <span className="fs-chip">Cargos de gestión</span>}
+          {mgmtFilter && <span className="fs-chip">Cargos</span>}
           {roleFilter && <span className="fs-chip">{(roles.find((r) => r.key === roleFilter) || {}).label || roleFilter}</span>}
           <span className="fs-count">{data.length} persona{data.length === 1 ? '' : 's'}</span>
           <button className="btn-sm" onClick={() => { setCountryFilter(''); setMgmtFilter(false); setRoleFilter(null); setDomainFilter(''); setMissingFilter('') }}>Limpiar</button>
@@ -527,7 +555,7 @@ export default function Usuarios() {
               {us.map((u) => (
                 <tr key={u.id}>
                   <td><div className="row" style={{ justifyContent: 'flex-start', gap: '.5rem' }}>
-                    {u.avatar_url ? <img className="avatar-img" src={u.avatar_url} alt="" /> : <div className="avatar sm">{initials(u.full_name || u.email)}</div>}
+                    {u.avatar_url ? <img className="avatar-img" src={u.avatar_url} alt="" loading="lazy" decoding="async" /> : <div className="avatar sm">{initials(u.full_name || u.email)}</div>}
                     <div><strong>{u.full_name || '—'}</strong>{u.id === user?.id && <span className="badge" style={{ marginLeft: 6 }}>tú</span>}{u.active === false && <span className="badge s-rejected" style={{ marginLeft: 6 }}>Deshabilitado</span>}{u.app_access === false && <span className="badge" style={{ marginLeft: 6 }} title="Solo para organización · sin acceso a la app"><Icon n="ban" /> Sin acceso</span>}<br /><span className="muted">{u.email}</span></div>
                   </div></td>
                   <td>{u.department || <span className="muted">—</span>}</td>

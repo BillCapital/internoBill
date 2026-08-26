@@ -607,7 +607,7 @@ export default function EquipoDetalle() {
                       <td><span className="badge">{ev.event_type}</span></td>
                       <td>{ev.note || <span className="muted">—</span>}
                         {(ev.images && ev.images.length > 0) ? <div style={{ display: 'flex', gap: '.3rem', flexWrap: 'wrap', marginTop: '.3rem' }}>
-                          {ev.images.map((src, k) => <img key={k} className="ins-thumb" src={src} alt="foto" onClick={() => viewImage(src)} />)}
+                          {ev.images.map((src, k) => <img key={k} className="ins-thumb" src={src} alt="foto" loading="lazy" decoding="async" onClick={() => viewImage(src)} />)}
                         </div> : null}</td>
                       <td>{ev.actor_name}</td>
                       {canManageInventory && <td className="actions">{String(ev.id).startsWith('tmp-') ? <span className="muted">…</span> : <>

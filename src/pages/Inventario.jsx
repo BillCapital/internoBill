@@ -856,7 +856,7 @@ export default function Inventario() {
                       {rows.length === 0 && <tr><td colSpan={eqCols} className="muted" style={{ padding: '.7rem' }}>Sin equipos.</td></tr>}
                       {rows.map((e) => (
                         <tr key={e.id}>
-                          <td><div style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>{e.image_url ? <img className="ins-thumb" src={e.image_url} alt="" onClick={() => viewImage(e.image_url)} /> : null}<span><strong>{e.name}</strong> {e.brand} {e.model}</span></div></td>
+                          <td><div style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>{e.image_url ? <img className="ins-thumb" src={e.image_url} alt="" loading="lazy" decoding="async" onClick={() => viewImage(e.image_url)} /> : null}<span><strong>{e.name}</strong> {e.brand} {e.model}</span></div></td>
                           <td>{e.serial_number}</td>
                           <td>{e.location}</td>
                           <td>{s.assign_to === 'department'

@@ -177,7 +177,7 @@ export default function Insumos() {
                     <tr key={i.id} className={sel.has(i.id) ? 'row-sel' : ''}>
                       <td><input type="checkbox" checked={sel.has(i.id)} onChange={() => toggleSel(i.id)} /></td>
                       <td><div style={{ display: 'flex', gap: '.55rem', alignItems: 'flex-start' }}>
-                        {i.image_url ? <img className="ins-thumb" src={i.image_url} alt="" onClick={() => viewImage(i.image_url)} /> : null}
+                        {i.image_url ? <img className="ins-thumb" src={i.image_url} alt="" loading="lazy" decoding="async" onClick={() => viewImage(i.image_url)} /> : null}
                         <div><strong>{i.name}</strong>{i.requires_manager ? <span className="req-tech-tag" title="Requiere doble aprobación (gerente de área)"><Icon n="key" /> tecnológico</span> : null}{i.description ? <><br /><span className="muted">{i.description}</span></> : null}
                           <br /><span className="muted">Destino: {(i.departments && i.departments.length) ? i.departments.join(', ') : <span style={{ color: 'var(--danger)' }}>Sin asignar — no aparece en solicitudes</span>}</span>
                           {i.purchase_url ? <><br /><a className="btn-sm btn-lime" style={{ textDecoration: 'none', marginTop: '.25rem', display: 'inline-block' }} href={/^https?:\/\//i.test(i.purchase_url) ? i.purchase_url : 'https://' + i.purchase_url} target="_blank" rel="noreferrer"><Icon n="cart" /> Comprar</a></> : null}</div>

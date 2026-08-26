@@ -49,6 +49,8 @@ export default function Rooms() {
   const [roomEdit, setRoomEdit] = useState(null) // sala en edición/creación
   const [users, setUsers] = useState([])         // perfiles para convocar
   const [extAtt, setExtAtt] = useState('')       // correo externo manual
+  const [attQuery, setAttQuery] = useState('')   // búsqueda de convocados
+  const [attOpen, setAttOpen] = useState(false)  // lista de convocados desplegada
 
   const load = useCallback(async () => {
     const [{ data: rms }, { data: rs }, { data: us }] = await Promise.all([
@@ -207,6 +209,12 @@ export default function Rooms() {
           <div className="sal-right" ref={salRightRef}>
             <>
               <h3 style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</h3>
+              <div className="room-legend">
+                <span className="rl-item free"><span className="dot" />Disponible</span>
+                <span className="rl-item resv"><span className="dot" />Reservado</span>
+                <span className="rl-item pend"><span className="dot" />Pendiente</span>
+                <span className="rl-item lunch"><span className="dot" />Colación</span>
+              </div>
               <div style={{ overflowX: 'auto' }}><table className="cal"><thead><tr><th>Bloque</th>{rooms.map((r) => <th key={r.id}>{r.name}</th>)}</tr></thead>
                 <tbody>
                   {SLOTS.map((t, idx) => {
@@ -222,7 +230,12 @@ export default function Rooms() {
                         resAt={resAt} covered={covered} durSlots={durSlots} idx={idx} t={t} slotList={SLOTS}
                         canManageRooms={canManageRooms} profile={profile}
                         onReserve={(room) => { setExtAtt(''); setForm({ room: room.id, slotIdx: idx, dur: Math.min(2, maxDur(room.id, idx)) || 1, maxDur: maxDur(room.id, idx), title: 'Reunión', just: '', att: [], includeSelf: true }) }}
-                        onOpen={(id) => setOpenRes(id)} />
+                        onOpen={(id) => setOpenRes(id)}
+                        onPendingInfo={(r) => {
+                          const who = r.profiles?.full_name || r.profiles?.email || 'otra persona'
+                          const mail = r.profiles?.email && r.profiles.email !== who ? `\nCorreo: ${r.profiles.email}` : ''
+                          alertDialog(`Esta sala ya tiene una solicitud pendiente de aprobación para esta hora.\n\nReunión: ${r.title}\nSolicitada por: ${who}${mail}\n\nAún no está confirmada. Si necesitas esta sala a esta hora, coordina directamente con esta persona antes de que se apruebe.`, { title: 'Sala solicitada (pendiente)' })
+                        }} />
                     )
                   })}
                 </tbody>
@@ -234,30 +247,60 @@ export default function Rooms() {
 
       {form && (
         <div className="backdrop open">
-          <div className="modal">
-            <h3>Reservar sala</h3>
-            <p className="muted">{dayLong(calDay)} · desde {SLOTS[form.slotIdx]}</p>
-            <label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-            <label>Duración</label>
-            <select value={form.dur} onChange={(e) => setForm({ ...form, dur: Number(e.target.value) })}>
-              {Array.from({ length: form.maxDur }).map((_, i) => { const d = i + 1, mm = d * 30; return <option key={d} value={d}>{mm < 60 ? mm + ' min' : (mm / 60) + ' h'}</option> })}
-            </select>
+          <div className="modal modal-reserve">
+            <div className="mr-head">
+              <span className="mr-ico"><Icon n="calendar" /></span>
+              <div><h3>Reservar sala</h3>
+                <p className="mr-meta"><Icon n="clock" /> <span style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</span> · desde {SLOTS[form.slotIdx]}</p></div>
+            </div>
+            <div className="mr-grid">
+              <div><label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+              <div><label>Duración</label>
+                <select value={form.dur} onChange={(e) => setForm({ ...form, dur: Number(e.target.value) })}>
+                  {Array.from({ length: form.maxDur }).map((_, i) => { const d = i + 1, mm = d * 30; return <option key={d} value={d}>{mm < 60 ? mm + ' min' : (mm / 60) + ' h'}</option> })}
+                </select></div>
+            </div>
             <label>Convocados <span className="muted">— se les crea la cita en su calendario 365</span></label>
-            <select value="" onChange={async (e) => {
-              const v = e.target.value; if (!v) return
-              const u = users.find((x) => x.email === v)
-              const nm = u ? (u.full_name || u.email) : v
-              setForm((f) => (f.att || []).some((a) => a.email === v) ? f : { ...f, att: [...(f.att || []), { email: v, name: nm }] })
-              const busy = await checkBusy([v], form)
-              if (busy.length) alertDialog(`${nm} ya tiene una reunión agendada el ${dayLong(calDay)} desde las ${SLOTS[form.slotIdx]} (${durLabel(form)}). Considera elegir otro horario.`, { title: 'Convocado ocupado' })
-            }}>
-              <option value="">＋ Agregar convocado…</option>
-              {users.filter((u) => u.email && !(form.att || []).some((a) => a.email === u.email)).map((u) => (
-                <option key={u.id} value={u.email}>{(u.full_name || 'Sin nombre')} — {u.email}</option>
-              ))}
-            </select>
-            <div className="qc" style={{ marginTop: '.4rem', gap: '.4rem' }}>
-              <input style={{ flex: 1 }} placeholder="Correo externo…" value={extAtt}
+            <div className="att-picker">
+              <div className="att-inputwrap">
+                <span className="att-ico"><Icon n="search" /></span>
+                <input className="att-search" placeholder="Buscar persona por nombre o correo…" value={attQuery}
+                  onChange={(e) => { setAttQuery(e.target.value); setAttOpen(true) }}
+                  onFocus={() => setAttOpen(true)}
+                  onBlur={() => setTimeout(() => setAttOpen(false), 150)} />
+              </div>
+              {attOpen && (() => {
+                const q = attQuery.trim().toLowerCase()
+                const list = users
+                  .filter((u) => u.email && !(form.att || []).some((a) => a.email === u.email))
+                  .filter((u) => !q || (u.full_name || '').toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+                  .slice(0, 60)
+                return (
+                  <div className="att-list">
+                    {list.length === 0 && <div className="att-empty">Sin coincidencias</div>}
+                    {list.map((u) => {
+                      const v = u.email, nm = u.full_name || u.email
+                      return (
+                        <button type="button" key={u.id} className="att-opt" onMouseDown={(e) => e.preventDefault()}
+                          onClick={async () => {
+                            setForm((f) => (f.att || []).some((a) => a.email === v) ? f : { ...f, att: [...(f.att || []), { email: v, name: nm }] })
+                            setAttQuery(''); setAttOpen(false)
+                            const busy = await checkBusy([v], form)
+                            if (busy.length) alertDialog(`${nm} ya tiene una reunión agendada el ${dayLong(calDay)} desde las ${SLOTS[form.slotIdx]} (${durLabel(form)}). Considera elegir otro horario.`, { title: 'Convocado ocupado' })
+                          }}>
+                          <span className="att-av">{(u.full_name || u.email).charAt(0).toUpperCase()}</span>
+                          <span className="att-nm">{u.full_name || 'Sin nombre'}<br /><span className="muted">{u.email}</span></span>
+                          <span className="att-plus"><Icon n="plus" /></span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
+            <div className="att-ext-lbl">o invita a un correo externo</div>
+            <div className="qc att-ext" style={{ gap: '.4rem' }}>
+              <input style={{ flex: 1 }} placeholder="nombre@empresa.com" value={extAtt}
                 onChange={(e) => setExtAtt(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('add-ext-att')?.click() } }} />
               <button id="add-ext-att" className="btn-sm" type="button" onClick={() => {
@@ -331,7 +374,7 @@ export default function Rooms() {
   )
 }
 
-function ReservRow({ label, lunch, cells, durSlots, canManageRooms, profile, onReserve, onOpen, rooms, past }) {
+function ReservRow({ label, lunch, cells, durSlots, canManageRooms, profile, onReserve, onOpen, onPendingInfo, rooms, past }) {
   return (
     <>
       {lunch && <tr className="lunch"><td>13:00–15:30</td><td colSpan={rooms.length}>Colación (no reservable)</td></tr>}
@@ -341,10 +384,14 @@ function ReservRow({ label, lunch, cells, durSlots, canManageRooms, profile, onR
           if (c.covered && !c.res) return null // cubierto por rowspan de arriba
           if (c.res) {
             const mine = c.res.profiles?.email === profile?.email
+            const canEdit = mine || canManageRooms
+            const isPend = c.res.status === 'pending'
             const clas = c.res.status === 'approved' ? 'slot busy' : 'slot pending'
             return <td key={c.room.id} rowSpan={durSlots(c.res)}>
-              <button className={clas} style={{ height: '100%', width: '100%' }} onClick={() => (mine || canManageRooms) && onOpen(c.res.id)}>
-                {c.res.title}<br /><span className="muted">{c.res.profiles?.full_name || c.res.profiles?.email}{c.res.status === 'pending' ? ' · pend.' : ''}</span>
+              <button className={clas} style={{ height: '100%', width: '100%' }}
+                title={isPend && !canEdit ? 'Solicitud pendiente — toca para coordinar' : undefined}
+                onClick={() => { if (canEdit) onOpen(c.res.id); else if (isPend) onPendingInfo(c.res) }}>
+                {c.res.title}<br /><span className="muted">{c.res.profiles?.full_name || c.res.profiles?.email}{isPend ? ' · pendiente' : ''}</span>
               </button></td>
           }
           if (past) return <td key={c.room.id}><button className="slot slot-off" disabled title="Hora pasada">—</button></td>

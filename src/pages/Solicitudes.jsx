@@ -211,7 +211,7 @@ export default function Solicitudes() {
               {itemsFor(wDept, wSection).map((i) => (
                 <div className="cat-row prod-row" key={i.id}>
                   <div className="prod-info">
-                    {i.image_url ? <img className="prod-thumb" src={i.image_url} alt="" onClick={() => viewImage(i.image_url)} /> : <div className="prod-ph"><Icon n="box" /></div>}
+                    {i.image_url ? <img className="prod-thumb" src={i.image_url} alt="" loading="lazy" decoding="async" onClick={() => viewImage(i.image_url)} /> : <div className="prod-ph"><Icon n="box" /></div>}
                     <div><strong>{i.name}</strong><br /><span className="muted">stock {i.stock}</span></div>
                   </div>
                   <div className="qc">
