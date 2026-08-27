@@ -585,12 +585,25 @@ body.light tr.row-sel{background:#eefbe0}
 .ins-thumb.ph .licon{width:1.2rem;height:1.2rem;opacity:.45}
 
 /* ===== Gastos ===== */
-.gz-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-top:1rem}
+.gz-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin:1.2rem 0 .4rem}
+@media(max-width:720px){.gz-kpis{grid-template-columns:1fr}}
+.gz-kpi{display:flex;align-items:center;gap:.85rem;background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:1.05rem 1.2rem;box-shadow:var(--shadow-sm)}
+.gz-kpi.accent{border-color:color-mix(in srgb,var(--lime) 42%,var(--line));background:color-mix(in srgb,var(--lime) 8%,var(--panel))}
+.gk-ico{width:44px;height:44px;flex:0 0 auto;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--lime) 14%,transparent);color:var(--lime)}
+.gk-ico .licon{width:1.3rem;height:1.3rem}
+.gz-kpi.accent .gk-ico{background:var(--lime);color:var(--accent-ink)}
+.gk-txt{min-width:0}
+.gk-num{font-size:1.7rem;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em}
+.gk-lbl{font-size:.8rem;color:var(--muted);margin-top:.15rem;line-height:1.25}
+@media(max-width:900px){.gk-num{font-size:1.4rem}}
+
+.gz-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.4rem}
 @media(max-width:820px){.gz-grid{grid-template-columns:1fr}}
-.gz-card{padding:1rem}
-.gz-head{display:flex;align-items:center;gap:.45rem;font-weight:700;font-size:.95rem;margin-bottom:.6rem}
-.gz-head .licon{width:1.05rem;height:1.05rem;color:var(--lime)}
-.gz-card table.tbl-compact td,.gz-card table.tbl-compact th{padding:.42rem .5rem}
+.gz-card{padding:1.15rem 1.25rem}
+.gz-head{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:1rem;margin-bottom:.7rem}
+.gz-head .licon{width:1.1rem;height:1.1rem;color:var(--lime)}
+.gz-card table.tbl-compact{font-size:.86rem}
+.gz-card table.tbl-compact td,.gz-card table.tbl-compact th{padding:.5rem .55rem}
 .gz-card .tnum{font-variant-numeric:tabular-nums;white-space:nowrap}
 .gz-card tfoot td{border-top:1.5px solid var(--line);padding-top:.5rem}
 .gz-unassigned td{opacity:.75}

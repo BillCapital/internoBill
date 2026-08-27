@@ -38,7 +38,8 @@ const ago = (iso) => { const s = (Date.now() - new Date(iso)) / 1000; if (s < 60
 export default function Layout() {
   const { user, profile, role, roleLabel, isAdmin, canManageOrders, canManageRooms, canManageSupplies, canManageInventory, canManageUsers, signOut } = useAuth()
   const nav = useNavigate()
-  const [collapsed, setCollapsed] = useState(true)
+  // Barra lateral abierta por defecto en escritorio; colapsada en móvil.
+  const [collapsed, setCollapsed] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 760 : false))
   const [theme, setTheme] = useState('dark')
   const [counts, setCounts] = useState({ sol: 0, sal: 0 })
   const [notifs, setNotifs] = useState([])

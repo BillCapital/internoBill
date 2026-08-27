@@ -67,13 +67,13 @@ export default function Gastos() {
 
       {loading ? <SkeletonKpis n={3} /> : (
         <>
-          <div className="kpi-grid compact">
-            <div className="kpi kpi-all"><span className="ico"><Icon n="phone" /></span>
-              <div><div className="num">{fmtMoney(totalMensual)}</div><div className="lbl">Telefonía · cargo fijo / mes</div></div></div>
-            <div className="kpi"><span className="ico"><Icon n="layers" /></span>
-              <div><div className="num">{lines.length}</div><div className="lbl">Líneas activas</div></div></div>
-            <div className="kpi"><span className="ico"><Icon n="tag" /></span>
-              <div><div className="num">{fmtMoney(saldoArriendo)}</div><div className="lbl">Saldo arriendo equipos ({enCuotas} en cuotas)</div></div></div>
+          <div className="gz-kpis">
+            <div className="gz-kpi accent"><span className="gk-ico"><Icon n="phone" /></span>
+              <div className="gk-txt"><div className="gk-num">{fmtMoney(totalMensual)}</div><div className="gk-lbl">Telefonía · cargo fijo / mes</div></div></div>
+            <div className="gz-kpi"><span className="gk-ico"><Icon n="layers" /></span>
+              <div className="gk-txt"><div className="gk-num">{lines.length}</div><div className="gk-lbl">Líneas activas</div></div></div>
+            <div className="gz-kpi"><span className="gk-ico"><Icon n="tag" /></span>
+              <div className="gk-txt"><div className="gk-num">{fmtMoney(saldoArriendo)}</div><div className="gk-lbl">Saldo arriendo equipos · {enCuotas} en cuotas</div></div></div>
           </div>
 
           <div className="gz-grid">
