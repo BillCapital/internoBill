@@ -346,9 +346,10 @@ export default function Solicitudes() {
 
             {tecView === 'disponibles' && (
               <div className="tec-avail">
-                <div className="row" style={{ marginBottom: '.5rem' }}>
-                  <h3 style={{ fontSize: '1rem', margin: 0 }}>Disponibles para asignar</h3>
-                  <button className="btn-sm" onClick={() => setTecView('choose')}>‹ Volver</button>
+                <div className="tec-desc-head">
+                  <div><div className="tec-desc-t">Disponibles para asignar</div>
+                    <div className="tec-desc-s muted">Marca los equipos o periféricos que necesites para solicitar su asignación.</div></div>
+                  <button className="btn-sm tec-back" onClick={() => setTecView('choose')}>‹ Volver</button>
                 </div>
                 {availEquip === null
                   ? <div className="muted att-empty">Cargando disponibilidad…</div>
