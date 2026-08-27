@@ -849,8 +849,9 @@ export default function Inventario() {
               <span className="count">{all.length}</span><span className="chev">▾</span>
             </button>
             {isOpen && (() => {
-              const showAV = s.name === 'Computadores' || rows.some((r) => r.antivirus)
-              const eqCols = 6 + (showAV ? 1 : 0)
+              const isPhones = s.name === 'Teléfonos'
+              const showAV = !isPhones && (s.name === 'Computadores' || rows.some((r) => r.antivirus))
+              const eqCols = 6 + (showAV ? 1 : 0) + (isPhones ? 1 : 0)
               return (
               <div className="sec-body">
                 <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem' }}>
@@ -881,7 +882,7 @@ export default function Inventario() {
                     <thead><tr>
                       {canManageInventory && <th style={{ width: '2rem' }}><input type="checkbox" title="Seleccionar todos los visibles" checked={rows.length > 0 && rows.every((e) => sel.has(e.id))} onChange={(ev) => toggleMany(rows.map((e) => e.id), ev.target.checked)} /></th>}
                       <th>Equipo</th><th>Serie</th><th>Ubicación</th>
-                      <th>{s.assign_to === 'department' ? 'Departamento' : 'Asignado a'}</th><th>Estado</th>{showAV && <th>Antivirus</th>}<th></th>
+                      <th>{s.assign_to === 'department' ? 'Departamento' : 'Asignado a'}</th><th>Estado</th>{showAV && <th>Antivirus</th>}{isPhones && <th>Línea</th>}<th></th>
                     </tr></thead>
                     <tbody>
                       {rows.length === 0 && <tr><td colSpan={eqCols + (canManageInventory ? 1 : 0)} className="muted" style={{ padding: '.7rem' }}>Sin equipos.</td></tr>}
@@ -896,6 +897,7 @@ export default function Inventario() {
                             : <>{e.assigned_to_name || <span className="muted">Sin asignar</span>}<br /><span className="muted">{e.assigned_to_email}</span></>}</td>
                           <td><span className="badge">{e.condition}</span></td>
                           {showAV && <td>{e.antivirus ? <span className={`badge ${(e.antivirus || '').toLowerCase().includes('activo') ? 's-approved' : (e.antivirus || '').toLowerCase().includes('inactivo') ? 's-rejected' : ''}`}>{e.antivirus}</span> : <span className="muted">—</span>}</td>}
+                          {isPhones && (() => { const a = e.attributes?.activa || 'Activa'; const inact = a.toLowerCase().includes('inactiv'); return <td><span className={`badge ${inact ? 's-rejected' : 's-approved'}`}>{a}</span></td> })()}
                           <td className="actions">
                             <button className="btn-sm" onClick={() => nav(`/equipo/${e.id}`)}>Ver / Editar</button>{' '}
                             <button className="btn-sm btn-danger" onClick={() => delEquip(e)}>Eliminar</button>
