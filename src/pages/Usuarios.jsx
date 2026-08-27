@@ -612,15 +612,17 @@ export default function Usuarios() {
       {/* Modal editar perfil */}
       {edit && (
         <div className="backdrop open">
-          <div className="modal">
-            <h3>Editar perfil</h3>
-            <p className="muted" style={{ marginTop: 0 }}>{edit.email}</p>
-            <div className="pf-top" style={{ marginBottom: '.6rem' }}>
+          <div className="modal pf-modal">
+            <div className="pf-head">
               {edit.avatar_url ? <img className="big-avatar" src={edit.avatar_url} alt="" /> : <div className="big">{initials(edit.full_name || edit.email)}</div>}
-              <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap' }}>
-                <button className="btn-sm" onClick={() => fileRef.current?.click()}>{edit.avatar_url ? 'Cambiar foto' : 'Subir foto'}</button>
-                {edit.avatar_url && <button className="btn-sm btn-danger" onClick={() => setEdit({ ...edit, avatar_url: '' })}>Quitar foto</button>}
-                <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
+              <div className="pf-head-info">
+                <h3>Editar perfil</h3>
+                <p className="muted">{edit.email}</p>
+                <div className="pf-head-actions">
+                  <button className="btn-sm" onClick={() => fileRef.current?.click()}>{edit.avatar_url ? 'Cambiar foto' : 'Subir foto'}</button>
+                  {edit.avatar_url && <button className="btn-sm btn-danger" onClick={() => setEdit({ ...edit, avatar_url: '' })}>Quitar foto</button>}
+                  <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
+                </div>
               </div>
             </div>
             <div className="pf-fields">
@@ -641,79 +643,79 @@ export default function Usuarios() {
                 {edit.id === user?.id && <span className="muted" style={{ fontSize: '.75rem' }}>No puedes cambiar tu propio rol</span>}
               </div>
             </div>
-            <div style={{ marginTop: '.8rem' }}>
-              <label style={{ display: 'block' }}>Computadores asignados <span className="muted">— {compsOf(edit).length} en inventario</span></label>
+            <div className="pf-section">
+              <div className="pf-section-head">Computadores asignados <span className="muted">— {compsOf(edit).length} en inventario</span></div>
               {compsOf(edit).length > 0 ? (
-                <ul style={{ listStyle: 'none', padding: 0, margin: '.3rem 0', display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+                <ul className="pf-list">
                   {compsOf(edit).map((c) => (
-                    <li key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '.5rem', background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: 8, padding: '.35rem .5rem', fontSize: '.8rem' }}>
+                    <li key={c.id} className="pf-list-item">
                       <span><Icon n="monitor" /> {[c.name, c.brand, c.model].filter(Boolean).join(' ') || 'Computador'}{c.serial_number ? ` · ${c.serial_number}` : ''}</span>
-                      <span style={{ display: 'flex', gap: '.3rem', flex: 'none' }}>
+                      <span className="btns">
                         <button type="button" className="btn-sm" onClick={() => nav(`/equipo/${c.id}`)}>Ver ficha</button>
                         <button type="button" className="btn-sm btn-danger" disabled={compBusy} onClick={() => unassignComp(c)}>Quitar</button>
                       </span>
                     </li>
                   ))}
                 </ul>
-              ) : <p className="muted" style={{ margin: '.3rem 0' }}>Sin computadores asignados.</p>}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.4rem', alignItems: 'center', marginTop: '.4rem' }}>
-                <select style={{ flex: 1, minWidth: 160 }} value={assignPick} onChange={(e) => setAssignPick(e.target.value)}>
+              ) : <p className="muted pf-empty">Sin computadores asignados.</p>}
+              <div className="pf-assign">
+                <select value={assignPick} onChange={(e) => setAssignPick(e.target.value)}>
                   <option value="">Asignar uno existente (sin asignar)…</option>
                   {freeComps.map((c) => <option key={c.id} value={c.id}>{[c.name, c.brand, c.model].filter(Boolean).join(' ') || 'Computador'}{c.serial_number ? ` · ${c.serial_number}` : ''}</option>)}
                 </select>
                 <button type="button" className="btn-sm" disabled={compBusy || !assignPick} onClick={assignExisting}>Asignar</button>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.4rem', alignItems: 'center', marginTop: '.4rem' }}>
-                <label style={{ margin: 0 }}>Total que debe tener</label>
-                <input type="number" min={compCur} style={{ width: 80 }} value={compTarget} onChange={(e) => setCompTarget(e.target.value)} />
+              <div className="pf-assign">
+                <label className="pf-inline-lbl">Total que debe tener</label>
+                <input type="number" min={compCur} style={{ width: 80, flex: 'none' }} value={compTarget} onChange={(e) => setCompTarget(e.target.value)} />
                 <button type="button" className="btn-sm btn-lime" disabled={compBusy || compToCreate <= 0} onClick={applyComps}>{compBusy ? 'Registrando…' : 'Registrar'}</button>
                 <span className="muted" style={{ fontSize: '.74rem' }}>{compToCreate > 0 ? `Tiene ${compCur} · se registrarán ${compToCreate}` : `Tiene ${compCur} · nada por crear`}</span>
               </div>
-              <p className="muted" style={{ fontSize: '.72rem', margin: '.3rem 0 0' }}>Indica el total que debe tener: se registran solo los que faltan. Si ya tiene esa cantidad, no crea nada. Al quitar, el equipo NO se elimina: queda como "Sin asignar" en el inventario.</p>
+              <p className="muted pf-hint">Indica el total que debe tener: se registran solo los que faltan. Si ya tiene esa cantidad, no crea nada. Al quitar, el equipo NO se elimina: queda como "Sin asignar" en el inventario.</p>
             </div>
-            <div style={{ marginTop: '.8rem' }}>
-              <label style={{ display: 'block' }}>Periféricos asignados <span className="muted">— {myPeriphs.reduce((n, a) => n + (a.qty || 0), 0)} unidad(es)</span></label>
+            <div className="pf-section">
+              <div className="pf-section-head">Periféricos asignados <span className="muted">— {myPeriphs.reduce((n, a) => n + (a.qty || 0), 0)} unidad(es)</span></div>
               {myPeriphs.length > 0 ? (
-                <ul style={{ listStyle: 'none', padding: 0, margin: '.3rem 0', display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+                <ul className="pf-list">
                   {myPeriphs.map((a) => (
-                    <li key={a.peripheral_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '.5rem', background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: 8, padding: '.35rem .5rem', fontSize: '.8rem' }}>
+                    <li key={a.peripheral_id} className="pf-list-item">
                       <span><Icon n="mouse" /> {periphById[a.peripheral_id]?.name || 'Periférico'}{periphById[a.peripheral_id]?.model ? ` · ${periphById[a.peripheral_id].model}` : ''} <span className="badge">{a.qty}</span></span>
                       <button type="button" className="btn-sm btn-danger" disabled={compBusy} onClick={() => removePeriphUser(a.peripheral_id)}>Quitar</button>
                     </li>
                   ))}
                 </ul>
-              ) : <p className="muted" style={{ margin: '.3rem 0' }}>Sin periféricos asignados.</p>}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.4rem', alignItems: 'center', marginTop: '.4rem' }}>
-                <select style={{ flex: 1, minWidth: 150 }} value={pPick.per} onChange={(e) => setPPick({ ...pPick, per: e.target.value })}>
+              ) : <p className="muted pf-empty">Sin periféricos asignados.</p>}
+              <div className="pf-assign">
+                <select value={pPick.per} onChange={(e) => setPPick({ ...pPick, per: e.target.value })}>
                   <option value="">Asignar periférico…</option>
                   {periphs.map((p) => <option key={p.id} value={p.id} disabled={(periphAvail[p.id] || 0) <= 0}>{p.name}{p.model ? ` · ${p.model}` : ''} (disp: {periphAvail[p.id] || 0})</option>)}
                 </select>
-                <input type="number" min="1" max={pPick.per ? (periphAvail[pPick.per] || 0) : undefined} style={{ width: 64 }} value={pPick.qty} onChange={(e) => setPPick({ ...pPick, qty: e.target.value })} />
+                <input type="number" min="1" max={pPick.per ? (periphAvail[pPick.per] || 0) : undefined} style={{ width: 64, flex: 'none' }} value={pPick.qty} onChange={(e) => setPPick({ ...pPick, qty: e.target.value })} />
                 <button type="button" className="btn-sm" disabled={compBusy || !pPick.per || Number(pPick.qty) < 1 || Number(pPick.qty) > (periphAvail[pPick.per] || 0)} onClick={assignPeriphUser}>Asignar</button>
               </div>
             </div>
             {isM365(edit.email) && (
-              <div style={{ marginTop: '.8rem' }}>
-                <label style={{ display: 'block' }}>Licencias de Microsoft 365</label>
-                {!msLic && <p className="muted" style={{ margin: '.3rem 0' }}>Cargando licencias…</p>}
-                {msLic?.error && <p className="muted" style={{ margin: '.3rem 0', color: 'var(--danger)' }}>No se pudieron cargar: {msLic.error}</p>}
+              <div className="pf-section">
+                <div className="pf-section-head">Licencias de Microsoft 365</div>
+                {!msLic && <p className="muted pf-empty">Cargando licencias…</p>}
+                {msLic?.error && <p className="muted pf-empty" style={{ color: 'var(--danger)' }}>No se pudieron cargar: {msLic.error}</p>}
                 {msLic && !msLic.error && (<>
                   {(msLic.assignedLicenses || []).length > 0 ? (
-                    <ul style={{ listStyle: 'none', padding: 0, margin: '.3rem 0', display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+                    <ul className="pf-list">
                       {msLic.assignedLicenses.map((l) => {
                         const sku = msSkus.find((s) => s.skuId === l.skuId)
                         const nm = skuName(sku?.skuPartNumber) || l.skuId
                         return (
-                          <li key={l.skuId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '.5rem', background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: 8, padding: '.35rem .5rem', fontSize: '.8rem' }}>
+                          <li key={l.skuId} className="pf-list-item">
                             <span><Icon n="file" /> {nm}</span>
                             <button type="button" className="btn-sm btn-danger" disabled={licBusy} onClick={() => removeLic(l.skuId, nm)}>Quitar</button>
                           </li>
                         )
                       })}
                     </ul>
-                  ) : <p className="muted" style={{ margin: '.3rem 0' }}>Sin licencias asignadas.</p>}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.4rem', alignItems: 'center', marginTop: '.4rem' }}>
-                    <select style={{ flex: 1, minWidth: 180 }} value={licPick} onChange={(e) => setLicPick(e.target.value)}>
+                  ) : <p className="muted pf-empty">Sin licencias asignadas.</p>}
+                  <div className="pf-assign">
+                    <select value={licPick} onChange={(e) => setLicPick(e.target.value)}>
                       <option value="">Asignar licencia…</option>
                       {msSkus.filter((s) => s.available > 0 && !(msLic.assignedLicenses || []).some((l) => l.skuId === s.skuId)).map((s) => (
                         <option key={s.skuId} value={s.skuId}>{skuName(s.skuPartNumber)} ({s.available} disp.)</option>
@@ -721,13 +723,15 @@ export default function Usuarios() {
                     </select>
                     <button type="button" className="btn-sm btn-lime" disabled={licBusy || !licPick} onClick={() => assignLic(licPick)}>{licBusy ? 'Aplicando…' : 'Asignar'}</button>
                   </div>
-                  <p className="muted" style={{ fontSize: '.72rem', margin: '.3rem 0 0' }}>Solo se muestran licencias con unidades disponibles. Asignar una licencia habilita sus servicios (Office, Exchange/Outlook, etc.) para la persona.</p>
+                  <p className="muted pf-hint">Solo se muestran licencias con unidades disponibles. Asignar una licencia habilita sus servicios (Office, Exchange/Outlook, etc.) para la persona.</p>
                 </>)}
               </div>
             )}
-            <label style={{ display: 'block', marginTop: '.7rem' }}>Información adicional <span className="muted">— solo administradores · no afecta el sistema</span></label>
-            <textarea value={edit.admin_notes || ''} onChange={(e) => setEdit({ ...edit, admin_notes: e.target.value })} placeholder="Correo alterno, credenciales, notas internas…" style={{ minHeight: 70 }} />
-            <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
+            <div className="pf-section">
+              <div className="pf-section-head">Información adicional <span className="muted">— solo administradores · no afecta el sistema</span></div>
+              <textarea value={edit.admin_notes || ''} onChange={(e) => setEdit({ ...edit, admin_notes: e.target.value })} placeholder="Correo alterno, credenciales, notas internas…" style={{ minHeight: 70, marginTop: 0 }} />
+            </div>
+            <div className="modal-actions pf-actions" style={{ justifyContent: 'space-between' }}>
               {isM365(edit.email)
                 ? <button className="btn" disabled={msBusy} onClick={() => resetMsPassword(edit)} title="Establece una contraseña temporal en Microsoft 365"><Icon n="key" /> Restablecer contraseña (M365)</button>
                 : <span />}
