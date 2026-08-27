@@ -264,20 +264,19 @@ export default function Gastos() {
             </div>
             <div className="table-wrap">
               <table className="tbl-compact">
-                <thead><tr><th>Número</th><th>Dispositivo</th>{detail.kind === 'plan' ? <th>Asignado a</th> : <th>Plan</th>}<th className="mny-h">Cargo / mes</th></tr></thead>
+                <thead><tr><th>Número</th><th>Dispositivo</th><th>Asignado a</th>{detail.kind === 'dept' ? <th>Plan</th> : null}<th className="mny-h">Cargo / mes</th></tr></thead>
                 <tbody>
                   {detail.rows.map((l) => (
                     <tr key={l.id}>
                       <td className="nowrap"><strong>{l.linea}</strong></td>
                       <td>{l.device}</td>
-                      {detail.kind === 'plan'
-                        ? <td>{l.persona || <span className="muted">Sin asignar</span>}</td>
-                        : <td>{l.plan}</td>}
+                      <td>{l.persona || <span className="muted">Sin asignar</span>}</td>
+                      {detail.kind === 'dept' ? <td>{l.plan}</td> : null}
                       <td className="mny-cell"><Money value={l.cargo} /></td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot><tr><td colSpan={3}><strong>Total · {detail.rows.length} {detail.rows.length === 1 ? 'línea' : 'líneas'}</strong></td><td className="mny-cell"><Money value={detail.rows.reduce((a, l) => a + l.cargo, 0)} strong /></td></tr></tfoot>
+                <tfoot><tr><td colSpan={detail.kind === 'dept' ? 4 : 3}><strong>Total · {detail.rows.length} {detail.rows.length === 1 ? 'línea' : 'líneas'}</strong></td><td className="mny-cell"><Money value={detail.rows.reduce((a, l) => a + l.cargo, 0)} strong /></td></tr></tfoot>
               </table>
             </div>
           </div>
