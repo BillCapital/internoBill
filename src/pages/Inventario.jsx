@@ -894,7 +894,9 @@ export default function Inventario() {
                           <td>{e.location}</td>
                           <td>{s.assign_to === 'department'
                             ? <span className="badge"><Icon n="building" /> {e.assigned_to_name || '—'}</span>
-                            : <>{e.assigned_to_name || <span className="muted">Sin asignar</span>}<br /><span className="muted">{e.assigned_to_email}</span></>}</td>
+                            : (e.assigned_to_name || e.assigned_to_email
+                              ? <span className="asig-cell">{e.assigned_to_name ? <strong>{e.assigned_to_name}</strong> : null}{e.assigned_to_email ? <span className="muted asig-mail">{e.assigned_to_email}</span> : null}</span>
+                              : <span className="muted">Sin asignar</span>)}</td>
                           <td><span className="badge">{e.condition}</span></td>
                           {showAV && <td>{e.antivirus ? <span className={`badge ${(e.antivirus || '').toLowerCase().includes('activo') ? 's-approved' : (e.antivirus || '').toLowerCase().includes('inactivo') ? 's-rejected' : ''}`}>{e.antivirus}</span> : <span className="muted">—</span>}</td>}
                           {isPhones && (() => { const a = e.attributes?.activa || 'Activa'; const inact = a.toLowerCase().includes('inactiv'); return <td><span className={`badge ${inact ? 's-rejected' : 's-approved'}`}>{a}</span></td> })()}

@@ -1145,6 +1145,11 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .inv-table td .muted{font-size:.75rem}
 .inv-table .badge{font-size:.7rem;padding:.14rem .5rem}
 .inv-table td.actions{gap:.35rem;white-space:nowrap}
+/* Asignado a: nombre y correo en la misma línea, no apilados */
+.asig-cell{display:inline}
+.asig-cell strong{font-weight:600}
+.asig-cell .asig-mail{margin-left:.4rem;font-size:.82rem}
+.asig-cell .asig-mail::before{content:"·";margin-right:.4rem;opacity:.6}
 /* Resaltado de fila consistente en las tablas de listas (accesos, correos, insumos, etc.) */
 .table-wrap table.tbl-compact tbody tr:not(.grp-row):not(.row-sel):hover td{background:color-mix(in srgb,var(--lime) 5%,transparent)}
 .gz-card table.tbl-compact tbody tr:hover td{background:transparent}
