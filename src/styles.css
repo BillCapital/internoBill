@@ -295,7 +295,9 @@ body.sb-collapsed .menu-item{position:relative}
 .pf-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:1.3rem 1.4rem;margin-bottom:1rem}
 .pf-top{display:flex;align-items:center;gap:1rem;margin-bottom:.4rem}
 .pf-top .big{width:60px;height:60px;border-radius:50%;background:var(--lime);color:#12210a;display:grid;place-items:center;font-weight:700;font-size:1.4rem}
-.pf-fields{display:grid;grid-template-columns:1fr 1fr;gap:1rem 1.5rem;margin-top:.7rem}
+.pf-fields{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem 1.4rem;margin-top:.9rem}
+.pf-fields>div{display:flex;flex-direction:column;gap:.35rem;min-width:0}
+.pf-fields>div label{margin:0;font-size:.78rem;color:var(--muted);font-weight:500}
 .pf-field label{display:block;font-size:.76rem;color:var(--muted);margin-bottom:.3rem}
 .pf-field .val{border:1px solid var(--line);border-radius:10px;padding:.6rem .7rem;color:var(--text);background:transparent;display:flex;align-items:center;gap:.5rem}
 .pf-field .lock{margin-left:auto;font-size:.7rem;color:var(--muted)}
@@ -358,7 +360,7 @@ tr:last-child td{border-bottom:none}
 .b-system{align-self:center;background:#2a2450;color:#c3b6f5;font-size:.8rem;text-align:center;max-width:88%}
 .chat-in{display:flex;gap:.5rem;padding:.7rem 1.1rem;border-top:1px solid var(--line);background:var(--panel);align-items:center;flex-wrap:wrap}
 .chat-in input[type=text]{flex:1;min-width:170px;padding:.55rem .7rem;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;background:var(--soft);color:var(--text)}
-.chat-in select{padding:.5rem .55rem;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:.85rem;background:var(--soft);color:var(--text)}
+.chat-in select{padding:.5rem .55rem;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:.85rem;background-color:var(--soft);color:var(--text)}
 .bot-chip{border:1px dashed var(--lav);color:#c3b6f5;background:#241f3d;border-radius:999px;padding:.3rem .6rem;font-size:.74rem;cursor:not-allowed}
 .adm-actions{display:flex;gap:.4rem;flex-wrap:wrap;padding:.6rem 1.1rem;border-top:1px solid var(--line);background:#1b1f27;align-items:center}
 
@@ -382,7 +384,7 @@ tr:last-child td{border-bottom:none}
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:1.4rem;max-width:520px;width:100%;box-shadow:0 30px 70px rgba(0,0,0,.6);max-height:88vh;overflow:auto}
 .modal h3{margin-top:0}
 .modal label{display:block;font-size:.8rem;color:var(--muted);margin:.7rem 0 .2rem}
-.modal input,.modal select,.modal textarea{width:100%;padding:.55rem .6rem;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;background:var(--soft);color:var(--text)}
+.modal input,.modal select,.modal textarea{width:100%;padding:.55rem .6rem;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;background-color:var(--soft);color:var(--text)}
 .modal textarea{min-height:80px;resize:vertical}
 .modal-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.2rem;flex-wrap:wrap}
 .modal label.self-chk{display:flex;align-items:center;gap:.5rem;margin:.9rem 0 0;color:var(--text);font-size:.9rem;cursor:pointer}
@@ -402,7 +404,7 @@ body.light .menu-item:hover,body.light .menu-item.active{background:#eef0f6}
 body.light .sec-head:hover,body.light .cv-head:hover{background:#f4f5fa}
 body.light .chat{background:#f4f5fa}
 body.light .adm-actions{background:#eef0f6}
-body.light .chat-in input[type=text],body.light .chat-in select,body.light .modal input,body.light .modal select,body.light .modal textarea,body.light .qc button{background:#ffffff;color:#1c2342}
+body.light .chat-in input[type=text],body.light .chat-in select,body.light .modal input,body.light .modal select,body.light .modal textarea,body.light .qc button{background-color:#ffffff;color:#1c2342}
 body.light .b-support{background:#eef0f6;color:#1c2342}
 body.light .b-system{background:#f0eefb;color:#4b3ea3}
 body.light .bot-chip{background:#f6f4fe;color:#6a5cc0}
@@ -508,11 +510,11 @@ body.light .note{background:#fbfbe8;border-color:#ececc0;color:#6b6a2c}
 
 /* ==== Campos editables unificados con la estética oscura ==== */
 input:not([type=checkbox]):not([type=radio]),select,textarea{
-  font-family:inherit;font-size:.9rem;color:var(--text);background:var(--soft);
+  font-family:inherit;font-size:.9rem;color:var(--text);background-color:var(--soft);
   border:1.5px solid var(--line);border-radius:10px;padding:.55rem .65rem;outline:none}
 input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{border-color:var(--lime)}
 select{cursor:pointer}
-body.light input:not([type=checkbox]):not([type=radio]),body.light select,body.light textarea{background:#fff;color:#1c2342}
+body.light input:not([type=checkbox]):not([type=radio]),body.light select,body.light textarea{background-color:#fff;color:#1c2342}
 .pf-field .qc input{flex:1}
 
 /* ==== Editor de permisos de roles ==== */
@@ -1455,6 +1457,9 @@ body.light .kpi-grid .kpi-all .num{-webkit-text-fill-color:var(--text);color:var
 select{appearance:none;-webkit-appearance:none;-moz-appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b91a4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right .65rem center;padding-right:2.1rem}
+/* Deja espacio para la flecha en los selects que fijan su propio padding */
+.modal select,.pf-fields select,.sw-app select,.chat-in select,.cal-form select,.sort-ctl select,.bulk-bar select{padding-right:2rem}
+body.light select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23535a6c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")}
 input:not([type=checkbox]):not([type=radio]),select,textarea{border-radius:10px}
 
 /* Pills de estado con punto de color (como el prototipo) */
