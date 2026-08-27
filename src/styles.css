@@ -1196,7 +1196,8 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .av-pick{display:flex;align-items:center;gap:.55rem;padding:.42rem .55rem;cursor:pointer;transition:background .12s}
 .av-pick:hover{background:color-mix(in srgb,var(--lime) 6%,transparent)}
 .av-pick.on{background:color-mix(in srgb,var(--lime) 12%,transparent)}
-.av-box{flex:none;width:18px;height:18px;border:1.5px solid var(--line);border-radius:5px;display:grid;place-items:center;color:var(--ink);background:var(--panel2)}
+.av-box{flex:none;width:19px;height:19px;border:2px solid color-mix(in srgb,var(--text) 45%,transparent);border-radius:5px;display:grid;place-items:center;color:var(--ink);background:transparent}
+.av-pick:hover .av-box{border-color:var(--lime)}
 .av-pick.on .av-box{background:var(--lime);border-color:var(--lime)}
 .av-box .licon{width:13px;height:13px}
 .av-lbl{min-width:0;overflow-wrap:anywhere}
@@ -1209,9 +1210,12 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .gloss-head h3{display:flex;align-items:center;gap:.45rem;margin:0}
 .gloss-head h3 .licon{width:1.1rem;height:1.1rem;color:var(--lime)}
 .gloss-list{margin:.7rem 0 0;padding:0;display:flex;flex-direction:column;gap:.55rem;max-height:62vh;overflow-y:auto}
-.gloss-list>div{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:.6rem .75rem}
-.gloss-list dt{font-weight:600;font-size:.9rem;color:var(--text)}
-.gloss-list dd{margin:.25rem 0 0;color:var(--muted);font-size:.84rem;line-height:1.45}
+.gloss-list .g-item{display:flex;gap:.7rem;background:var(--soft);border:1px solid var(--line);border-radius:11px;padding:.7rem .8rem}
+.g-ico{flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--lime) 15%,transparent);color:var(--lime)}
+.g-ico .licon{width:1.15rem;height:1.15rem}
+.gloss-list dt{font-weight:700;font-size:.82rem;letter-spacing:.03em;color:var(--text);font-family:'Inter Tight','Inter',sans-serif}
+.gloss-list dd{margin:.3rem 0 0;color:var(--text);opacity:.82;font-size:.86rem;line-height:1.5}
+.gloss-list dd strong{opacity:1;color:var(--text);font-weight:700}
 .tec-info{display:flex;gap:.5rem;align-items:flex-start;background:color-mix(in srgb,var(--lime) 8%,transparent);border:1px solid color-mix(in srgb,var(--lime) 26%,transparent);border-radius:10px;padding:.6rem .7rem;font-size:.82rem;margin-top:.55rem}
 .tec-info .licon{width:1rem;height:1rem;color:var(--lime);flex:none;margin-top:.15rem}
 /* Adjuntos de solicitud (links y cotizaciones) */

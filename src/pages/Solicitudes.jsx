@@ -688,14 +688,26 @@ export default function Solicitudes() {
               <h3><Icon n="book" /> Glosario de términos</h3>
               <button className="btn-sm" type="button" onClick={() => setGlossOpen(false)}><Icon n="close" /> Cerrar</button>
             </div>
-            <p className="muted" style={{ marginTop: 0, fontSize: '.85rem' }}>Para describir qué necesitas sin saber de computadores.</p>
+            <p className="muted" style={{ marginTop: 0, fontSize: '.85rem' }}>En palabras simples, para pedir lo que necesitas sin ser experto.</p>
             <dl className="gloss-list">
-              <div><dt>RAM (memoria)</dt><dd>La memoria de trabajo. Con poca RAM el equipo se pone lento al tener varias pestañas o programas abiertos a la vez.</dd></div>
-              <div><dt>Almacenamiento (disco / SSD)</dt><dd>Dónde se guardan tus archivos y programas. Un SSD hace que todo cargue mucho más rápido que un disco antiguo.</dd></div>
-              <div><dt>Procesador (CPU)</dt><dd>El "cerebro" del equipo. Uno más potente abre y ejecuta los programas con mayor rapidez.</dd></div>
-              <div><dt>Tarjeta gráfica (GPU)</dt><dd>Se encarga de imágenes y video. Necesaria para diseño, edición de video o 3D; para tareas de oficina (Google, Chrome, planillas) normalmente no hace falta.</dd></div>
-              <div><dt>Pantalla / monitor</dt><dd>La pantalla donde ves todo. Puede ser un equipo aparte del computador.</dd></div>
-              <div><dt>Periférico</dt><dd>Accesorios que se conectan al equipo: mouse, teclado, audífonos, cámara, etc.</dd></div>
+              <div className="g-item"><span className="g-ico"><Icon n="layers" /></span><div>
+                <dt>RAM (MEMORIA)</dt>
+                <dd>Es el espacio para trabajar, como tu escritorio. Si es poco, el computador se pone <strong>lento</strong> cuando abres muchas cosas a la vez (varias pestañas o programas).</dd></div></div>
+              <div className="g-item"><span className="g-ico"><Icon n="save" /></span><div>
+                <dt>ALMACENAMIENTO (DISCO / SSD)</dt>
+                <dd>Es donde se <strong>guardan</strong> tus archivos y programas, como un cajón. El tipo “SSD” es más moderno y hace que todo abra mucho más rápido.</dd></div></div>
+              <div className="g-item"><span className="g-ico"><Icon n="cpu" /></span><div>
+                <dt>PROCESADOR (CPU)</dt>
+                <dd>Es el <strong>motor</strong> del computador. Mientras más potente, más rápido hace las tareas.</dd></div></div>
+              <div className="g-item"><span className="g-ico"><Icon n="image" /></span><div>
+                <dt>TARJETA GRÁFICA (GPU)</dt>
+                <dd>Sirve para juegos, diseño o editar videos. Para trabajar con <strong>Google, Chrome y planillas NO hace falta</strong> una especial.</dd></div></div>
+              <div className="g-item"><span className="g-ico"><Icon n="monitor" /></span><div>
+                <dt>PANTALLA / MONITOR</dt>
+                <dd>Es la <strong>pantalla</strong> donde ves todo. A veces es una parte aparte del computador.</dd></div></div>
+              <div className="g-item"><span className="g-ico"><Icon n="mouse" /></span><div>
+                <dt>PERIFÉRICO</dt>
+                <dd>Son los <strong>accesorios</strong> que se enchufan: mouse, teclado, audífonos, cámara.</dd></div></div>
             </dl>
           </div>
         </div>
