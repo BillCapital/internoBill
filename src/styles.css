@@ -1150,6 +1150,7 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .asig-cell strong{font-weight:600}
 .asig-cell .asig-mail{margin-left:.4rem;font-size:.82rem}
 .asig-cell .asig-mail::before{content:"·";margin-right:.4rem;opacity:.6}
+.corp-mail{color:var(--text);opacity:.9;word-break:break-all}
 /* Resaltado de fila consistente en las tablas de listas (accesos, correos, insumos, etc.) */
 .table-wrap table.tbl-compact tbody tr:not(.grp-row):not(.row-sel):hover td{background:color-mix(in srgb,var(--lime) 5%,transparent)}
 .gz-card table.tbl-compact tbody tr:hover td{background:transparent}

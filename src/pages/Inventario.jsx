@@ -882,7 +882,7 @@ export default function Inventario() {
                     <thead><tr>
                       {canManageInventory && <th style={{ width: '2rem' }}><input type="checkbox" title="Seleccionar todos los visibles" checked={rows.length > 0 && rows.every((e) => sel.has(e.id))} onChange={(ev) => toggleMany(rows.map((e) => e.id), ev.target.checked)} /></th>}
                       <th>Equipo</th><th>Serie</th><th>Ubicación</th>
-                      <th>{s.assign_to === 'department' ? 'Departamento' : 'Asignado a'}</th><th>Estado</th>{showAV && <th>Antivirus</th>}{isPhones && <th>Línea</th>}<th></th>
+                      <th>{s.assign_to === 'department' ? 'Departamento' : 'Asignado a'}</th><th>{isPhones ? 'Correo corporativo' : 'Estado'}</th>{showAV && <th>Antivirus</th>}{isPhones && <th>Línea</th>}<th></th>
                     </tr></thead>
                     <tbody>
                       {rows.length === 0 && <tr><td colSpan={eqCols + (canManageInventory ? 1 : 0)} className="muted" style={{ padding: '.7rem' }}>Sin equipos.</td></tr>}
@@ -894,10 +894,14 @@ export default function Inventario() {
                           <td>{e.location}</td>
                           <td>{s.assign_to === 'department'
                             ? <span className="badge"><Icon n="building" /> {e.assigned_to_name || '—'}</span>
-                            : (e.assigned_to_name || e.assigned_to_email
-                              ? <span className="asig-cell">{e.assigned_to_name ? <strong>{e.assigned_to_name}</strong> : null}{e.assigned_to_email ? <span className="muted asig-mail">{e.assigned_to_email}</span> : null}</span>
-                              : <span className="muted">Sin asignar</span>)}</td>
-                          <td><span className="badge">{e.condition}</span></td>
+                            : isPhones
+                              ? (e.assigned_to_name ? <strong>{e.assigned_to_name}</strong> : <span className="muted">Sin asignar</span>)
+                              : (e.assigned_to_name || e.assigned_to_email
+                                ? <span className="asig-cell">{e.assigned_to_name ? <strong>{e.assigned_to_name}</strong> : null}{e.assigned_to_email ? <span className="muted asig-mail">{e.assigned_to_email}</span> : null}</span>
+                                : <span className="muted">Sin asignar</span>)}</td>
+                          {isPhones
+                            ? <td>{e.assigned_to_email ? <span className="corp-mail">{e.assigned_to_email}</span> : <span className="muted">—</span>}</td>
+                            : <td><span className="badge">{e.condition}</span></td>}
                           {showAV && <td>{e.antivirus ? <span className={`badge ${(e.antivirus || '').toLowerCase().includes('activo') ? 's-approved' : (e.antivirus || '').toLowerCase().includes('inactivo') ? 's-rejected' : ''}`}>{e.antivirus}</span> : <span className="muted">—</span>}</td>}
                           {isPhones && (() => { const a = e.attributes?.activa || 'Activa'; const inact = a.toLowerCase().includes('inactiv'); return <td><span className={`badge ${inact ? 's-rejected' : 's-approved'}`}>{a}</span></td> })()}
                           <td className="actions">
