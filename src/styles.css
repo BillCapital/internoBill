@@ -1191,9 +1191,15 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .av-folder.open .af-chev{transform:rotate(180deg)}
 .av-folder.open .av-fhead{border-bottom:1px solid var(--line)}
 .av-fitems{list-style:none;margin:0;padding:.3rem .4rem .4rem}
-.av-fitems li{padding:.4rem .55rem;font-size:.85rem;border-radius:7px}
-.av-fitems li:hover{background:color-mix(in srgb,var(--lime) 6%,transparent)}
+.av-fitems li{font-size:.85rem;border-radius:7px}
 .av-fitems li+li{margin-top:.1rem}
+.av-pick{display:flex;align-items:center;gap:.55rem;padding:.42rem .55rem;cursor:pointer;transition:background .12s}
+.av-pick:hover{background:color-mix(in srgb,var(--lime) 6%,transparent)}
+.av-pick.on{background:color-mix(in srgb,var(--lime) 12%,transparent)}
+.av-box{flex:none;width:18px;height:18px;border:1.5px solid var(--line);border-radius:5px;display:grid;place-items:center;color:var(--ink);background:var(--panel2)}
+.av-pick.on .av-box{background:var(--lime);border-color:var(--lime)}
+.av-box .licon{width:13px;height:13px}
+.av-lbl{min-width:0;overflow-wrap:anywhere}
 /* Glosario: botón + ventana superpuesta */
 .tec-topbar{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;margin-bottom:.7rem}
 .gloss-btn{display:inline-flex;align-items:center;gap:.4rem}
