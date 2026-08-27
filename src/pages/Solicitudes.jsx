@@ -41,6 +41,21 @@ export default function Solicitudes() {
   const [tecBusy, setTecBusy] = useState(false)
   const [attBusy, setAttBusy] = useState(false)
   const [glossOpen, setGlossOpen] = useState(false)
+  const [availOpen, setAvailOpen] = useState({}) // carpetas de disponibilidad abiertas
+  const sortEs = (a, b) => (a || '').localeCompare(b || '', 'es', { sensitivity: 'base' })
+  // Carpeta por TIPO de dispositivo (derivado del nombre del equipo)
+  const tecTypeOf = (e) => {
+    const s = `${e.name || ''} ${e.brand || ''} ${e.model || ''}`.toLowerCase()
+    if (/l[ií]nea telef|\bsim\b|\bchip\b/.test(s)) return 'Líneas telefónicas'
+    if (/celular|smartphone|tel[eé]fono|m[oó]vil/.test(s)) return 'Celulares'
+    if (/notebook|laptop|port[aá]til/.test(s)) return 'Notebooks'
+    if (/computador|desktop|torre|\bpc\b|all.?in.?one|mac\s?mini|imac/.test(s)) return 'Computadores'
+    if (/impresora|printer|multifunc|toner|t[oó]ner/.test(s)) return 'Impresoras'
+    if (/monitor|pantalla/.test(s)) return 'Monitores'
+    if (/tablet|ipad/.test(s)) return 'Tablets'
+    if (/audi[fó]|head|parlante|micr[oó]fono/.test(s)) return 'Audio'
+    return e.section || 'Otros equipos'
+  }
 
   const loadTecDisponibles = useCallback(async () => {
     setAvailEquip(null); setAvailPeriph(null)
@@ -50,7 +65,9 @@ export default function Solicitudes() {
       supabase.from('peripheral_assignments').select('peripheral_id,qty'),
     ])
     const used = {}; (pa || []).forEach((a) => { used[a.peripheral_id] = (used[a.peripheral_id] || 0) + (a.qty || 0) })
-    setAvailEquip((eq || []).map((e) => ({ ...e, section: e.equipment_sections?.name || 'Equipos' })))
+    // Solo hardware asignable: se excluyen correos, cuentas, servicios/accesos y WiFi
+    const EXCLUDE = /correo|cuenta|mail|servicio|acceso|clave|contrase|wifi|wi-?fi|red inal|licencia/i
+    setAvailEquip((eq || []).map((e) => ({ ...e, section: e.equipment_sections?.name || 'Equipos' })).filter((e) => !EXCLUDE.test(e.section)))
     setAvailPeriph((ph || []).map((p) => ({ ...p, avail: Math.max(0, (p.total_qty || 0) - (used[p.id] || 0)) })).filter((p) => p.avail > 0))
   }, [])
   const [products, setProducts] = useState([])      // productos con link agregados
@@ -318,25 +335,30 @@ export default function Solicitudes() {
                 </div>
                 {availEquip === null
                   ? <div className="muted att-empty">Cargando disponibilidad…</div>
-                  : <>
-                    <div className="tec-avail-sec">Equipos sin asignar <span className="muted">({availEquip.length})</span></div>
-                    {availEquip.length === 0
-                      ? <div className="muted att-empty">No hay equipos disponibles por ahora.</div>
-                      : <ul className="tec-avail-list">
-                          {availEquip.map((e) => (
-                            <li key={e.id}><span className="ta-name">{[e.name, e.brand, e.model].filter(Boolean).join(' ') || 'Equipo'}</span>
-                              <span className="ta-tag">{e.section}</span><span className="muted ta-cond">{e.condition}</span></li>
-                          ))}
-                        </ul>}
-                    <div className="tec-avail-sec" style={{ marginTop: '.7rem' }}>Periféricos con stock <span className="muted">({(availPeriph || []).length})</span></div>
-                    {(availPeriph || []).length === 0
-                      ? <div className="muted att-empty">No hay periféricos disponibles por ahora.</div>
-                      : <ul className="tec-avail-list">
-                          {availPeriph.map((p) => (
-                            <li key={p.id}><span className="ta-name">{p.name}{p.model ? ` · ${p.model}` : ''}</span><span className="ta-tag">{p.avail} disp.</span></li>
-                          ))}
-                        </ul>}
-                  </>}
+                  : (() => {
+                    // Agrupa por categoría (carpetas), alfabético. Los periféricos van en su propia carpeta.
+                    const g = {}
+                    availEquip.forEach((e) => { const k = tecTypeOf(e); (g[k] = g[k] || []).push([e.name, e.brand, e.model].filter(Boolean).join(' ') || 'Equipo') })
+                    const folders = Object.entries(g).map(([name, items]) => ({ name, items: items.sort(sortEs) }))
+                    if ((availPeriph || []).length) folders.push({ name: 'Periféricos', items: [...availPeriph].sort((a, b) => sortEs(a.name, b.name)).map((p) => `${p.name}${p.model ? ` · ${p.model}` : ''} · ${p.avail} disp.`) })
+                    folders.sort((a, b) => sortEs(a.name, b.name))
+                    if (folders.length === 0) return <div className="muted att-empty">No hay equipos ni periféricos disponibles por ahora.</div>
+                    return (
+                      <div className="av-folders">
+                        {folders.map((f) => {
+                          const on = !!availOpen[f.name]
+                          return (
+                            <div className={`av-folder ${on ? 'open' : ''}`} key={f.name}>
+                              <button type="button" className="av-fhead" onClick={() => setAvailOpen((o) => ({ ...o, [f.name]: !o[f.name] }))}>
+                                <Icon n="folder" /> <span className="af-name">{f.name}</span> <span className="af-count">{f.items.length}</span> <span className="af-chev">▾</span>
+                              </button>
+                              {on && <ul className="av-fitems">{f.items.map((it, i) => <li key={i}>{it}</li>)}</ul>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                 <div className="tec-avail-cta">
                   <span className="muted">¿No hay lo que necesitas?</span>
                   <button className="btn btn-lime" onClick={() => setTecView('solicitar')}>Realizar una solicitud</button>
