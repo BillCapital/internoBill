@@ -17,6 +17,15 @@ const num = (v) => {
   return isNaN(n) ? 0 : n
 }
 const fmtDate = (iso) => { if (!iso) return ''; const d = new Date(iso + 'T00:00:00'); return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}` }
+// Celda de dinero estilo contable: símbolo a la izquierda, monto a la derecha
+function Money({ value, strong }) {
+  const txt = fmtMoney(Number(value) || 0) || '$0'
+  const m = txt.match(/^(\D*)(.+)$/)
+  const sym = m ? m[1].trim() || '$' : '$'
+  const n = m ? m[2] : txt
+  const Num = strong ? 'strong' : 'span'
+  return <span className="mny"><span className="mny-s">{sym}</span><Num className="mny-n">{n}</Num></span>
+}
 
 export default function Gastos() {
   const [tab, setTab] = useState('resumen')
@@ -150,16 +159,16 @@ export default function Gastos() {
               <div className="conv gz-card">
                 <div className="gz-head"><Icon n="clipboard" /> Por plan</div>
                 <div className="table-wrap"><table className="tbl-compact">
-                  <thead><tr><th>Plan</th><th className="tr">Líneas</th><th className="tr">Cargo c/u</th><th className="tr">Subtotal / mes</th></tr></thead>
-                  <tbody>{byPlan.map((p) => (<tr key={p.plan}><td>{p.plan}</td><td className="tr">{p.n}</td><td className="tr tnum">{fmtMoney(p.cargo)}</td><td className="tr tnum"><strong>{fmtMoney(p.sub)}</strong></td></tr>))}</tbody>
-                  <tfoot><tr><td><strong>Total</strong></td><td className="tr"><strong>{lines.length}</strong></td><td></td><td className="tr"><strong>{fmtMoney(totalMensual)}</strong></td></tr></tfoot>
+                  <thead><tr><th>Plan</th><th className="tr">Líneas</th><th className="mny-h">Cargo c/u</th><th className="mny-h">Subtotal / mes</th></tr></thead>
+                  <tbody>{byPlan.map((p) => (<tr key={p.plan}><td>{p.plan}</td><td className="tr">{p.n}</td><td className="mny-cell"><Money value={p.cargo} /></td><td className="mny-cell"><Money value={p.sub} strong /></td></tr>))}</tbody>
+                  <tfoot><tr><td><strong>Total</strong></td><td className="tr"><strong>{lines.length}</strong></td><td></td><td className="mny-cell"><Money value={totalMensual} strong /></td></tr></tfoot>
                 </table></div>
               </div>
               <div className="conv gz-card">
                 <div className="gz-head"><Icon n="building" /> Por departamento</div>
                 <div className="table-wrap"><table className="tbl-compact">
-                  <thead><tr><th>Departamento</th><th className="tr">Líneas</th><th className="tr">Total / mes</th></tr></thead>
-                  <tbody>{byDept.map((d) => (<tr key={d.depto} className={d.depto === 'Sin asignar' ? 'gz-unassigned' : ''}><td>{d.depto === 'Sin asignar' ? <span className="muted">Sin asignar</span> : d.depto}</td><td className="tr">{d.n}</td><td className="tr tnum"><strong>{fmtMoney(d.sub)}</strong></td></tr>))}</tbody>
+                  <thead><tr><th>Departamento</th><th className="tr">Líneas</th><th className="mny-h">Total / mes</th></tr></thead>
+                  <tbody>{byDept.map((d) => (<tr key={d.depto} className={d.depto === 'Sin asignar' ? 'gz-unassigned' : ''}><td>{d.depto === 'Sin asignar' ? <span className="muted">Sin asignar</span> : d.depto}</td><td className="tr">{d.n}</td><td className="mny-cell"><Money value={d.sub} strong /></td></tr>))}</tbody>
                 </table></div>
                 <p className="muted" style={{ fontSize: '.78rem', margin: '.5rem .2rem 0' }}>Las líneas sin dueño aparecen como "Sin asignar". A medida que las asignes, el gasto se reparte por departamento.</p>
               </div>
@@ -180,7 +189,7 @@ export default function Gastos() {
               ? <div className="conv"><div className="empty">Aún no hay facturas registradas. Crea la primera con "Nueva factura".</div></div>
               : <div className="conv gz-card">
                   <div className="table-wrap"><table className="tbl-compact ed-table">
-                    <thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Proveedor</th><th>Categoría</th><th>Depto.</th><th className="tr">Monto</th><th></th></tr></thead>
+                    <thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Proveedor</th><th>Categoría</th><th>Depto.</th><th className="mny-h">Monto</th><th></th></tr></thead>
                     <tbody>
                       {docsFiltrados.map((d) => (
                         <tr key={d.id}>
@@ -190,7 +199,7 @@ export default function Gastos() {
                           <td>{d.proveedor || <span className="muted">—</span>}</td>
                           <td>{d.categoria}</td>
                           <td>{d.departamento || <span className="muted">—</span>}</td>
-                          <td className="tr tnum"><strong>{fmtMoney(Number(d.monto))}</strong></td>
+                          <td className="mny-cell"><Money value={Number(d.monto)} strong /></td>
                           <td className="actions nowrap">
                             {d.file_path ? <button className="btn-sm" onClick={() => openViewer(d)}><Icon n="eye" /> Ver</button> : null}
                             <button className="icon-btn danger" title="Eliminar" onClick={() => del(d)}><Icon n="trash" /></button>

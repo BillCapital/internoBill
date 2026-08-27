@@ -615,6 +615,11 @@ body.light tr.row-sel{background:#eefbe0}
 .gz-card tfoot td{border-top:1.5px solid var(--line);padding-top:.5rem}
 .gz-unassigned td{opacity:.75}
 .gz-card th.tr,.gz-card td.tr,td.tr,th.tr{text-align:right}
+/* Celda de dinero: símbolo y monto juntos, alineados a la izquierda (lectura recta) */
+.mny-cell,.mny-h{text-align:left}
+.mny{display:inline-flex;align-items:baseline;gap:.15rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mny-s{color:var(--text);opacity:.55;font-weight:500}
+.mny-n{font-variant-numeric:tabular-nums}
 .nowrap{white-space:nowrap}
 .ed-table td.actions{white-space:nowrap;text-align:right}
 .ed-table td.actions .btn-sm{margin-right:.3rem}
