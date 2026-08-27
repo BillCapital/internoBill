@@ -168,45 +168,47 @@ export default function Insumos() {
                   <button className="btn-sm btn-lime" disabled={selArr.length === 0} onClick={() => openDeptEdit(selArr, `${selArr.length} insumo(s) seleccionado(s)`)}>Asignar a seleccionados ({selArr.length})</button>
                   {selArr.length > 0 && <button className="btn-sm" onClick={() => setSel((s) => { const n = new Set(s); arr.forEach((i) => n.delete(i.id)); return n })}>Limpiar selección</button>}
                 </div>
-                <div className="ins-list">
-                  <div className="ins-list-head">
-                    <label className="ins-selall"><input type="checkbox" checked={allSel} onChange={() => setSel((s) => { const n = new Set(s); if (allSel) arr.forEach((i) => n.delete(i.id)); else arr.forEach((i) => n.add(i.id)); return n })} /> Seleccionar todos</label>
-                    <span className="ins-head-stock">Stock</span>
-                  </div>
+                <div className="table-wrap"><table className="ins-table inv-table">
+                <colgroup><col className="c-chk" /><col className="c-name" /><col className="c-dept" /><col className="c-stock" /><col className="c-act" /></colgroup>
+                <thead><tr>
+                  <th><input type="checkbox" checked={allSel} onChange={() => setSel((s) => { const n = new Set(s); if (allSel) arr.forEach((i) => n.delete(i.id)); else arr.forEach((i) => n.add(i.id)); return n })} /></th>
+                  <th>Insumo</th><th>Departamentos</th><th>Stock</th><th aria-label="Acciones"></th></tr></thead>
+                <tbody>
                   {arr.map((i) => {
                     const dirty = String(stockVals[i.id] ?? '') !== String(i.stock)
                     const cur = Number(stockVals[i.id]) || 0
                     return (
-                      <div key={i.id} className={`ins-row ${sel.has(i.id) ? 'sel' : ''}`}>
-                        <input type="checkbox" className="ins-row-chk" checked={sel.has(i.id)} onChange={() => toggleSel(i.id)} />
+                    <tr key={i.id} className={sel.has(i.id) ? 'row-sel' : ''}>
+                      <td><input type="checkbox" checked={sel.has(i.id)} onChange={() => toggleSel(i.id)} /></td>
+                      <td><div className="ins-cell">
                         {i.image_url
                           ? <img className="ins-thumb" src={i.image_url} alt="" loading="lazy" decoding="async" onClick={() => viewImage(i.image_url)} />
                           : <span className="ins-thumb ph"><Icon n="box" /></span>}
                         <div className="ins-info">
                           <div className="ins-name"><strong>{i.name}</strong>{i.requires_manager ? <span className="req-tech-tag" title="Requiere doble aprobación (gerente de área)"><Icon n="key" /> tecnológico</span> : null}</div>
                           <span className="ins-unit muted">{i.description || 'Unidad'}</span>
-                          <div className="ins-depts">
-                            {(i.departments && i.departments.length)
-                              ? i.departments.map((d) => <span key={d} className="dept-chip">{d}</span>)
-                              : <span className="dept-chip danger"><Icon n="alert" /> Sin asignar — no aparece en solicitudes</span>}
-                          </div>
                           {i.purchase_url ? <a className="btn-sm btn-lime ins-buy" href={/^https?:\/\//i.test(i.purchase_url) ? i.purchase_url : 'https://' + i.purchase_url} target="_blank" rel="noreferrer"><Icon n="cart" /> Comprar</a> : null}
                         </div>
-                        <div className="ins-right">
-                          <div className="stock-cell">
-                            <span className={`stock-dot ${cur === 0 ? 'zero' : cur <= 5 ? 'low' : 'ok'}`} />
-                            <input type="number" min="0" className="stock-in" value={stockVals[i.id] ?? ''} onChange={(e) => setStockVals((v) => ({ ...v, [i.id]: e.target.value }))} />
-                            {dirty && <button className="btn-sm btn-lime" onClick={() => saveStock(i.id)}>Guardar</button>}
-                          </div>
-                          <div className="ins-row-actions">
-                            <button className="icon-btn" title="Editar" onClick={() => setEdit({ ...emptyItem, ...i, category_id: i.category_id || '', departments: i.departments || [] })}><Icon n="edit" /></button>
-                            <button className="icon-btn danger" title="Eliminar" onClick={() => delItem(i)}><Icon n="trash" /></button>
-                          </div>
-                        </div>
-                      </div>
+                      </div></td>
+                      <td><div className="ins-depts">
+                        {(i.departments && i.departments.length)
+                          ? i.departments.map((d) => <span key={d} className="dept-chip">{d}</span>)
+                          : <span className="dept-chip danger"><Icon n="alert" /> Sin asignar</span>}
+                      </div></td>
+                      <td><div className="stock-cell">
+                        <span className={`stock-dot ${cur === 0 ? 'zero' : cur <= 5 ? 'low' : 'ok'}`} />
+                        <input type="number" min="0" className="stock-in" value={stockVals[i.id] ?? ''} onChange={(e) => setStockVals((v) => ({ ...v, [i.id]: e.target.value }))} />
+                        {dirty && <button className="btn-sm btn-lime" onClick={() => saveStock(i.id)}>Guardar</button>}
+                      </div></td>
+                      <td className="actions">
+                        <button className="icon-btn" title="Editar" onClick={() => setEdit({ ...emptyItem, ...i, category_id: i.category_id || '', departments: i.departments || [] })}><Icon n="edit" /></button>
+                        <button className="icon-btn danger" title="Eliminar" onClick={() => delItem(i)}><Icon n="trash" /></button>
+                      </td>
+                    </tr>
                     )
                   })}
-                </div></div>
+                </tbody>
+              </table></div></div>
             )}
           </div>
         )

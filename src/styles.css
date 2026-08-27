@@ -672,10 +672,12 @@ body.light tr.row-sel{background:#eefbe0}
 
 /* ===== Tabla de insumos: compacta (tamaño similar a Usuarios) ===== */
 .ins-table{table-layout:fixed;font-size:.82rem}
-.ins-table col.c-chk{width:38px}
-.ins-table col.c-stock{width:180px}
-.ins-table col.c-act{width:78px}
-.ins-table th,.ins-table td{padding:.6rem .55rem;vertical-align:middle}
+.ins-table col.c-chk{width:40px}
+.ins-table col.c-dept{width:30%}
+.ins-table col.c-stock{width:175px}
+.ins-table col.c-act{width:84px}
+.ins-table th,.ins-table td{padding:.6rem .6rem;vertical-align:middle}
+.ins-table td:has(.ins-depts){vertical-align:middle}
 .ins-table tbody tr:not(:first-child) td{border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
 .ins-table thead th{font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
 .ins-table td:first-child,.ins-table th:first-child{text-align:center}
@@ -696,26 +698,7 @@ body.light tr.row-sel{background:#eefbe0}
 .dept-chip.danger{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 32%,transparent)}
 .dept-chip.danger .licon{width:.72rem;height:.72rem}
 .ins-buy{align-self:flex-start;text-decoration:none;margin-top:.15rem}
-/* Lista de insumos en tarjetas (reemplaza la tabla estirada) */
-.ins-list{display:flex;flex-direction:column;gap:.5rem}
-.ins-list-head{display:flex;align-items:center;justify-content:space-between;padding:0 .9rem .15rem;font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
-.ins-selall{display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin:0;color:var(--muted)}
-.ins-selall input{width:15px;height:15px;margin:0;cursor:pointer}
-.ins-head-stock{padding-right:5.5rem}
-.ins-row{display:flex;align-items:center;gap:.85rem;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:.75rem .9rem;transition:border-color .12s,background .12s}
-.ins-row:hover{border-color:color-mix(in srgb,var(--lime) 38%,var(--line))}
-.ins-row.sel{border-color:var(--lime);background:color-mix(in srgb,var(--lime) 8%,var(--soft))}
-.ins-row-chk{width:16px;height:16px;margin:0;flex:none;cursor:pointer}
-.ins-row .ins-thumb{flex:none}
-.ins-row .ins-info{flex:1;min-width:0}
 .ins-unit{font-size:.75rem;line-height:1.3}
-.ins-right{display:flex;align-items:center;gap:1.2rem;flex:none}
-.ins-row-actions{display:flex;gap:.35rem;flex:none}
-@media(max-width:640px){
-  .ins-row{flex-wrap:wrap}
-  .ins-right{width:100%;justify-content:space-between;border-top:1px solid var(--line);padding-top:.55rem;margin-top:.1rem;margin-left:calc(16px + .85rem)}
-  .ins-head-stock{display:none}
-}
 
 /* Control de stock compacto: punto de nivel + input + guardar solo si cambió */
 .stock-cell{display:flex;align-items:center;gap:.4rem}
