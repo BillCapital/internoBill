@@ -881,7 +881,7 @@ export default function Inventario() {
                   <div className="table-wrap"><table className="tbl-compact inv-table">
                     <thead><tr>
                       {canManageInventory && <th style={{ width: '2rem' }}><input type="checkbox" title="Seleccionar todos los visibles" checked={rows.length > 0 && rows.every((e) => sel.has(e.id))} onChange={(ev) => toggleMany(rows.map((e) => e.id), ev.target.checked)} /></th>}
-                      <th>Equipo</th><th>Serie</th><th>Ubicación</th>
+                      <th>Equipo</th><th>{isPhones ? 'IMEI' : 'Serie'}</th><th>Ubicación</th>
                       <th>{s.assign_to === 'department' ? 'Departamento' : 'Asignado a'}</th><th>{isPhones ? 'Correo corporativo' : 'Estado'}</th>{showAV && <th>Antivirus</th>}{isPhones && <th>Línea</th>}<th></th>
                     </tr></thead>
                     <tbody>
