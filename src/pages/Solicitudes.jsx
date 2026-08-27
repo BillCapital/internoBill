@@ -11,10 +11,11 @@ import { Icon } from '../lib/icons'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
 const ST = [
-  { key: 'pending', label: 'Pendientes', ico: 'clock' },
-  { key: 'manager_review', label: 'Por gerente', ico: 'key' },
-  { key: 'approved', label: 'Aprobadas', ico: 'check' },
-  { key: 'rejected', label: 'Rechazadas', ico: 'ban' }, { key: 'delivered', label: 'Entregadas', ico: 'box' },
+  { key: 'pending', label: 'Pendientes', ico: 'clock', tone: 'pend' },
+  { key: 'manager_review', label: 'Por gerente', ico: 'key', tone: 'rev' },
+  { key: 'approved', label: 'Aprobadas', ico: 'check', tone: 'appr' },
+  { key: 'rejected', label: 'Rechazadas', ico: 'ban', tone: 'rej' },
+  { key: 'delivered', label: 'Entregadas', ico: 'tray', tone: 'deliv' },
 ]
 const cls = (k) => 's-' + ({ pending: 'pending', manager_review: 'pending', approved: 'approved', rejected: 'rejected', delivered: 'delivered' }[k])
 const label = (k) => (ST.find((s) => s.key === k) || {}).label || k
@@ -53,6 +54,9 @@ export default function Solicitudes() {
     setTecView('solicitar')
   }
   const sortEs = (a, b) => (a || '').localeCompare(b || '', 'es', { sensitivity: 'base' })
+  // Traduce nombres de color en inglés al español (para etiquetas de equipos)
+  const COLORS_ES = { black: 'Negro', white: 'Blanco', blue: 'Azul', green: 'Verde', red: 'Rojo', silver: 'Plata', gold: 'Dorado', gray: 'Gris', grey: 'Gris', pink: 'Rosa', purple: 'Morado', yellow: 'Amarillo', orange: 'Naranjo' }
+  const esColor = (s) => (s || '').replace(/\b([A-Za-z]+)\b/g, (w) => COLORS_ES[w.toLowerCase()] || w)
   // Carpeta por TIPO de dispositivo (derivado del nombre del equipo)
   const tecTypeOf = (e) => {
     const s = `${e.name || ''} ${e.brand || ''} ${e.model || ''}`.toLowerCase()
@@ -70,7 +74,7 @@ export default function Solicitudes() {
   const loadTecDisponibles = useCallback(async () => {
     setAvailEquip(null); setAvailPeriph(null)
     const [{ data: eq }, { data: ph }, { data: pa }] = await Promise.all([
-      supabase.from('equipment').select('id,name,brand,model,serial_number,condition,equipment_sections(name)').is('user_id', null).is('returned_at', null),
+      supabase.from('equipment').select('id,name,brand,model,serial_number,attributes,condition,equipment_sections(name)').is('user_id', null).is('returned_at', null),
       supabase.from('peripherals').select('id,name,model,total_qty'),
       supabase.from('peripheral_assignments').select('peripheral_id,qty'),
     ])
@@ -354,10 +358,12 @@ export default function Solicitudes() {
                     availEquip.forEach((e) => {
                       const k = tecTypeOf(e)
                       if (TEC_NO_ASIGNABLE.has(k)) return
-                      ;(g[k] = g[k] || []).push({ key: e.id, label: [e.name, e.brand, e.model].filter(Boolean).join(' ') || 'Equipo' })
+                      const label = esColor([e.name, e.brand, e.model].filter(Boolean).join(' ')) || 'Equipo'
+                      const id = e.serial_number || e.attributes?.imei || e.attributes?.serie || ''
+                      ;(g[k] = g[k] || []).push({ key: e.id, label, tag: id })
                     })
-                    const folders = Object.entries(g).map(([name, items]) => ({ name, items: items.sort((a, b) => sortEs(a.label, b.label)) }))
-                    if ((availPeriph || []).length) folders.push({ name: 'Periféricos', items: [...availPeriph].sort((a, b) => sortEs(a.name, b.name)).map((p) => ({ key: `p:${p.id}`, label: `${p.name}${p.model ? ` · ${p.model}` : ''} · ${p.avail} disp.` })) })
+                    const folders = Object.entries(g).map(([name, items]) => ({ name, items: items.sort((a, b) => sortEs(a.label, b.label) || sortEs(a.tag, b.tag)) }))
+                    if ((availPeriph || []).length) folders.push({ name: 'Periféricos', items: [...availPeriph].sort((a, b) => sortEs(a.name, b.name)).map((p) => ({ key: `p:${p.id}`, label: esColor(`${p.name}${p.model ? ` · ${p.model}` : ''}`), tag: `${p.avail} disp.` })) })
                     folders.sort((a, b) => sortEs(a.name, b.name))
                     if (folders.length === 0) return <div className="muted att-empty">No hay equipos ni periféricos disponibles por ahora.</div>
                     return (
@@ -370,9 +376,9 @@ export default function Solicitudes() {
                                 <Icon n="folder" /> <span className="af-name">{f.name}</span> <span className="af-count">{f.items.length}</span> <span className="af-chev">▾</span>
                               </button>
                               {on && <ul className="av-fitems">{f.items.map((it) => (
-                                <li key={it.key} className={`av-pick ${availSel[it.key] ? 'on' : ''}`} onClick={() => toggleAvail(it.key, it.label)}>
+                                <li key={it.key} className={`av-pick ${availSel[it.key] ? 'on' : ''}`} onClick={() => toggleAvail(it.key, it.tag ? `${it.label} (${it.tag})` : it.label)}>
                                   <span className="av-box">{availSel[it.key] ? <Icon n="check" /> : null}</span>
-                                  <span className="av-lbl">{it.label}</span>
+                                  <span className="av-lbl">{it.label}{it.tag ? <span className="av-tag muted">{it.tag}</span> : null}</span>
                                 </li>
                               ))}</ul>}
                             </div>
@@ -492,15 +498,17 @@ export default function Solicitudes() {
       )}
 
       {!creating && loading && <SkeletonKpis n={6} />}
-      {!creating && !loading && <div className="kpi-grid compact">
-        <button className={`kpi ${!status ? 'active' : ''}`} onClick={() => setStatus(null)}>
-          <div className="ico"><Icon n="box" /></div>
-          <div className="num">{visibleRows.filter((t) => t.status !== 'rejected').length}</div>
-          <div className="lbl">{canManageOrders ? 'En total' : 'Tus solicitudes'}</div>
+      {!creating && !loading && <div className="req-kpis">
+        <button className={`rk k-all ${!status ? 'on' : ''}`} onClick={() => setStatus(null)}>
+          <span className="rk-ico"><Icon n="box" /></span>
+          <span className="rk-txt"><span className="rk-n">{visibleRows.filter((t) => t.status !== 'rejected').length}</span>
+            <span className="rk-l">{canManageOrders ? 'En total' : 'Tus solicitudes'}</span></span>
         </button>
         {ST.map((s) => (
-          <button key={s.key} className={`kpi ${status === s.key ? 'active' : ''}`} onClick={() => setStatus(status === s.key ? null : s.key)}>
-            <div className="ico"><Icon n={s.ico} /></div><div className="num">{visibleRows.filter((t) => t.status === s.key).length}</div><div className="lbl">{s.label}</div>
+          <button key={s.key} className={`rk k-${s.tone} ${status === s.key ? 'on' : ''}`} onClick={() => setStatus(status === s.key ? null : s.key)}>
+            <span className="rk-ico"><Icon n={s.ico} /></span>
+            <span className="rk-txt"><span className="rk-n">{visibleRows.filter((t) => t.status === s.key).length}</span>
+              <span className="rk-l">{s.label}</span></span>
           </button>
         ))}
       </div>}
