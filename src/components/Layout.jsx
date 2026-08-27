@@ -40,7 +40,8 @@ export default function Layout() {
   const nav = useNavigate()
   // Barra lateral abierta por defecto en escritorio; colapsada en móvil.
   const [collapsed, setCollapsed] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 760 : false))
-  const [theme, setTheme] = useState('dark')
+  // Tema recordado entre recargas (se guarda en el navegador)
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem('bc-theme') || 'dark' } catch { return 'dark' } })
   const [counts, setCounts] = useState({ sol: 0, sal: 0 })
   const [notifs, setNotifs] = useState([])
   const [notifOpen, setNotifOpen] = useState(false)
@@ -65,7 +66,7 @@ export default function Layout() {
     try { await api('announcement_delete', { p_id: id }); await loadAnns() } catch (e) { alertDialog(e.message) }
   }
 
-  useEffect(() => { document.body.classList.toggle('light', theme === 'light'); return () => document.body.classList.remove('light') }, [theme])
+  useEffect(() => { document.body.classList.toggle('light', theme === 'light'); try { localStorage.setItem('bc-theme', theme) } catch { /* noop */ } }, [theme])
   useEffect(() => { document.body.classList.toggle('sb-collapsed', collapsed); return () => document.body.classList.remove('sb-collapsed') }, [collapsed])
 
   const loadNotifs = useCallback(async () => {
