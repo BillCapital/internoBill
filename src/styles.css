@@ -623,6 +623,10 @@ body.light tr.row-sel{background:#eefbe0}
 .gz-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.9rem}
 .gz-detail .table-wrap{max-height:60vh;overflow-y:auto}
 .gz-detail tfoot td{border-top:1.5px solid var(--line);padding-top:.5rem}
+/* Badge de estado de pago clicable */
+.estado-badge{border:0;cursor:pointer;font:inherit;font-size:.74rem;font-weight:600;line-height:1.4;transition:filter .12s}
+.estado-badge:hover{filter:brightness(1.12)}
+.tbl-compact .estado-badge{font-size:.66rem}
 .gz-card th.tr,.gz-card td.tr,td.tr,th.tr{text-align:right}
 /* Celda de dinero: símbolo y monto juntos, alineados a la izquierda (lectura recta) */
 .mny-cell,.mny-h{text-align:left}

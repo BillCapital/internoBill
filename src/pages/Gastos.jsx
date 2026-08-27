@@ -36,7 +36,7 @@ export default function Gastos() {
   // Facturas: formulario, filtros, visor
   const [form, setForm] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [flt, setFlt] = useState({ tipo: '', cat: '', dep: '' })
+  const [flt, setFlt] = useState({ estado: '', cat: '', dep: '' })
   const [viewer, setViewer] = useState(null)
   const [detail, setDetail] = useState(null) // { kind:'plan'|'dept', title, rows }
 
@@ -91,13 +91,14 @@ export default function Gastos() {
     return Object.values(m).sort((a, b) => (a.depto === 'Sin asignar' ? 1 : b.depto === 'Sin asignar' ? -1 : b.sub - a.sub))
   }, [lines])
 
-  // ---- Facturas / movimientos ----
-  const compras = useMemo(() => docs.filter((d) => d.tipo === 'compra').reduce((a, d) => a + Number(d.monto || 0), 0), [docs])
-  const ventas = useMemo(() => docs.filter((d) => d.tipo === 'venta').reduce((a, d) => a + Number(d.monto || 0), 0), [docs])
+  // ---- Facturas ----
+  const totalFacturas = useMemo(() => docs.reduce((a, d) => a + Number(d.monto || 0), 0), [docs])
+  const pendiente = useMemo(() => docs.filter((d) => d.estado !== 'pagada').reduce((a, d) => a + Number(d.monto || 0), 0), [docs])
+  const nPendientes = useMemo(() => docs.filter((d) => d.estado !== 'pagada').length, [docs])
   const docsFiltrados = useMemo(() => docs.filter((d) =>
-    (!flt.tipo || d.tipo === flt.tipo) && (!flt.cat || d.categoria === flt.cat) && (!flt.dep || d.departamento === flt.dep)), [docs, flt])
+    (!flt.estado || (flt.estado === 'pagada' ? d.estado === 'pagada' : d.estado !== 'pagada')) && (!flt.cat || d.categoria === flt.cat) && (!flt.dep || d.departamento === flt.dep)), [docs, flt])
 
-  const startForm = () => setForm({ tipo: 'compra', concepto: '', proveedor: '', categoria: 'Otros', departamento: '', monto: '', fecha: new Date().toISOString().slice(0, 10), file: null })
+  const startForm = () => setForm({ estado: 'pendiente', concepto: '', proveedor: '', categoria: 'Otros', departamento: '', monto: '', fecha: new Date().toISOString().slice(0, 10), file: null })
   const submit = async () => {
     if (!form.concepto.trim()) return alertDialog('Ponle un concepto a la factura.')
     setBusy(true)
@@ -110,12 +111,18 @@ export default function Gastos() {
         fname = form.file.name; mime = form.file.type || ''; size = form.file.size || 0
       }
       await api('expense_doc_add', {
-        p_tipo: form.tipo, p_concepto: form.concepto.trim(), p_proveedor: form.proveedor.trim(),
+        p_estado: form.estado, p_concepto: form.concepto.trim(), p_proveedor: form.proveedor.trim(),
         p_categoria: form.categoria, p_departamento: form.departamento, p_monto: num(form.monto),
         p_fecha: form.fecha, p_path: path, p_name: fname, p_mime: mime, p_size: size,
       })
       setForm(null); loadDocs()
     } catch (e) { alertDialog(e.message || 'No se pudo guardar la factura.') } finally { setBusy(false) }
+  }
+  const toggleEstado = async (d) => {
+    const nuevo = d.estado === 'pagada' ? 'pendiente' : 'pagada'
+    setDocs((ds) => ds.map((x) => x.id === d.id ? { ...x, estado: nuevo } : x)) // optimista
+    try { await api('expense_doc_set_estado', { p_id: d.id, p_estado: nuevo }) }
+    catch (e) { setDocs((ds) => ds.map((x) => x.id === d.id ? { ...x, estado: d.estado } : x)); alertDialog(e.message) }
   }
   const del = async (d) => {
     if (!(await confirmDialog(`¿Eliminar "${d.concepto}"?`, { title: 'Eliminar factura', danger: true, okText: 'Eliminar' }))) return
@@ -150,9 +157,9 @@ export default function Gastos() {
             <div className="gz-kpi accent"><span className="gk-ico"><Icon n="phone" /></span>
               <div className="gk-txt"><div className="gk-num">{fmtMoney(totalMensual)}</div><div className="gk-lbl">Telefonía · cargo fijo / mes</div></div></div>
             <div className="gz-kpi"><span className="gk-ico"><Icon n="cart" /></span>
-              <div className="gk-txt"><div className="gk-num">{fmtMoney(compras)}</div><div className="gk-lbl">Compras registradas ({docs.filter((d) => d.tipo === 'compra').length})</div></div></div>
-            <div className="gz-kpi"><span className="gk-ico"><Icon n="tag" /></span>
-              <div className="gk-txt"><div className="gk-num">{fmtMoney(ventas)}</div><div className="gk-lbl">Ventas registradas ({docs.filter((d) => d.tipo === 'venta').length})</div></div></div>
+              <div className="gk-txt"><div className="gk-num">{fmtMoney(totalFacturas)}</div><div className="gk-lbl">Total en facturas ({docs.length})</div></div></div>
+            <div className="gz-kpi"><span className="gk-ico"><Icon n="clock" /></span>
+              <div className="gk-txt"><div className="gk-num">{fmtMoney(pendiente)}</div><div className="gk-lbl">Pendiente de pago ({nPendientes})</div></div></div>
           </div>
         )}
 
@@ -191,7 +198,7 @@ export default function Gastos() {
           <>
             <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.8rem' }}>
               <button className="btn btn-lime" onClick={startForm}><Icon n="plus" /> Nueva factura</button>
-              <select value={flt.tipo} onChange={(e) => setFlt((f) => ({ ...f, tipo: e.target.value }))}><option value="">Compras y ventas</option><option value="compra">Compras</option><option value="venta">Ventas</option></select>
+              <select value={flt.estado} onChange={(e) => setFlt((f) => ({ ...f, estado: e.target.value }))}><option value="">Todos los estados</option><option value="pendiente">Pendientes de pago</option><option value="pagada">Pagadas</option></select>
               <select value={flt.cat} onChange={(e) => setFlt((f) => ({ ...f, cat: e.target.value }))}><option value="">Todas las categorías</option>{CATS.map((c) => <option key={c}>{c}</option>)}</select>
               <select value={flt.dep} onChange={(e) => setFlt((f) => ({ ...f, dep: e.target.value }))}><option value="">Todos los departamentos</option>{depts.map((d) => <option key={d}>{d}</option>)}</select>
             </div>
@@ -200,12 +207,12 @@ export default function Gastos() {
               ? <div className="conv"><div className="empty">Aún no hay facturas registradas. Crea la primera con "Nueva factura".</div></div>
               : <div className="conv gz-card">
                   <div className="table-wrap"><table className="tbl-compact ed-table">
-                    <thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Proveedor</th><th>Categoría</th><th>Depto.</th><th className="mny-h">Monto</th><th></th></tr></thead>
+                    <thead><tr><th>Fecha</th><th>Estado</th><th>Concepto</th><th>Proveedor</th><th>Categoría</th><th>Depto.</th><th className="mny-h">Monto</th><th></th></tr></thead>
                     <tbody>
                       {docsFiltrados.map((d) => (
                         <tr key={d.id}>
                           <td className="nowrap">{fmtDate(d.fecha)}</td>
-                          <td><span className={`badge ${d.tipo === 'venta' ? 's-approved' : ''}`}>{d.tipo === 'venta' ? 'Venta' : 'Compra'}</span></td>
+                          <td><button type="button" className={`badge estado-badge ${d.estado === 'pagada' ? 's-approved' : 's-pending'}`} onClick={() => toggleEstado(d)} title="Clic para cambiar el estado de pago">{d.estado === 'pagada' ? 'Pagada' : 'Pendiente'}</button></td>
                           <td>{d.concepto}</td>
                           <td>{d.proveedor || <span className="muted">—</span>}</td>
                           <td>{d.categoria}</td>
@@ -230,8 +237,8 @@ export default function Gastos() {
           <div className="modal">
             <h3>Nueva factura</h3>
             <div className="pf-fields">
-              <div><label>Tipo</label>
-                <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}><option value="compra">Compra</option><option value="venta">Venta</option></select></div>
+              <div><label>Estado de pago</label>
+                <select value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}><option value="pendiente">Pendiente</option><option value="pagada">Pagada</option></select></div>
               <div><label>Fecha</label><input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} /></div>
               <div style={{ gridColumn: '1 / -1' }}><label>Concepto</label><input value={form.concepto} onChange={(e) => setForm({ ...form, concepto: e.target.value })} placeholder="Ej: 3 monitores Samsung 27''" autoFocus /></div>
               <div><label>Proveedor</label><input value={form.proveedor} onChange={(e) => setForm({ ...form, proveedor: e.target.value })} placeholder="Ej: PCFactory" /></div>
