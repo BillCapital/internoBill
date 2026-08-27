@@ -514,6 +514,11 @@ input:not([type=checkbox]):not([type=radio]),select,textarea{
   border:1.5px solid var(--line);border-radius:10px;padding:.55rem .65rem;outline:none}
 input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{border-color:var(--lime)}
 select{cursor:pointer}
+/* Controles nativos (fecha/hora): ícono y calendario acorde al tema, no negro sobre negro */
+input[type=date],input[type=time],input[type=datetime-local],input[type=month]{color-scheme:dark}
+body.light input[type=date],body.light input[type=time],body.light input[type=datetime-local],body.light input[type=month]{color-scheme:light}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator,input[type=datetime-local]::-webkit-calendar-picker-indicator{opacity:.85;cursor:pointer}
+input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 body.light input:not([type=checkbox]):not([type=radio]),body.light select,body.light textarea{background-color:#fff;color:#1c2342}
 .pf-field .qc input{flex:1}
 
