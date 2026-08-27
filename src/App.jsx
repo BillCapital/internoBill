@@ -17,6 +17,7 @@ const Insumos = lazy(() => import('./pages/Insumos'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Roles = lazy(() => import('./pages/Roles'))
 const Perfil = lazy(() => import('./pages/Perfil'))
+const Gastos = lazy(() => import('./pages/Gastos'))
 
 function Protected({ children, need }) {
   const auth = useAuth()
@@ -26,6 +27,7 @@ function Protected({ children, need }) {
   const map = {
     supplies: auth.canManageSupplies, inventory: auth.canManageInventory,
     users: auth.canManageUsers, orders: auth.canManageOrders, rooms: auth.canManageRooms,
+    admin: auth.isAdmin,
   }
   if (need && !map[need]) return <Navigate to="/" replace />
   return children
@@ -50,6 +52,7 @@ export default function App() {
           <Route path="usuarios" element={<Protected need="users"><Usuarios /></Protected>} />
           <Route path="roles" element={<Protected need="users"><Roles /></Protected>} />
           <Route path="perfil" element={<Perfil />} />
+          <Route path="gastos" element={<Protected need="admin"><Gastos /></Protected>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
