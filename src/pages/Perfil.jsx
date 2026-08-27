@@ -35,13 +35,14 @@ export default function Perfil() {
       birth_month: profile?.birth_month || '',
     })
   }, [profile?.phone, profile?.work_mode, profile?.emergency_name, profile?.emergency_phone, profile?.birth_day, profile?.birth_month])
-  // Equipos asignados a MÍ (por correo o por vínculo de usuario). El RLS ya limita a los propios
-  // cuando no eres admin; para admin, el filtro restringe a los tuyos en vez de traer todo el inventario.
+  // Equipos asignados a MÍ. El dueño actual es el user_id; el correo asignado solo se usa
+  // como respaldo cuando el equipo aún no tiene user_id. Así, si un equipo se reasigna a otra
+  // persona (cambia el user_id), deja de aparecerle al dueño anterior aunque el correo viejo siga.
   useEffect(() => {
     if (!profile?.id && !profile?.email) return
     const conds = []
-    if (profile?.email) conds.push(`assigned_to_email.ilike.${profile.email}`)
     if (profile?.id) conds.push(`user_id.eq.${profile.id}`)
+    if (profile?.email) conds.push(`and(user_id.is.null,assigned_to_email.ilike.${profile.email})`)
     let q = supabase.from('equipment').select('id,name,brand,model,serial_number,location,condition').is('returned_at', null).order('name')
     if (conds.length) q = q.or(conds.join(','))
     q.then(({ data }) => setEquipos(data ?? []))

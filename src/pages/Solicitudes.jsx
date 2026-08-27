@@ -6,6 +6,7 @@ import Chat from '../components/Chat'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, promptDialog, alertDialog, viewImage } from '../lib/ui'
 import { loadDepts, rootDeptOf, NON_REQUESTING_DEPTS } from '../lib/depts'
+import { fetchLinkPreview, fmtMoney } from '../lib/linkPreview'
 import { Icon } from '../lib/icons'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
@@ -33,13 +34,41 @@ export default function Solicitudes() {
   const [step, setStep] = useState(1)
   const [wDept, setWDept] = useState('')
   const [wSection, setWSection] = useState('')
+  const [wMode, setWMode] = useState('catalogo')   // 'catalogo' | 'link' (producto tecnológico por link)
+  const [products, setProducts] = useState([])      // productos con link agregados
+  const [pUrl, setPUrl] = useState('')              // URL en edición
+  const [pBusy, setPBusy] = useState(false)         // trayendo datos del link
+  const [pErr, setPErr] = useState('')
+
+  const addProductFromLink = async () => {
+    const url = pUrl.trim()
+    if (!/^https?:\/\//i.test(url)) return setPErr('Pega un link que empiece con http:// o https://')
+    setPErr(''); setPBusy(true)
+    const r = await fetchLinkPreview(url)
+    setPBusy(false)
+    // Aunque falle la lectura, agregamos la tarjeta para que complete a mano
+    setProducts((ps) => [...ps, {
+      product_url: url,
+      name: (r && r.ok && r.title) ? r.title : '',
+      image_url: (r && r.ok && r.image) ? r.image : '',
+      price: (r && r.ok && r.price != null) ? r.price : '',
+      currency: (r && r.currency) || 'CLP',
+      quantity: 1,
+      site: (r && r.site) || '',
+      autofailed: !(r && r.ok),
+    }])
+    setPUrl('')
+    if (r && !r.ok && r.error) setPErr(r.error)
+  }
+  const setProd = (i, k, v) => setProducts((ps) => ps.map((p, idx) => (idx === i ? { ...p, [k]: v } : p)))
+  const removeProd = (i) => setProducts((ps) => ps.filter((_, idx) => idx !== i))
   // Departamentos de nivel superior (las solicitudes son "desde el departamento":
   // los subdepartamentos —Riesgo, Tesorería, Legal— se agrupan bajo su padre).
   const [topDepts, setTopDepts] = useState(DEFAULT_DEPTS)
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('requests')
-      .select('id, status, note, custom, department, needs_manager, l1_by, mgr_by, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock))')
+      .select('id, status, note, custom, department, needs_manager, l1_by, mgr_by, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock)), request_products(id,product_url,name,image_url,price,currency,quantity,status,reject_reason)')
       .order('created_at', { ascending: false })
     setRows(data ?? [])
     setLoading(false)
@@ -100,6 +129,7 @@ export default function Solicitudes() {
   const ownDept = rootDeptOf(profile?.department || '')
   const startWizard = () => {
     setCreating((v) => !v); setStep(1); setCart({}); setNote(''); setCustom(''); setWSection('')
+    setWMode('catalogo'); setProducts([]); setPUrl(''); setPErr('')
     setWDept(canChooseDept ? '' : ownDept)
     if (!canChooseDept && ownDept) setStep(2)
   }
@@ -114,12 +144,24 @@ export default function Solicitudes() {
   const cartCount = cartList.reduce((a, x) => a + x.qty, 0)
   const setQty = (id, q, max) => setCart((c) => ({ ...c, [id]: Math.max(0, Math.min(q, max)) }))
   const submit = async () => {
-    const items = Object.entries(cart).filter(([, q]) => q > 0).map(([id, quantity]) => ({ item_id: id, quantity }))
-    if (!items.length && !custom.trim()) return alertDialog('Agrega al menos un artículo del catálogo o describe el insumo que necesitas.')
+    const isLink = wMode === 'link'
+    const items = isLink ? [] : Object.entries(cart).filter(([, q]) => q > 0).map(([id, quantity]) => ({ item_id: id, quantity }))
+    const prods = isLink ? products.filter((p) => (p.name || '').trim() || (p.product_url || '').trim()) : []
+    if (isLink) {
+      if (!prods.length) return alertDialog('Agrega al menos un producto (pega el link y trae sus datos).')
+      if (prods.some((p) => !(p.name || '').trim())) return alertDialog('Cada producto necesita un nombre. Complétalo si no se detectó del link.')
+    } else if (!items.length && !custom.trim()) {
+      return alertDialog('Agrega al menos un artículo del catálogo o describe el insumo que necesitas.')
+    }
     if (note.trim().length < 10) return alertDialog('La justificación debe tener al menos 10 caracteres.')
+    const p_products = prods.map((p) => ({
+      product_url: (p.product_url || '').trim(), name: (p.name || '').trim(),
+      image_url: (p.image_url || '').trim(), price: p.price === '' || p.price == null ? null : Number(p.price),
+      currency: p.currency || 'CLP', quantity: Math.max(1, Number(p.quantity) || 1),
+    }))
     try {
-      await api('create_request', { p_note: note.trim(), p_department: rootDeptOf(wDept || ownDept || ''), p_items: items, p_custom: custom.trim() || null })
-      setCart({}); setNote(''); setCustom(''); setCreating(false); setStep(1); load()
+      await api('create_request', { p_note: note.trim(), p_department: rootDeptOf(wDept || ownDept || ''), p_items: items, p_custom: (!isLink && custom.trim()) || null, p_products })
+      setCart({}); setNote(''); setCustom(''); setProducts([]); setWMode('catalogo'); setCreating(false); setStep(1); load()
     } catch (e) { alertDialog(e.message) }
   }
   // Acción: refleja el nuevo estado al instante y reconcilia en segundo plano.
@@ -132,6 +174,15 @@ export default function Solicitudes() {
       ? rs.filter((r) => r.id !== p_id)
       : (next ? rs.map((r) => (r.id === p_id ? { ...r, status: next } : r)) : rs))
     ;(async () => { try { await api(action, { p_id, ...extra }) } catch (e) { alertDialog(e.message) } finally { load(); loadMgr() } })()
+  }
+
+  // Gestión decide un producto (con link) por separado: aprobar / rechazar con motivo
+  const decideProduct = async (prodId, approve) => {
+    let reason = ''
+    if (!approve) { const r = await promptDialog('Motivo del rechazo', { title: 'Rechazar producto', placeholder: 'Ej: hay una alternativa más barata…' }); if (r === null) return; reason = r || '' }
+    else if (!(await confirmDialog('¿Aprobar este producto?', { title: 'Aprobar producto', okText: 'Aprobar' }))) return
+    setRows((rs) => rs.map((r) => ({ ...r, request_products: (r.request_products || []).map((p) => (p.id === prodId ? { ...p, status: approve ? 'approved' : 'rejected', reject_reason: approve ? null : reason } : p)) })))
+    try { await api('request_product_decide', { p_id: prodId, p_approve: approve, p_reason: reason }) } catch (e) { alertDialog(e.message) } finally { load() }
   }
 
   const data = rows.filter((t) => !status || t.status === status)
@@ -147,15 +198,28 @@ export default function Solicitudes() {
         <div className="conv wizard" style={{ padding: '1rem' }}>
           <div className="wz-steps">
             <span className={`wz-step ${step === 1 ? 'on' : ''} ${step > 1 ? 'done' : ''}`}>1 · Departamento{wDept ? `: ${wDept}` : ''}</span>
-            <span className={`wz-step ${step === 2 ? 'on' : ''} ${step > 2 ? 'done' : ''}`}>2 · Sección{wSection ? `: ${wSection}` : ''}</span>
-            <span className={`wz-step ${step === 3 ? 'on' : ''}`}>3 · Artículos</span>
+            {wMode === 'catalogo' ? <>
+              <span className={`wz-step ${step === 2 ? 'on' : ''} ${step > 2 ? 'done' : ''}`}>2 · Sección{wSection ? `: ${wSection}` : ''}</span>
+              <span className={`wz-step ${step === 3 ? 'on' : ''}`}>3 · Artículos</span>
+            </> : <span className={`wz-step on`}>2 · Productos{products.length ? `: ${products.length}` : ''}</span>}
             <div className="wz-actions">
               <button className="btn btn-primary btn-sm" onClick={submit}>Enviar solicitud</button>
               <button className="btn btn-sm" onClick={() => { setCreating(false); setStep(1) }}>Cancelar</button>
             </div>
           </div>
 
-          {/* Carrito del pedido */}
+          {/* Tipo de solicitud: catálogo general o producto tecnológico por link */}
+          <div className="req-mode">
+            <button className={`req-mode-b ${wMode === 'catalogo' ? 'on' : ''}`} onClick={() => setWMode('catalogo')}>
+              <Icon n="box" /> <span><strong>Del catálogo</strong><em>insumos generales</em></span>
+            </button>
+            <button className={`req-mode-b ${wMode === 'link' ? 'on' : ''}`} onClick={() => setWMode('link')}>
+              <Icon n="cart" /> <span><strong>Producto tecnológico</strong><em>pega el link · pantallas, computadores…</em></span>
+            </button>
+          </div>
+
+          {/* Carrito del pedido (solo catálogo) */}
+          {wMode === 'catalogo' && (
           <div className="cart-box">
             <div className="cart-head"><span><Icon n="cart" /> Tu pedido</span><span className="cart-count">{cartCount} art.</span></div>
             {cartList.length === 0
@@ -167,6 +231,47 @@ export default function Solicitudes() {
                   ))}
                 </ul>}
           </div>
+          )}
+
+          {/* Constructor de productos por link (tecnológico) */}
+          {wMode === 'link' && (
+          <div className="prodbuild">
+            <label className="pb-label">Pega el link del producto que quieres</label>
+            <div className="pb-add">
+              <input type="url" placeholder="https://www.tienda.cl/producto/…" value={pUrl}
+                onChange={(e) => { setPUrl(e.target.value); setPErr('') }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addProductFromLink() } }} />
+              <button className="btn btn-lime" disabled={pBusy} onClick={addProductFromLink}>
+                {pBusy ? 'Trayendo…' : <><Icon n="plus" /> Agregar</>}
+              </button>
+            </div>
+            {pErr && <div className="pb-err"><Icon n="alert" /> {pErr}</div>}
+            <p className="muted" style={{ fontSize: '.78rem', margin: '.2rem 0 .6rem' }}>Traemos nombre, imagen y precio del link automáticamente. Si algo no se detecta, lo puedes completar a mano.</p>
+
+            {products.length === 0
+              ? <div className="muted" style={{ fontSize: '.85rem' }}>Aún no agregas productos. Pega un link y presiona Agregar.</div>
+              : <div className="pb-list">
+                  {products.map((p, i) => (
+                    <div className="pb-card" key={i}>
+                      <div className="pb-thumb">{p.image_url
+                        ? <img src={p.image_url} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                        : <span className="pb-ph"><Icon n="box" /></span>}</div>
+                      <div className="pb-fields">
+                        <input className="pb-name" placeholder="Nombre del producto" value={p.name} onChange={(e) => setProd(i, 'name', e.target.value)} />
+                        <div className="pb-row2">
+                          <label>Precio<input type="number" min="0" value={p.price} onChange={(e) => setProd(i, 'price', e.target.value)} placeholder="—" /></label>
+                          <label>Cant.<input type="number" min="1" value={p.quantity} onChange={(e) => setProd(i, 'quantity', e.target.value)} /></label>
+                          {p.product_url && <a className="pb-link" href={p.product_url} target="_blank" rel="noreferrer"><Icon n="cart" /> Ver</a>}
+                        </div>
+                        {p.autofailed && <span className="pb-warn">No se detectaron datos del link — complétalos.</span>}
+                        {p.site && !p.autofailed && <span className="pb-site">{p.site}</span>}
+                      </div>
+                      <button className="cart-x" title="Quitar" onClick={() => removeProd(i)}><Icon n="close" /></button>
+                    </div>
+                  ))}
+                </div>}
+          </div>
+          )}
 
           {step === 1 && (
             <div>
@@ -185,7 +290,7 @@ export default function Solicitudes() {
             </div>
           )}
 
-          {step === 2 && (
+          {wMode === 'catalogo' && step === 2 && (
             <div>
               <div className="row" style={{ marginBottom: '.5rem' }}>
                 <h3 style={{ fontSize: '1rem', margin: 0 }}>Sección de insumos</h3>
@@ -203,7 +308,7 @@ export default function Solicitudes() {
             </div>
           )}
 
-          {step === 3 && (
+          {wMode === 'catalogo' && step === 3 && (
             <div>
               <div className="row" style={{ marginBottom: '.5rem' }}>
                 <h3 style={{ fontSize: '1rem', margin: 0 }}>{wSection} · para {wDept}</h3>
@@ -231,8 +336,10 @@ export default function Solicitudes() {
 
           {/* Pie del asistente: insumo no listado + justificación (siempre visible) */}
           <div className="wz-foot">
-            <label className="muted" style={{ display: 'block' }}>¿No encuentras el insumo en la lista? Descríbelo aquí <span className="muted">(opcional)</span></label>
-            <textarea style={{ width: '100%', minHeight: 56 }} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Ej: Teclado mecánico compacto, 2 unidades. Se coordina por chat." />
+            {wMode === 'catalogo' && <>
+              <label className="muted" style={{ display: 'block' }}>¿No encuentras el insumo en la lista? Descríbelo aquí <span className="muted">(opcional)</span></label>
+              <textarea style={{ width: '100%', minHeight: 56 }} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Ej: Teclado mecánico compacto, 2 unidades. Se coordina por chat." />
+            </>}
             <label className="muted" style={{ display: 'block', marginTop: '.6rem' }}>Justificación (obligatoria)</label>
             <textarea style={{ width: '100%', minHeight: 64 }} value={note} onChange={(e) => setNote(e.target.value)} placeholder="¿Para qué necesitas estos insumos?" />
             <div style={{ marginTop: '.6rem', textAlign: 'right' }}>
@@ -272,6 +379,36 @@ export default function Solicitudes() {
                 <ul>{(t.request_items || []).map((li, i) => <li key={i}>{li.quantity} × {li.inventory_items?.name} <span className="muted">(stock: {li.inventory_items?.stock})</span></li>)}
                   {t.custom ? <li>{t.custom}</li> : null}</ul>
               </div>
+
+              {/* Productos con link (tecnológicos): tarjeta con vista previa + decisión por producto */}
+              {(t.request_products || []).length > 0 && (
+                <div className="rp-cards">
+                  {(t.request_products || []).map((p) => (
+                    <div className={`rp-card ${p.status}`} key={p.id}>
+                      <div className="rp-thumb">{p.image_url
+                        ? <img src={p.image_url} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} onClick={() => viewImage(p.image_url)} />
+                        : <span className="rp-ph"><Icon n="box" /></span>}</div>
+                      <div className="rp-info">
+                        <strong>{p.quantity} × {p.name}</strong>
+                        <div className="rp-meta">
+                          {p.price != null ? <span className="rp-price">{fmtMoney(p.price, p.currency)}{p.quantity > 1 ? <span className="muted"> c/u</span> : null}</span> : <span className="muted">sin precio</span>}
+                          {p.product_url ? <a className="rp-link" href={/^https?:\/\//i.test(p.product_url) ? p.product_url : 'https://' + p.product_url} target="_blank" rel="noreferrer"><Icon n="cart" /> Ver producto</a> : null}
+                        </div>
+                        {p.status === 'rejected' && p.reject_reason ? <div className="rp-reason"><Icon n="ban" /> {p.reject_reason}</div> : null}
+                      </div>
+                      <div className="rp-side">
+                        <span className={`rp-badge ${p.status}`}>{p.status === 'approved' ? 'Aprobado' : p.status === 'rejected' ? 'Rechazado' : 'Pendiente'}</span>
+                        {canManageOrders && p.status === 'pending' && (t.status === 'pending' || t.status === 'manager_review') && (
+                          <div className="rp-actions">
+                            <button className="btn-sm btn-lime" onClick={() => decideProduct(p.id, true)}><Icon n="check" /></button>
+                            <button className="btn-sm btn-danger" onClick={() => decideProduct(p.id, false)}><Icon n="ban" /></button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {/* Aviso de doble aprobación cuando la solicitud incluye insumos tecnológicos */}
               {t.needs_manager && requiredSigners(t).length > 0 && (t.status === 'pending' || t.status === 'manager_review') && (
                 <div className="twokey-note"><Icon n="key" /> Insumo tecnológico: requiere la aprobación de <strong>gestión de pedidos</strong> y luego la autorización de <strong>{requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}</strong>.</div>
