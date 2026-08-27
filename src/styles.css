@@ -1236,6 +1236,11 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .gloss-list dd{margin:.3rem 0 0;color:var(--text);opacity:.82;font-size:.86rem;line-height:1.5}
 .gloss-list dd strong{opacity:1;color:var(--text);font-weight:700}
 .tec-info{display:flex;gap:.5rem;align-items:flex-start;background:color-mix(in srgb,var(--lime) 8%,transparent);border:1px solid color-mix(in srgb,var(--lime) 26%,transparent);border-radius:10px;padding:.6rem .7rem;font-size:.82rem;margin-top:.55rem}
+/* Cabecera del paso "Describe qué necesitas" */
+.tec-desc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin:.4rem 0 .55rem}
+.tec-desc-t{font-weight:700;font-size:1rem;font-family:'Inter Tight','Inter',sans-serif}
+.tec-desc-s{font-size:.8rem;margin-top:.15rem;max-width:60ch;line-height:1.4}
+.tec-back{flex:none;white-space:nowrap}
 .tec-info .licon{width:1rem;height:1rem;color:var(--lime);flex:none;margin-top:.15rem}
 /* Adjuntos de solicitud (links y cotizaciones) */
 .att-box{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:.7rem .8rem;margin:.7rem 0}

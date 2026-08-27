@@ -402,12 +402,13 @@ export default function Solicitudes() {
 
             {tecView === 'solicitar' && (
               <>
-                <div className="row" style={{ marginBottom: '.4rem' }}>
-                  <label className="pb-label" style={{ margin: 0 }}>Describe qué necesitas</label>
-                  <button className="btn-sm" onClick={() => setTecView('choose')}>‹ Volver</button>
+                <div className="tec-desc-head">
+                  <div><div className="tec-desc-t">Describe qué necesitas</div>
+                    <div className="tec-desc-s muted">Cuéntanos para qué lo necesitas y qué problema tienes; nosotros vemos la mejor opción.</div></div>
+                  <button className="btn-sm tec-back" onClick={() => setTecView('choose')}>‹ Volver</button>
                 </div>
-                <textarea style={{ width: '100%', minHeight: 96 }} value={note} onChange={(e) => setNote(e.target.value)}
-                  placeholder="Ej: Necesito un computador para diseño gráfico (Illustrator, Photoshop) y videollamadas. Presupuesto aprox. $700.000." />
+                <textarea style={{ width: '100%', minHeight: 110 }} value={note} onChange={(e) => setNote(e.target.value)}
+                  placeholder="Ej: Mi computador se pone muy lento con Chrome y varias pestañas de Google (Gmail, Sheets, Drive) abiertas; tiene poca RAM. Necesito ampliar la memoria o reemplazarlo." />
                 <div className="tec-info">
                   <Icon n="key" /> <span>Al enviarla podrás <strong>adjuntar links y cotizaciones en PDF</strong> y conversar dentro de la solicitud. La autorizan <strong>RRHH, el Gerente de TI y el encargado de tu área</strong>; la gestora de pedidos no interviene.</span>
                 </div>
