@@ -21,7 +21,7 @@ const label = (k) => (ST.find((s) => s.key === k) || {}).label || k
 const DEFAULT_DEPTS = ['Cobranza', 'Comercial', 'Operaciones', 'Producto', 'Gerencia']
 
 export default function Solicitudes() {
-  const { profile, canManageOrders } = useAuth()
+  const { profile, canManageOrders, isAdmin } = useAuth()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [catalog, setCatalog] = useState([])
@@ -34,7 +34,25 @@ export default function Solicitudes() {
   const [step, setStep] = useState(1)
   const [wDept, setWDept] = useState('')
   const [wSection, setWSection] = useState('')
-  const [wMode, setWMode] = useState('catalogo')   // 'catalogo' | 'link' (producto tecnológico por link)
+  const [wMode, setWMode] = useState('catalogo')   // 'catalogo' | 'tec' (solicitud tecnológica conversable)
+  const [tecView, setTecView] = useState('choose') // 'choose' | 'disponibles' | 'solicitar'
+  const [availEquip, setAvailEquip] = useState(null) // equipos sin asignar
+  const [availPeriph, setAvailPeriph] = useState(null) // periféricos con stock
+  const [tecBusy, setTecBusy] = useState(false)
+  const [attBusy, setAttBusy] = useState(false)
+  const [glossOpen, setGlossOpen] = useState(false)
+
+  const loadTecDisponibles = useCallback(async () => {
+    setAvailEquip(null); setAvailPeriph(null)
+    const [{ data: eq }, { data: ph }, { data: pa }] = await Promise.all([
+      supabase.from('equipment').select('id,name,brand,model,condition,equipment_sections(name)').is('user_id', null).is('returned_at', null),
+      supabase.from('peripherals').select('id,name,model,total_qty'),
+      supabase.from('peripheral_assignments').select('peripheral_id,qty'),
+    ])
+    const used = {}; (pa || []).forEach((a) => { used[a.peripheral_id] = (used[a.peripheral_id] || 0) + (a.qty || 0) })
+    setAvailEquip((eq || []).map((e) => ({ ...e, section: e.equipment_sections?.name || 'Equipos' })))
+    setAvailPeriph((ph || []).map((p) => ({ ...p, avail: Math.max(0, (p.total_qty || 0) - (used[p.id] || 0)) })).filter((p) => p.avail > 0))
+  }, [])
   const [products, setProducts] = useState([])      // productos con link agregados
   const [pUrl, setPUrl] = useState('')              // URL en edición
   const [pBusy, setPBusy] = useState(false)         // trayendo datos del link
@@ -68,7 +86,7 @@ export default function Solicitudes() {
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('requests')
-      .select('id, status, note, custom, department, needs_manager, l1_by, mgr_by, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock)), request_products(id,product_url,name,image_url,price,currency,quantity,status,reject_reason)')
+      .select('id, status, kind, note, custom, department, needs_manager, l1_by, mgr_by, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock)), request_products(id,product_url,name,image_url,price,currency,quantity,status,reject_reason), request_attachments(id,kind,url,name,mime,size,uploaded_by,created_at)')
       .order('created_at', { ascending: false })
     setRows(data ?? [])
     setLoading(false)
@@ -90,18 +108,23 @@ export default function Solicitudes() {
 
   // Firmantes de una compra tecnológica: aprobadores de tecnología (TI+RRHH) + gerente del área que pide.
   // El conjunto se des-duplica por persona (ej. Juan es RRHH y gerente de Operaciones = 1 firma).
-  const [techApprovers, setTechApprovers] = useState([])   // [{id, full_name, email}]
+  const [techApprovers, setTechApprovers] = useState([])   // aprobadores técnicos (flujo catálogo)
+  const [hrApprovers, setHrApprovers] = useState([])       // RRHH (flujo tecnológico)
+  const [itMgrs, setItMgrs] = useState([])                 // Gerente de TI (flujo tecnológico)
   const [approvals, setApprovals] = useState([])           // [{request_id, approver_id, decision}]
   const [deptMgrs, setDeptMgrs] = useState([])             // [{name, manager:{id,full_name,email}}]
   const [people, setPeople] = useState({})                 // { id: 'Nombre' } para resolver l1_by/mgr_by
   const loadMgr = useCallback(async () => {
-    const [{ data: ta }, { data: ap }, { data: dm }, { data: pp }] = await Promise.all([
-      supabase.from('profiles').select('id,full_name,email').eq('is_tech_approver', true).eq('active', true),
+    const [{ data: flagged }, { data: ap }, { data: dm }, { data: pp }] = await Promise.all([
+      supabase.from('profiles').select('id,full_name,email,is_tech_approver,is_hr,is_it_manager').eq('active', true),
       supabase.from('request_approvals').select('request_id, approver_id, decision, at'),
       supabase.from('departments').select('name, manager:manager_id(id,full_name,email)'),
       supabase.from('profiles').select('id,full_name,email'),
     ])
-    setTechApprovers(ta || [])
+    const F = flagged || []
+    setTechApprovers(F.filter((p) => p.is_tech_approver))
+    setHrApprovers(F.filter((p) => p.is_hr))
+    setItMgrs(F.filter((p) => p.is_it_manager))
     setApprovals(ap || [])
     setDeptMgrs(dm || [])
     setPeople(Object.fromEntries((pp || []).map((p) => [p.id, p.full_name || p.email])))
@@ -110,11 +133,15 @@ export default function Solicitudes() {
   useEffect(() => { loadMgr() }, [loadMgr])
   // Gerente de área de un departamento (el guardado en la solicitud ya es el depto raíz)
   const deptManagerOf = (dept) => (deptMgrs.find((d) => d.name === dept)?.manager) || null
-  // Conjunto de firmantes requeridos para una solicitud, des-duplicado por persona
+  // Conjunto de firmantes requeridos para una solicitud, des-duplicado por persona.
+  // Tecnológica: RRHH + Gerente TI + encargado del área. Catálogo: aprobadores técnicos + encargado.
   const requiredSigners = (t) => {
-    const list = [...techApprovers]
+    const base = t.kind === 'tec' ? [...hrApprovers, ...itMgrs] : [...techApprovers]
+    const list = []
+    const seen = new Set()
+    for (const p of base) { if (p && p.id && !seen.has(p.id)) { seen.add(p.id); list.push(p) } }
     const m = deptManagerOf(t.department)
-    if (m && m.id && !list.some((x) => x.id === m.id)) list.push(m)
+    if (m && m.id && !seen.has(m.id)) { seen.add(m.id); list.push(m) }
     return list
   }
   const myIsSigner = (t) => requiredSigners(t).some((s) => s.id === profile?.id)
@@ -129,7 +156,7 @@ export default function Solicitudes() {
   const ownDept = rootDeptOf(profile?.department || '')
   const startWizard = () => {
     setCreating((v) => !v); setStep(1); setCart({}); setNote(''); setCustom(''); setWSection('')
-    setWMode('catalogo'); setProducts([]); setPUrl(''); setPErr('')
+    setWMode('catalogo'); setTecView('choose'); setProducts([]); setPUrl(''); setPErr('')
     setWDept(canChooseDept ? '' : ownDept)
     if (!canChooseDept && ownDept) setStep(2)
   }
@@ -144,25 +171,52 @@ export default function Solicitudes() {
   const cartCount = cartList.reduce((a, x) => a + x.qty, 0)
   const setQty = (id, q, max) => setCart((c) => ({ ...c, [id]: Math.max(0, Math.min(q, max)) }))
   const submit = async () => {
-    const isLink = wMode === 'link'
-    const items = isLink ? [] : Object.entries(cart).filter(([, q]) => q > 0).map(([id, quantity]) => ({ item_id: id, quantity }))
-    const prods = isLink ? products.filter((p) => (p.name || '').trim() || (p.product_url || '').trim()) : []
-    if (isLink) {
-      if (!prods.length) return alertDialog('Agrega al menos un producto (pega el link y trae sus datos).')
-      if (prods.some((p) => !(p.name || '').trim())) return alertDialog('Cada producto necesita un nombre. Complétalo si no se detectó del link.')
-    } else if (!items.length && !custom.trim()) {
-      return alertDialog('Agrega al menos un artículo del catálogo o describe el insumo que necesitas.')
+    // Solicitud tecnológica: conversable, se aprueba por RRHH + Gerente TI + encargado del área
+    if (wMode === 'tec') {
+      if (note.trim().length < 5) return alertDialog('Describe qué necesitas (al menos unas palabras).')
+      setTecBusy(true)
+      try {
+        await api('create_tech_request', { p_note: note.trim(), p_department: rootDeptOf(wDept || ownDept || '') })
+        setNote(''); setWMode('catalogo'); setCreating(false); setStep(1); load(); loadMgr()
+      } catch (e) { alertDialog(e.message) } finally { setTecBusy(false) }
+      return
     }
+    const items = Object.entries(cart).filter(([, q]) => q > 0).map(([id, quantity]) => ({ item_id: id, quantity }))
+    if (!items.length && !custom.trim()) return alertDialog('Agrega al menos un artículo del catálogo o describe el insumo que necesitas.')
     if (note.trim().length < 10) return alertDialog('La justificación debe tener al menos 10 caracteres.')
-    const p_products = prods.map((p) => ({
-      product_url: (p.product_url || '').trim(), name: (p.name || '').trim(),
-      image_url: (p.image_url || '').trim(), price: p.price === '' || p.price == null ? null : Number(p.price),
-      currency: p.currency || 'CLP', quantity: Math.max(1, Number(p.quantity) || 1),
-    }))
     try {
-      await api('create_request', { p_note: note.trim(), p_department: rootDeptOf(wDept || ownDept || ''), p_items: items, p_custom: (!isLink && custom.trim()) || null, p_products })
-      setCart({}); setNote(''); setCustom(''); setProducts([]); setWMode('catalogo'); setCreating(false); setStep(1); load()
+      await api('create_request', { p_note: note.trim(), p_department: rootDeptOf(wDept || ownDept || ''), p_items: items, p_custom: custom.trim() || null, p_products: [] })
+      setCart({}); setNote(''); setCustom(''); setWMode('catalogo'); setCreating(false); setStep(1); load()
     } catch (e) { alertDialog(e.message) }
+  }
+
+  // ---- Adjuntos de una solicitud tecnológica (links y archivos/cotizaciones) ----
+  const addAttachLink = async (reqId) => {
+    const url = await promptDialog('Pega el link (producto, tienda, etc.)', { title: 'Agregar link', placeholder: 'https://…' })
+    if (url === null) return
+    const u = url.trim(); if (!/^https?:\/\//i.test(u)) return alertDialog('El link debe empezar con http:// o https://')
+    const name = (await promptDialog('Nombre o descripción del link (opcional)', { title: 'Nombre del link', placeholder: 'Ej: Monitor Samsung 27"' })) || u
+    setAttBusy(true)
+    try { await api('request_attach_add', { p_request: reqId, p_kind: 'link', p_url: u, p_name: name }) } catch (e) { alertDialog(e.message) } finally { setAttBusy(false); load() }
+  }
+  const uploadAttachFile = async (reqId, file) => {
+    if (!file) return
+    setAttBusy(true)
+    try {
+      const path = `${reqId}/${Date.now()}_${(file.name || 'archivo').replace(/[^\w.\-]+/g, '_')}`
+      const { error: upErr } = await supabase.storage.from('cotizaciones').upload(path, file, { contentType: file.type || undefined, upsert: false })
+      if (upErr) throw upErr
+      await api('request_attach_add', { p_request: reqId, p_kind: 'file', p_url: path, p_name: file.name, p_mime: file.type || '', p_size: file.size || 0 })
+    } catch (e) { alertDialog(e.message || 'No se pudo subir el archivo.') } finally { setAttBusy(false); load() }
+  }
+  const openAttach = async (a) => {
+    if (a.kind === 'link') { window.open(/^https?:\/\//i.test(a.url) ? a.url : 'https://' + a.url, '_blank'); return }
+    const { data } = await supabase.storage.from('cotizaciones').createSignedUrl(a.url, 3600)
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+  }
+  const delAttach = async (a) => {
+    if (!(await confirmDialog(`¿Quitar "${a.name}"?`, { title: 'Quitar adjunto', danger: true, okText: 'Quitar' }))) return
+    try { if (a.kind === 'file' && a.url) await supabase.storage.from('cotizaciones').remove([a.url]); await api('request_attach_delete', { p_id: a.id }) } catch (e) { alertDialog(e.message) } finally { load() }
   }
   // Acción: refleja el nuevo estado al instante y reconcilia en segundo plano.
   // optStatus permite forzar el estado optimista (ej: 1er V°B° -> "manager_review").
@@ -185,7 +239,10 @@ export default function Solicitudes() {
     try { await api('request_product_decide', { p_id: prodId, p_approve: approve, p_reason: reason }) } catch (e) { alertDialog(e.message) } finally { load() }
   }
 
-  const data = rows.filter((t) => !status || t.status === status)
+  // La gestora de pedidos NO ve las solicitudes tecnológicas (salvo que sea firmante o dueña); admin sí.
+  const canSee = (t) => t.kind !== 'tec' || isAdmin || t.user_id === profile?.id || myIsSigner(t)
+  const visibleRows = rows.filter(canSee)
+  const data = visibleRows.filter((t) => !status || t.status === status)
   return (
     <div>
       <div className="page-head"><div className="row">
@@ -201,7 +258,7 @@ export default function Solicitudes() {
             {wMode === 'catalogo' ? <>
               <span className={`wz-step ${step === 2 ? 'on' : ''} ${step > 2 ? 'done' : ''}`}>2 · Sección{wSection ? `: ${wSection}` : ''}</span>
               <span className={`wz-step ${step === 3 ? 'on' : ''}`}>3 · Artículos</span>
-            </> : <span className={`wz-step on`}>2 · Productos{products.length ? `: ${products.length}` : ''}</span>}
+            </> : <span className={`wz-step on`}>2 · Descripción</span>}
             <div className="wz-actions">
               <button className="btn btn-primary btn-sm" onClick={submit}>Enviar solicitud</button>
               <button className="btn btn-sm" onClick={() => { setCreating(false); setStep(1) }}>Cancelar</button>
@@ -213,8 +270,8 @@ export default function Solicitudes() {
             <button className={`req-mode-b ${wMode === 'catalogo' ? 'on' : ''}`} onClick={() => setWMode('catalogo')}>
               <Icon n="box" /> <span><strong>Del catálogo</strong><em>insumos generales</em></span>
             </button>
-            <button className={`req-mode-b ${wMode === 'link' ? 'on' : ''}`} onClick={() => setWMode('link')}>
-              <Icon n="cart" /> <span><strong>Producto tecnológico</strong><em>pega el link · pantallas, computadores…</em></span>
+            <button className={`req-mode-b ${wMode === 'tec' ? 'on' : ''}`} onClick={() => { setWMode('tec'); setTecView('choose') }}>
+              <Icon n="cart" /> <span><strong>Producto tecnológico</strong><em>equipos y periféricos · aprueban RRHH, Gerente TI y tu jefe de área</em></span>
             </button>
           </div>
 
@@ -233,43 +290,73 @@ export default function Solicitudes() {
           </div>
           )}
 
-          {/* Constructor de productos por link (tecnológico) */}
-          {wMode === 'link' && (
-          <div className="prodbuild">
-            <label className="pb-label">Pega el link del producto que quieres</label>
-            <div className="pb-add">
-              <input type="url" placeholder="https://www.tienda.cl/producto/…" value={pUrl}
-                onChange={(e) => { setPUrl(e.target.value); setPErr('') }}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addProductFromLink() } }} />
-              <button className="btn btn-lime" disabled={pBusy} onClick={addProductFromLink}>
-                {pBusy ? 'Trayendo…' : <><Icon n="plus" /> Agregar</>}
-              </button>
+          {/* Apartado tecnológico: primero elige consultar disponibilidad o solicitar */}
+          {wMode === 'tec' && !(canChooseDept && step === 1) && (
+          <div className="tecbuild">
+            <div className="tec-topbar">
+              <span className="muted" style={{ fontSize: '.82rem' }}>¿Dudas con los términos técnicos?</span>
+              <button type="button" className="btn-sm gloss-btn" onClick={() => setGlossOpen(true)}><Icon n="book" /> Ver glosario</button>
             </div>
-            {pErr && <div className="pb-err"><Icon n="alert" /> {pErr}</div>}
-            <p className="muted" style={{ fontSize: '.78rem', margin: '.2rem 0 .6rem' }}>Traemos nombre, imagen y precio del link automáticamente. Si algo no se detecta, lo puedes completar a mano.</p>
+            {tecView === 'choose' && (
+              <div className="tec-choose">
+                <button className="tec-opt" onClick={() => { setTecView('disponibles'); loadTecDisponibles() }}>
+                  <span className="to-ico"><Icon n="box" /></span>
+                  <span><strong>Consultar disponibilidad</strong><em>Revisa los equipos y periféricos ya disponibles para asignar.</em></span>
+                </button>
+                <button className="tec-opt" onClick={() => setTecView('solicitar')}>
+                  <span className="to-ico"><Icon n="cart" /></span>
+                  <span><strong>Realizar una solicitud</strong><em>Describe lo que necesitas; lo autorizan RRHH, el Gerente de TI y tu jefe de área.</em></span>
+                </button>
+              </div>
+            )}
 
-            {products.length === 0
-              ? <div className="muted" style={{ fontSize: '.85rem' }}>Aún no agregas productos. Pega un link y presiona Agregar.</div>
-              : <div className="pb-list">
-                  {products.map((p, i) => (
-                    <div className="pb-card" key={i}>
-                      <div className="pb-thumb">{p.image_url
-                        ? <img src={p.image_url} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-                        : <span className="pb-ph"><Icon n="box" /></span>}</div>
-                      <div className="pb-fields">
-                        <input className="pb-name" placeholder="Nombre del producto" value={p.name} onChange={(e) => setProd(i, 'name', e.target.value)} />
-                        <div className="pb-row2">
-                          <label>Precio<input type="number" min="0" value={p.price} onChange={(e) => setProd(i, 'price', e.target.value)} placeholder="—" /></label>
-                          <label>Cant.<input type="number" min="1" value={p.quantity} onChange={(e) => setProd(i, 'quantity', e.target.value)} /></label>
-                          {p.product_url && <a className="pb-link" href={p.product_url} target="_blank" rel="noreferrer"><Icon n="cart" /> Ver</a>}
-                        </div>
-                        {p.autofailed && <span className="pb-warn">No se detectaron datos del link — complétalos.</span>}
-                        {p.site && !p.autofailed && <span className="pb-site">{p.site}</span>}
-                      </div>
-                      <button className="cart-x" title="Quitar" onClick={() => removeProd(i)}><Icon n="close" /></button>
-                    </div>
-                  ))}
-                </div>}
+            {tecView === 'disponibles' && (
+              <div className="tec-avail">
+                <div className="row" style={{ marginBottom: '.5rem' }}>
+                  <h3 style={{ fontSize: '1rem', margin: 0 }}>Disponibles para asignar</h3>
+                  <button className="btn-sm" onClick={() => setTecView('choose')}>‹ Volver</button>
+                </div>
+                {availEquip === null
+                  ? <div className="muted att-empty">Cargando disponibilidad…</div>
+                  : <>
+                    <div className="tec-avail-sec">Equipos sin asignar <span className="muted">({availEquip.length})</span></div>
+                    {availEquip.length === 0
+                      ? <div className="muted att-empty">No hay equipos disponibles por ahora.</div>
+                      : <ul className="tec-avail-list">
+                          {availEquip.map((e) => (
+                            <li key={e.id}><span className="ta-name">{[e.name, e.brand, e.model].filter(Boolean).join(' ') || 'Equipo'}</span>
+                              <span className="ta-tag">{e.section}</span><span className="muted ta-cond">{e.condition}</span></li>
+                          ))}
+                        </ul>}
+                    <div className="tec-avail-sec" style={{ marginTop: '.7rem' }}>Periféricos con stock <span className="muted">({(availPeriph || []).length})</span></div>
+                    {(availPeriph || []).length === 0
+                      ? <div className="muted att-empty">No hay periféricos disponibles por ahora.</div>
+                      : <ul className="tec-avail-list">
+                          {availPeriph.map((p) => (
+                            <li key={p.id}><span className="ta-name">{p.name}{p.model ? ` · ${p.model}` : ''}</span><span className="ta-tag">{p.avail} disp.</span></li>
+                          ))}
+                        </ul>}
+                  </>}
+                <div className="tec-avail-cta">
+                  <span className="muted">¿No hay lo que necesitas?</span>
+                  <button className="btn btn-lime" onClick={() => setTecView('solicitar')}>Realizar una solicitud</button>
+                </div>
+              </div>
+            )}
+
+            {tecView === 'solicitar' && (
+              <>
+                <div className="row" style={{ marginBottom: '.4rem' }}>
+                  <label className="pb-label" style={{ margin: 0 }}>Describe qué necesitas</label>
+                  <button className="btn-sm" onClick={() => setTecView('choose')}>‹ Volver</button>
+                </div>
+                <textarea style={{ width: '100%', minHeight: 96 }} value={note} onChange={(e) => setNote(e.target.value)}
+                  placeholder="Ej: Necesito un computador para diseño gráfico (Illustrator, Photoshop) y videollamadas. Presupuesto aprox. $700.000." />
+                <div className="tec-info">
+                  <Icon n="key" /> <span>Al enviarla podrás <strong>adjuntar links y cotizaciones en PDF</strong> y conversar dentro de la solicitud. La autorizan <strong>RRHH, el Gerente de TI y el encargado de tu área</strong>; la gestora de pedidos no interviene.</span>
+                </div>
+              </>
+            )}
           </div>
           )}
 
@@ -334,18 +421,23 @@ export default function Solicitudes() {
             </div>
           )}
 
-          {/* Pie del asistente: insumo no listado + justificación (siempre visible) */}
+          {/* Pie del asistente (catálogo): insumo no listado + justificación */}
+          {wMode === 'catalogo' && (
           <div className="wz-foot">
-            {wMode === 'catalogo' && <>
-              <label className="muted" style={{ display: 'block' }}>¿No encuentras el insumo en la lista? Descríbelo aquí <span className="muted">(opcional)</span></label>
-              <textarea style={{ width: '100%', minHeight: 56 }} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Ej: Teclado mecánico compacto, 2 unidades. Se coordina por chat." />
-            </>}
+            <label className="muted" style={{ display: 'block' }}>¿No encuentras el insumo en la lista? Descríbelo aquí <span className="muted">(opcional)</span></label>
+            <textarea style={{ width: '100%', minHeight: 56 }} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Ej: Teclado mecánico compacto, 2 unidades. Se coordina por chat." />
             <label className="muted" style={{ display: 'block', marginTop: '.6rem' }}>Justificación (obligatoria)</label>
             <textarea style={{ width: '100%', minHeight: 64 }} value={note} onChange={(e) => setNote(e.target.value)} placeholder="¿Para qué necesitas estos insumos?" />
             <div style={{ marginTop: '.6rem', textAlign: 'right' }}>
               <button className="btn btn-primary" onClick={submit}>Enviar solicitud</button>
             </div>
           </div>
+          )}
+          {wMode === 'tec' && tecView === 'solicitar' && !(canChooseDept && step === 1) && (
+          <div style={{ marginTop: '.8rem', textAlign: 'right' }}>
+            <button className="btn btn-primary" disabled={tecBusy} onClick={submit}>{tecBusy ? 'Enviando…' : 'Enviar solicitud'}</button>
+          </div>
+          )}
         </div>
       )}
 
@@ -353,12 +445,12 @@ export default function Solicitudes() {
       {!creating && !loading && <div className="kpi-grid compact">
         <button className={`kpi ${!status ? 'active' : ''}`} onClick={() => setStatus(null)}>
           <div className="ico"><Icon n="box" /></div>
-          <div className="num">{rows.filter((t) => t.status !== 'rejected').length}</div>
+          <div className="num">{visibleRows.filter((t) => t.status !== 'rejected').length}</div>
           <div className="lbl">{canManageOrders ? 'En total' : 'Tus solicitudes'}</div>
         </button>
         {ST.map((s) => (
           <button key={s.key} className={`kpi ${status === s.key ? 'active' : ''}`} onClick={() => setStatus(status === s.key ? null : s.key)}>
-            <div className="ico"><Icon n={s.ico} /></div><div className="num">{rows.filter((t) => t.status === s.key).length}</div><div className="lbl">{s.label}</div>
+            <div className="ico"><Icon n={s.ico} /></div><div className="num">{visibleRows.filter((t) => t.status === s.key).length}</div><div className="lbl">{s.label}</div>
           </button>
         ))}
       </div>}
@@ -409,16 +501,52 @@ export default function Solicitudes() {
                   ))}
                 </div>
               )}
-              {/* Aviso de doble aprobación cuando la solicitud incluye insumos tecnológicos */}
+              {/* Adjuntos (solicitud tecnológica): links y cotizaciones PDF, se guardan y se puede conversar */}
+              {t.kind === 'tec' && (() => {
+                const canAttach = t.user_id === profile?.id || isAdmin || myIsSigner(t)
+                const atts = t.request_attachments || []
+                const active = t.status !== 'rejected' && t.status !== 'delivered'
+                return (
+                <div className="att-box">
+                  <div className="att-head"><span><Icon n="file" /> Links y cotizaciones</span>
+                    {canAttach && active && (
+                      <span className="att-add">
+                        <button className="btn-sm" disabled={attBusy} onClick={() => addAttachLink(t.id)}><Icon n="cart" /> Link</button>
+                        <label className="btn-sm att-upl">{attBusy ? 'Subiendo…' : <><Icon n="plus" /> Archivo</>}
+                          <input type="file" accept=".pdf,image/*,application/pdf" hidden disabled={attBusy}
+                            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) uploadAttachFile(t.id, f) }} />
+                        </label>
+                      </span>
+                    )}
+                  </div>
+                  {atts.length === 0
+                    ? <div className="muted att-empty">Aún no hay links ni cotizaciones. Agrega el producto que necesitas o la cotización.</div>
+                    : <ul className="att-list">
+                        {atts.map((a) => (
+                          <li key={a.id} className="att-item">
+                            <span className="att-ico"><Icon n={a.kind === 'file' ? 'file' : 'cart'} /></span>
+                            <button className="att-name" onClick={() => openAttach(a)} title="Abrir">{a.name}</button>
+                            <span className="att-by muted">{nameById(a.uploaded_by)}</span>
+                            {(a.uploaded_by === profile?.id || isAdmin) && active && <button className="att-x" title="Quitar" onClick={() => delAttach(a)}><Icon n="close" /></button>}
+                          </li>
+                        ))}
+                      </ul>}
+                </div>
+                )
+              })()}
+
+              {/* Aviso de autorización requerida */}
               {t.needs_manager && requiredSigners(t).length > 0 && (t.status === 'pending' || t.status === 'manager_review') && (
-                <div className="twokey-note"><Icon n="key" /> Insumo tecnológico: requiere la aprobación de <strong>gestión de pedidos</strong> y luego la autorización de <strong>{requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}</strong>.</div>
+                <div className="twokey-note"><Icon n="key" /> {t.kind === 'tec'
+                  ? <>Requiere la autorización de <strong>{requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}</strong> (RRHH, Gerente TI y encargado del área).</>
+                  : <>Insumo tecnológico: requiere la aprobación de <strong>gestión de pedidos</strong> y luego la autorización de <strong>{requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}</strong>.</>}</div>
               )}
 
               {/* Panel de firmas — vista total: quién autorizó, quién rechazó y quién falta.
                   Para gestión/admin queda visible en todo el ciclo (revisión, aprobada, rechazada);
                   para los propios firmantes se muestra mientras está en revisión. */}
               {t.needs_manager && requiredSigners(t).length > 0
-                && (canManageOrders || myIsSigner(t))
+                && (canManageOrders || myIsSigner(t) || isAdmin || t.user_id === profile?.id)
                 && ['manager_review', 'approved', 'rejected', 'delivered'].includes(t.status) && (() => {
                 const req = requiredSigners(t)
                 const ok = req.filter((s) => decisionFor(t.id, s.id) === 'approve').length
@@ -426,11 +554,13 @@ export default function Solicitudes() {
                 <div className="signers-panel">
                   <div className="sp-head"><span className="sp-title">Autorizaciones</span><span className="sp-count">{ok}/{req.length}</span></div>
                   <div className="sp-list">
+                    {t.kind !== 'tec' && (
                     <div className="sp-row ok">
                       <span className="sp-ico"><Icon n="check" /></span>
                       <span className="sp-name">Aprobación de gestión{t.l1_by ? ` · ${nameById(t.l1_by)}` : ''}</span>
                       <span className="sp-state">Aprobada</span>
                     </div>
+                    )}
                     {req.map((a) => {
                       const dec = decisionFor(t.id, a.id)
                       const st = dec === 'approve' ? 'ok' : dec === 'reject' ? 'bad' : 'wait'
@@ -499,6 +629,27 @@ export default function Solicitudes() {
       ))}
 
       {canManageOrders && <ActivityLog kinds={['Solicitud']} title="Registro de solicitudes" />}
+
+      {/* Glosario de términos (ventana superpuesta) */}
+      {glossOpen && (
+        <div className="backdrop open" onClick={() => setGlossOpen(false)}>
+          <div className="modal gloss-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="gloss-head">
+              <h3><Icon n="book" /> Glosario de términos</h3>
+              <button className="btn-sm" type="button" onClick={() => setGlossOpen(false)}><Icon n="close" /> Cerrar</button>
+            </div>
+            <p className="muted" style={{ marginTop: 0, fontSize: '.85rem' }}>Para describir qué necesitas sin saber de computadores.</p>
+            <dl className="gloss-list">
+              <div><dt>RAM (memoria)</dt><dd>La memoria de trabajo. Con poca RAM el equipo se pone lento al tener varias pestañas o programas abiertos a la vez.</dd></div>
+              <div><dt>Almacenamiento (disco / SSD)</dt><dd>Dónde se guardan tus archivos y programas. Un SSD hace que todo cargue mucho más rápido que un disco antiguo.</dd></div>
+              <div><dt>Procesador (CPU)</dt><dd>El "cerebro" del equipo. Uno más potente abre y ejecuta los programas con mayor rapidez.</dd></div>
+              <div><dt>Tarjeta gráfica (GPU)</dt><dd>Se encarga de imágenes y video. Necesaria para diseño, edición de video o 3D; para tareas de oficina (Google, Chrome, planillas) normalmente no hace falta.</dd></div>
+              <div><dt>Pantalla / monitor</dt><dd>La pantalla donde ves todo. Puede ser un equipo aparte del computador.</dd></div>
+              <div><dt>Periférico</dt><dd>Accesorios que se conectan al equipo: mouse, teclado, audífonos, cámara, etc.</dd></div>
+            </dl>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

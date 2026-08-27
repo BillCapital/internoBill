@@ -1151,6 +1151,52 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .asig-cell .asig-mail{margin-left:.4rem;font-size:.82rem}
 .asig-cell .asig-mail::before{content:"·";margin-right:.4rem;opacity:.6}
 .corp-mail{color:var(--text);opacity:.9;word-break:break-all}
+/* Solicitud tecnológica: describir + info */
+.tecbuild{margin:.6rem 0}
+/* Elección inicial del apartado tecnológico */
+.tec-choose{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+@media(max-width:640px){.tec-choose{grid-template-columns:1fr}}
+.tec-opt{display:flex;align-items:flex-start;gap:.7rem;text-align:left;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:.9rem 1rem;cursor:pointer;color:var(--text);transition:border-color .12s,background .12s}
+.tec-opt:hover{border-color:var(--lime);background:color-mix(in srgb,var(--lime) 7%,var(--soft))}
+.tec-opt .to-ico{flex:none;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--lime) 15%,transparent);color:var(--lime)}
+.tec-opt strong{display:block;font-size:.95rem}
+.tec-opt em{display:block;font-style:normal;color:var(--muted);font-size:.8rem;margin-top:.15rem;line-height:1.35}
+/* Disponibilidad */
+.tec-avail-sec{font-weight:600;font-size:.86rem;margin-bottom:.35rem}
+.tec-avail-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.3rem}
+.tec-avail-list li{display:flex;align-items:center;gap:.55rem;background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:.4rem .6rem;font-size:.85rem}
+.ta-name{flex:1;min-width:0;overflow-wrap:anywhere}
+.ta-tag{flex:none;font-size:.7rem;font-weight:600;padding:.12rem .5rem;border-radius:999px;background:color-mix(in srgb,var(--lime) 14%,transparent);color:var(--lime)}
+.ta-cond{flex:none;font-size:.76rem}
+.tec-avail-cta{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;margin-top:.9rem;padding-top:.8rem;border-top:1px solid var(--line);font-size:.85rem}
+/* Glosario: botón + ventana superpuesta */
+.tec-topbar{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;margin-bottom:.7rem}
+.gloss-btn{display:inline-flex;align-items:center;gap:.4rem}
+.gloss-btn .licon{width:1rem;height:1rem;color:var(--lime)}
+.gloss-modal{max-width:560px;width:100%}
+.gloss-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.2rem}
+.gloss-head h3{display:flex;align-items:center;gap:.45rem;margin:0}
+.gloss-head h3 .licon{width:1.1rem;height:1.1rem;color:var(--lime)}
+.gloss-list{margin:.6rem 0 0;padding:0;display:flex;flex-direction:column;gap:.7rem;max-height:60vh;overflow-y:auto}
+.gloss-list dt{font-weight:600;font-size:.9rem}
+.gloss-list dd{margin:.15rem 0 0;color:var(--muted);font-size:.84rem;line-height:1.45}
+.tec-info{display:flex;gap:.5rem;align-items:flex-start;background:color-mix(in srgb,var(--lime) 8%,transparent);border:1px solid color-mix(in srgb,var(--lime) 26%,transparent);border-radius:10px;padding:.6rem .7rem;font-size:.82rem;margin-top:.55rem}
+.tec-info .licon{width:1rem;height:1rem;color:var(--lime);flex:none;margin-top:.15rem}
+/* Adjuntos de solicitud (links y cotizaciones) */
+.att-box{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:.7rem .8rem;margin:.7rem 0}
+.att-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;font-weight:600;font-size:.86rem;margin-bottom:.5rem}
+.att-add{display:flex;gap:.4rem;flex-wrap:wrap}
+.att-upl{cursor:pointer;display:inline-flex;align-items:center;gap:.3rem}
+.att-empty{font-size:.82rem}
+.att-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.4rem}
+.att-item{display:flex;align-items:center;gap:.55rem;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:.4rem .55rem;font-size:.85rem}
+.att-ico{flex:none;color:var(--lime);display:grid;place-items:center}
+.att-ico .licon{width:1rem;height:1rem}
+.att-name{flex:1;min-width:0;text-align:left;background:none;border:0;color:var(--text);font:inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--text) 35%,transparent)}
+.att-name:hover{color:var(--lime)}
+.att-by{flex:none;font-size:.74rem;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att-x{flex:none;background:none;border:0;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:.1rem}
+.att-x:hover{color:var(--danger)}
 /* Resaltado de fila consistente en las tablas de listas (accesos, correos, insumos, etc.) */
 .table-wrap table.tbl-compact tbody tr:not(.grp-row):not(.row-sel):hover td{background:color-mix(in srgb,var(--lime) 5%,transparent)}
 .gz-card table.tbl-compact tbody tr:hover td{background:transparent}

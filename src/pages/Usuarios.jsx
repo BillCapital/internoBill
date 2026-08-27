@@ -255,6 +255,7 @@ export default function Usuarios() {
         p_user: edit.id, p_full_name: (edit.full_name || '').trim(),
         p_department: edit.department || '', p_role: edit.role, p_inventory: null,
         p_phone: (edit.phone || '').trim(), p_notes: edit.admin_notes ?? '', p_country: edit.country ?? '',
+        p_is_hr: !!edit.is_hr, p_is_it_manager: !!edit.is_it_manager,
       }
       if (edit.avatar_url !== edit._avatar0) payload.p_avatar = edit.avatar_url || ''
       await api('admin_update_user', payload)
@@ -642,6 +643,18 @@ export default function Usuarios() {
                 </select>
                 {edit.id === user?.id && <span className="muted" style={{ fontSize: '.75rem' }}>No puedes cambiar tu propio rol</span>}
               </div>
+            </div>
+            <div className="pf-section">
+              <div className="pf-section-head">Firmas de solicitudes tecnológicas <span className="muted">— autorizan las compras tecnológicas</span></div>
+              <label className="perm-row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                <input type="checkbox" checked={!!edit.is_hr} onChange={(e) => setEdit({ ...edit, is_hr: e.target.checked })} />
+                <span><strong>RRHH</strong> — firma todas las solicitudes tecnológicas.</span>
+              </label>
+              <label className="perm-row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginTop: '.4rem' }}>
+                <input type="checkbox" checked={!!edit.is_it_manager} onChange={(e) => setEdit({ ...edit, is_it_manager: e.target.checked })} />
+                <span><strong>Gerente de TI</strong> — firma todas las solicitudes tecnológicas.</span>
+              </label>
+              <p className="muted" style={{ fontSize: '.75rem', margin: '.5rem 0 0' }}>El tercer firmante (encargado del área) es el gerente del departamento de quien solicita, según lo asignado en cada departamento. Si una persona cumple dos roles, cuenta como una sola firma.</p>
             </div>
             <div className="pf-section">
               <div className="pf-section-head">Computadores asignados <span className="muted">— {compsOf(edit).length} en inventario</span></div>
