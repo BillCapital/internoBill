@@ -607,6 +607,10 @@ body.light tr.row-sel{background:#eefbe0}
 .gz-card .tnum{font-variant-numeric:tabular-nums;white-space:nowrap}
 .gz-card tfoot td{border-top:1.5px solid var(--line);padding-top:.5rem}
 .gz-unassigned td{opacity:.75}
+.gz-card th.tr,.gz-card td.tr,td.tr,th.tr{text-align:right}
+.nowrap{white-space:nowrap}
+.ed-table td.actions{white-space:nowrap;text-align:right}
+.ed-table td.actions .btn-sm{margin-right:.3rem}
 
 /* Aviso "Guardado" junto al botón de perfil */
 .save-ok{display:inline-flex;align-items:center;gap:.3rem;font-size:.82rem;font-weight:600;color:var(--ok);animation:saveok .2s ease-out}
