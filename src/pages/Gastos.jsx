@@ -38,6 +38,10 @@ export default function Gastos() {
   const [busy, setBusy] = useState(false)
   const [flt, setFlt] = useState({ tipo: '', cat: '', dep: '' })
   const [viewer, setViewer] = useState(null)
+  const [detail, setDetail] = useState(null) // { kind:'plan'|'dept', title, rows }
+
+  const openPlan = (plan) => setDetail({ kind: 'plan', title: plan, rows: lines.filter((l) => l.plan === plan) })
+  const openDept = (depto) => setDetail({ kind: 'dept', title: depto === 'Sin asignar' ? 'Sin asignar' : depto, rows: lines.filter((l) => l.depto === depto) })
 
   const loadDocs = useCallback(async () => {
     const { data } = await supabase.from('expense_docs').select('*').order('fecha', { ascending: false }).order('created_at', { ascending: false })
@@ -51,17 +55,24 @@ export default function Gastos() {
       const { data: secs } = await supabase.from('equipment_sections').select('id').eq('name', 'Teléfonos')
       const secId = secs?.[0]?.id
       const [{ data: eq }, { data: profs }] = await Promise.all([
-        secId ? supabase.from('equipment').select('attributes,user_id').eq('section_id', secId).is('returned_at', null) : Promise.resolve({ data: [] }),
-        supabase.from('profiles').select('id,department'),
+        secId ? supabase.from('equipment').select('id,name,attributes,user_id').eq('section_id', secId).is('returned_at', null) : Promise.resolve({ data: [] }),
+        supabase.from('profiles').select('id,email,full_name,department'),
       ])
-      const deptById = Object.fromEntries((profs || []).map((p) => [p.id, p.department || '']))
-      setLines((eq || []).filter((e) => e.attributes?.linea).map((e) => ({
-        plan: e.attributes.operador || '—',
-        cargo: num(e.attributes.cargo_fijo),
-        renovacion: num(e.attributes.renovacion),
-        cuotasPend: Number(e.attributes.cuotas_pagar) || 0,
-        depto: e.user_id ? (deptById[e.user_id] ? rootDeptOf(deptById[e.user_id]) : 'Sin asignar') : 'Sin asignar',
-      })))
+      const profById = Object.fromEntries((profs || []).map((p) => [p.id, p]))
+      setLines((eq || []).filter((e) => e.attributes?.linea).map((e) => {
+        const p = e.user_id ? profById[e.user_id] : null
+        return {
+          id: e.id,
+          device: e.name || 'Equipo',
+          linea: e.attributes.linea || '—',
+          plan: e.attributes.operador || '—',
+          cargo: num(e.attributes.cargo_fijo),
+          renovacion: num(e.attributes.renovacion),
+          cuotasPend: Number(e.attributes.cuotas_pagar) || 0,
+          persona: p ? (p.full_name || p.email || null) : null,
+          depto: p && p.department ? rootDeptOf(p.department) : 'Sin asignar',
+        }
+      }))
       await loadDocs()
       setLoading(false)
     })()
@@ -160,7 +171,7 @@ export default function Gastos() {
                 <div className="gz-head"><Icon n="clipboard" /> Por plan</div>
                 <div className="table-wrap"><table className="tbl-compact">
                   <thead><tr><th>Plan</th><th className="tr">Líneas</th><th className="mny-h">Cargo c/u</th><th className="mny-h">Subtotal / mes</th></tr></thead>
-                  <tbody>{byPlan.map((p) => (<tr key={p.plan}><td>{p.plan}</td><td className="tr">{p.n}</td><td className="mny-cell"><Money value={p.cargo} /></td><td className="mny-cell"><Money value={p.sub} strong /></td></tr>))}</tbody>
+                  <tbody>{byPlan.map((p) => (<tr key={p.plan} className="gz-row" onClick={() => openPlan(p.plan)} title="Ver dispositivos de este plan"><td><span className="gz-link">{p.plan}</span></td><td className="tr">{p.n}</td><td className="mny-cell"><Money value={p.cargo} /></td><td className="mny-cell"><Money value={p.sub} strong /></td></tr>))}</tbody>
                   <tfoot><tr><td><strong>Total</strong></td><td className="tr"><strong>{lines.length}</strong></td><td></td><td className="mny-cell"><Money value={totalMensual} strong /></td></tr></tfoot>
                 </table></div>
               </div>
@@ -168,7 +179,7 @@ export default function Gastos() {
                 <div className="gz-head"><Icon n="building" /> Por departamento</div>
                 <div className="table-wrap"><table className="tbl-compact">
                   <thead><tr><th>Departamento</th><th className="tr">Líneas</th><th className="mny-h">Total / mes</th></tr></thead>
-                  <tbody>{byDept.map((d) => (<tr key={d.depto} className={d.depto === 'Sin asignar' ? 'gz-unassigned' : ''}><td>{d.depto === 'Sin asignar' ? <span className="muted">Sin asignar</span> : d.depto}</td><td className="tr">{d.n}</td><td className="mny-cell"><Money value={d.sub} strong /></td></tr>))}</tbody>
+                  <tbody>{byDept.map((d) => (<tr key={d.depto} className={`gz-row${d.depto === 'Sin asignar' ? ' gz-unassigned' : ''}`} onClick={() => openDept(d.depto)} title="Ver dispositivos de este departamento"><td>{d.depto === 'Sin asignar' ? <span className="muted gz-link">Sin asignar</span> : <span className="gz-link">{d.depto}</span>}</td><td className="tr">{d.n}</td><td className="mny-cell"><Money value={d.sub} strong /></td></tr>))}</tbody>
                 </table></div>
                 <p className="muted" style={{ fontSize: '.78rem', margin: '.5rem .2rem 0' }}>Las líneas sin dueño aparecen como "Sin asignar". A medida que las asignes, el gasto se reparte por departamento.</p>
               </div>
@@ -235,6 +246,39 @@ export default function Gastos() {
             <div className="modal-actions">
               <button className="btn" onClick={() => setForm(null)} disabled={busy}>Cancelar</button>
               <button className="btn btn-primary" onClick={submit} disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detalle: dispositivos de un plan o departamento */}
+      {detail && (
+        <div className="backdrop open" onClick={() => setDetail(null)}>
+          <div className="modal gz-detail" onClick={(e) => e.stopPropagation()}>
+            <div className="gz-detail-head">
+              <div>
+                <span className="muted" style={{ fontSize: '.72rem', textTransform: 'uppercase', letterSpacing: '.04em' }}>{detail.kind === 'plan' ? 'Plan' : 'Departamento'}</span>
+                <h3 style={{ margin: '.1rem 0 0' }}>{detail.title}</h3>
+              </div>
+              <button className="btn-sm" type="button" onClick={() => setDetail(null)}><Icon n="close" /> Cerrar</button>
+            </div>
+            <div className="table-wrap">
+              <table className="tbl-compact">
+                <thead><tr><th>Número</th><th>Dispositivo</th>{detail.kind === 'plan' ? <th>Asignado a</th> : <th>Plan</th>}<th className="mny-h">Cargo / mes</th></tr></thead>
+                <tbody>
+                  {detail.rows.map((l) => (
+                    <tr key={l.id}>
+                      <td className="nowrap"><strong>{l.linea}</strong></td>
+                      <td>{l.device}</td>
+                      {detail.kind === 'plan'
+                        ? <td>{l.persona || <span className="muted">Sin asignar</span>}</td>
+                        : <td>{l.plan}</td>}
+                      <td className="mny-cell"><Money value={l.cargo} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot><tr><td colSpan={3}><strong>Total · {detail.rows.length} {detail.rows.length === 1 ? 'línea' : 'líneas'}</strong></td><td className="mny-cell"><Money value={detail.rows.reduce((a, l) => a + l.cargo, 0)} strong /></td></tr></tfoot>
+              </table>
             </div>
           </div>
         </div>
