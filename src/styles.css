@@ -341,7 +341,10 @@ tr:last-child td{border-bottom:none}
 /* Tabla de usuarios: divisores verticales y alineación uniforme (escritorio) */
 .usr-cards th,.usr-cards td{vertical-align:middle}
 @media(min-width:761px){
-  .usr-cards th,.usr-cards td{border-right:1px solid var(--line);padding:.5rem .4rem}
+  .usr-cards th,.usr-cards td{border-right:1px solid var(--line);padding:.62rem .55rem}
+  .usr-cards td{padding-top:.7rem;padding-bottom:.7rem}
+  .usr-cards tbody tr:not(.grp-row){transition:background .12s}
+  .usr-cards tbody tr:not(.grp-row):hover td{background:color-mix(in srgb,var(--lime) 5%,transparent)}
   .usr-cards th:last-child,.usr-cards td:last-child{border-right:none}
   .usr-cards th{letter-spacing:0;font-size:.7rem}
   /* Centrar columnas medias: Departamento, País, Rol, Computadores, Último ingreso */
@@ -1137,6 +1140,11 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .inv-table td .muted{font-size:.75rem}
 .inv-table .badge{font-size:.7rem;padding:.14rem .5rem}
 .inv-table td.actions{gap:.35rem;white-space:nowrap}
+/* Resaltado de fila consistente en las tablas de listas (accesos, correos, insumos, etc.) */
+.table-wrap table.tbl-compact tbody tr:not(.grp-row):not(.row-sel):hover td{background:color-mix(in srgb,var(--lime) 5%,transparent)}
+.gz-card table.tbl-compact tbody tr:hover td{background:transparent}
+.ins-table tbody tr:not(.row-sel):hover{background:color-mix(in srgb,var(--lime) 5%,transparent)}
+.ins-table tbody tr{transition:background .12s}
 
 /* Celda de contraseña en carpeta de accesos */
 .pass-cell{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82rem;background:rgba(255,255,255,.06);padding:.12rem .4rem;border-radius:6px;user-select:all;word-break:break-all}
