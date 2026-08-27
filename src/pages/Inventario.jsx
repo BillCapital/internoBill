@@ -894,11 +894,7 @@ export default function Inventario() {
                           <td>{e.location}</td>
                           <td>{s.assign_to === 'department'
                             ? <span className="badge"><Icon n="building" /> {e.assigned_to_name || '—'}</span>
-                            : isPhones
-                              ? (e.assigned_to_name ? <strong>{e.assigned_to_name}</strong> : <span className="muted">Sin asignar</span>)
-                              : (e.assigned_to_name || e.assigned_to_email
-                                ? <span className="asig-cell">{e.assigned_to_name ? <strong>{e.assigned_to_name}</strong> : null}{e.assigned_to_email ? <span className="muted asig-mail">{e.assigned_to_email}</span> : null}</span>
-                                : <span className="muted">Sin asignar</span>)}</td>
+                            : (e.assigned_to_name ? <strong>{e.assigned_to_name}</strong> : <span className="muted">Sin asignar</span>)}</td>
                           {isPhones
                             ? <td>{e.assigned_to_email ? <span className="corp-mail">{e.assigned_to_email}</span> : <span className="muted">—</span>}</td>
                             : <td><span className="badge">{e.condition}</span></td>}
