@@ -675,7 +675,8 @@ body.light tr.row-sel{background:#eefbe0}
 .ins-table col.c-chk{width:38px}
 .ins-table col.c-stock{width:180px}
 .ins-table col.c-act{width:78px}
-.ins-table th,.ins-table td{padding:.4rem .45rem;vertical-align:middle}
+.ins-table th,.ins-table td{padding:.6rem .55rem;vertical-align:middle}
+.ins-table tbody tr:not(:first-child) td{border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
 .ins-table thead th{font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
 .ins-table td:first-child,.ins-table th:first-child{text-align:center}
 .ins-table input[type=checkbox]{width:15px;height:15px;margin:0;cursor:pointer}
@@ -685,11 +686,12 @@ body.light tr.row-sel{background:#eefbe0}
 .ins-cell{display:flex;gap:.5rem;align-items:center}
 .ins-thumb,.ins-thumb.ph{width:32px;height:32px}
 .ins-thumb.ph .licon{width:1rem;height:1rem}
-.ins-info{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.ins-info{display:flex;flex-direction:column;gap:.3rem;min-width:0}
 .ins-name{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;line-height:1.15}
 .ins-name strong{font-size:.86rem}
-.ins-desc{font-size:.72rem;line-height:1.1}
-.ins-depts{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.05rem}
+.ins-desc{font-size:.74rem;line-height:1.3}
+.ins-depts{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.1rem}
+.ins-name{margin-bottom:.05rem}
 .dept-chip{display:inline-flex;align-items:center;gap:.2rem;font-size:.66rem;line-height:1;padding:.16rem .4rem;border-radius:999px;background:color-mix(in srgb,var(--line) 40%,transparent);color:var(--muted);border:1px solid var(--line)}
 .dept-chip.danger{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 32%,transparent)}
 .dept-chip.danger .licon{width:.72rem;height:.72rem}
@@ -1145,6 +1147,10 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .gz-card table.tbl-compact tbody tr:hover td{background:transparent}
 .ins-table tbody tr:not(.row-sel):hover{background:color-mix(in srgb,var(--lime) 5%,transparent)}
 .ins-table tbody tr{transition:background .12s}
+/* Barra de herramientas de la carpeta: separada de la tabla */
+.ins-tools{padding-bottom:.6rem;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+/* Chips de departamento un poco más legibles */
+.ins-depts .dept-chip{font-size:.68rem;padding:.18rem .45rem}
 
 /* Celda de contraseña en carpeta de accesos */
 .pass-cell{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82rem;background:rgba(255,255,255,.06);padding:.12rem .4rem;border-radius:6px;user-select:all;word-break:break-all}
