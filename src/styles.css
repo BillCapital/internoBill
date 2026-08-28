@@ -1549,6 +1549,10 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .sp-head{display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;border-bottom:1px solid var(--line)}
 .sp-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .sp-count{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.8rem;font-weight:700;color:var(--text)}
+.sp-htxt{display:flex;flex-direction:column;gap:.12rem;min-width:0}
+.sp-sub{font-size:.68rem;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0}
+.cv-section-t{display:flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:1rem 0 .5rem}
+.cv-section-t .licon{width:.95rem;height:.95rem}
 .sp-list{display:flex;flex-direction:column}
 .sp-row{display:flex;align-items:center;gap:.55rem;padding:.45rem .75rem;font-size:.85rem}
 .sp-row + .sp-row{border-top:1px solid var(--line)}

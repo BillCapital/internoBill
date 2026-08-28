@@ -528,9 +528,10 @@ export default function Solicitudes() {
           </button>
           {open === t.id && (
             <div className="cv-body">
-              <div className="reqsum"><strong>Pedido</strong> · {t.department}
+              <div className="reqsum"><strong>{t.kind === 'tec' ? 'Solicitud tecnológica' : 'Pedido'}</strong> · {t.department}
+                {((t.request_items || []).length > 0 || t.custom) && (
                 <ul>{(t.request_items || []).map((li, i) => <li key={i}>{li.quantity} × {li.inventory_items?.name} <span className="muted">(stock: {li.inventory_items?.stock})</span></li>)}
-                  {t.custom ? <li>{t.custom}</li> : null}</ul>
+                  {t.custom ? <li>{t.custom}</li> : null}</ul>)}
               </div>
 
               {/* Productos con link (tecnológicos): tarjeta con vista previa + decisión por producto */}
@@ -597,7 +598,8 @@ export default function Solicitudes() {
               })()}
 
               {/* Aviso de autorización requerida */}
-              {t.needs_manager && requiredSigners(t).length > 0 && (t.status === 'pending' || t.status === 'manager_review') && (
+              {t.needs_manager && requiredSigners(t).length > 0 && (t.status === 'pending' || t.status === 'manager_review')
+                && !((canManageOrders || myIsSigner(t) || isAdmin || t.user_id === profile?.id) && t.status === 'manager_review') && (
                 <div className="twokey-note"><Icon n="key" /> {t.kind === 'tec'
                   ? <>Requiere la autorización de <strong>{requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}</strong> (RRHH, Gerente TI y encargado del área).</>
                   : <>Insumo tecnológico: requiere la aprobación de <strong>gestión de pedidos</strong> y luego la autorización de <strong>{requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}</strong>.</>}</div>
@@ -613,7 +615,11 @@ export default function Solicitudes() {
                 const ok = req.filter((s) => decisionFor(t.id, s.id) === 'approve').length
                 return (
                 <div className="signers-panel">
-                  <div className="sp-head"><span className="sp-title">Autorizaciones</span><span className="sp-count">{ok}/{req.length}</span></div>
+                  <div className="sp-head">
+                    <span className="sp-htxt"><span className="sp-title">Autorizaciones</span>
+                      <span className="sp-sub">{t.kind === 'tec' ? 'RRHH · Gerente TI · encargado del área' : 'Aprobadores técnicos · encargado del área'}</span></span>
+                    <span className="sp-count">{ok}/{req.length}</span>
+                  </div>
                   <div className="sp-list">
                     {t.kind !== 'tec' && (
                     <div className="sp-row ok">
@@ -638,6 +644,7 @@ export default function Solicitudes() {
                 )
               })()}
 
+              <div className="cv-section-t"><Icon n="chat" /> Conversación</div>
               <Chat type="request" id={t.id} locked={t.status === 'rejected' || t.status === 'delivered'} />
 
               {/* 1ª llave: gestora / administración */}
