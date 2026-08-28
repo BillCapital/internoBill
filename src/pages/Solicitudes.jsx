@@ -12,7 +12,7 @@ import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
 const ST = [
   { key: 'pending', label: 'Pendientes', ico: 'clock', tone: 'pend' },
-  { key: 'manager_review', label: 'Por gerente', ico: 'key', tone: 'rev' },
+  { key: 'manager_review', label: 'Por firmar', ico: 'key', tone: 'rev' },
   { key: 'approved', label: 'Aprobadas', ico: 'check', tone: 'appr' },
   { key: 'rejected', label: 'Rechazadas', ico: 'ban', tone: 'rej' },
   { key: 'delivered', label: 'Entregadas', ico: 'tray', tone: 'deliv' },
@@ -150,15 +150,16 @@ export default function Solicitudes() {
   const [people, setPeople] = useState({})                 // { id: 'Nombre' } para resolver l1_by/mgr_by
   const loadMgr = useCallback(async () => {
     const [{ data: flagged }, { data: ap }, { data: dm }, { data: pp }] = await Promise.all([
-      supabase.from('profiles').select('id,full_name,email,is_tech_approver,is_hr,is_it_manager').eq('active', true),
+      supabase.from('profiles').select('id,full_name,email,is_tech_approver,is_hr,is_it_manager,role').eq('active', true),
       supabase.from('request_approvals').select('request_id, approver_id, decision, at'),
       supabase.from('departments').select('name, manager:manager_id(id,full_name,email)'),
       supabase.from('profiles').select('id,full_name,email'),
     ])
     const F = flagged || []
+    const roleOf = (p) => (p.role || '').toLowerCase()
     setTechApprovers(F.filter((p) => p.is_tech_approver))
-    setHrApprovers(F.filter((p) => p.is_hr))
-    setItMgrs(F.filter((p) => p.is_it_manager))
+    setHrApprovers(F.filter((p) => p.is_hr || roleOf(p) === 'rrhh'))
+    setItMgrs(F.filter((p) => p.is_it_manager || roleOf(p) === 'gerente_ti'))
     setApprovals(ap || [])
     setDeptMgrs(dm || [])
     setPeople(Object.fromEntries((pp || []).map((p) => [p.id, p.full_name || p.email])))
