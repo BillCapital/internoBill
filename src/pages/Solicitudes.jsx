@@ -184,6 +184,16 @@ export default function Solicitudes() {
   const iSigned = (reqId) => signedFor(reqId).includes(profile?.id)
   // Decisión de un firmante concreto sobre una solicitud: 'approve' | 'reject' | null (pendiente)
   const decisionFor = (reqId, approverId) => (approvals.find((a) => a.request_id === reqId && a.approver_id === approverId) || {}).decision || null
+  // Rol(es) que cumple una persona como firmante de una solicitud (RRHH / Gerente TI / Encargado de área)
+  const signerRoleLabel = (t, p) => {
+    const roles = []
+    if (hrApprovers.some((x) => x.id === p.id)) roles.push('RRHH')
+    if (itMgrs.some((x) => x.id === p.id)) roles.push('Gerente TI')
+    if (t.kind !== 'tec' && techApprovers.some((x) => x.id === p.id)) roles.push('Aprobador técnico')
+    const dm = deptManagerOf(t.department)
+    if (dm && dm.id === p.id) roles.push('Encargado de área')
+    return roles.join(' · ')
+  }
 
   // Paso 1 arranca en el departamento propio (usuarios) o a elección (gestora/admin)
   const canChooseDept = canManageOrders
@@ -634,7 +644,7 @@ export default function Solicitudes() {
                       return (
                         <div key={a.id} className={`sp-row ${st}`}>
                           <span className="sp-ico"><Icon n={dec === 'approve' ? 'check' : dec === 'reject' ? 'ban' : 'clock'} /></span>
-                          <span className="sp-name">{a.full_name || a.email}</span>
+                          <span className="sp-name">{a.full_name || a.email}{signerRoleLabel(t, a) ? <span className="sp-role">{signerRoleLabel(t, a)}</span> : null}</span>
                           <span className="sp-state">{dec === 'approve' ? 'Autorizó' : dec === 'reject' ? 'Rechazó' : 'Pendiente'}</span>
                         </div>
                       )
@@ -679,10 +689,10 @@ export default function Solicitudes() {
                 </div>
               )}
               {t.status === 'manager_review' && myIsSigner(t) && iSigned(t.id) && (
-                <div className="muted" style={{ fontSize: '.85rem' }}>Ya diste tu autorización. Falta la firma del resto de autorizadores.</div>
+                <div className="cv-note">Ya diste tu autorización. Falta la firma del resto de autorizadores.</div>
               )}
               {canManageOrders && t.status === 'manager_review' && !myIsSigner(t) && (
-                <div className="muted" style={{ fontSize: '.85rem' }}>Esperando la autorización de los firmantes (gerente de área y tecnología).</div>
+                <div className="cv-note">Esperando la autorización de los firmantes (RRHH, Gerente TI y encargado del área).</div>
               )}
 
               {canManageOrders && t.status === 'approved' && (

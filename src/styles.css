@@ -1551,8 +1551,13 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .sp-count{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.8rem;font-weight:700;color:var(--text)}
 .sp-htxt{display:flex;flex-direction:column;gap:.12rem;min-width:0}
 .sp-sub{font-size:.68rem;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0}
-.cv-section-t{display:flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:1rem 0 .5rem}
+.sp-name{display:flex;flex-direction:column;gap:.05rem;line-height:1.2}
+.sp-role{font-size:.66rem;color:var(--muted);font-weight:600}
+.cv-section-t{display:flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:1rem 1.1rem .5rem}
 .cv-section-t .licon{width:.95rem;height:.95rem}
+.cv-note{padding:.35rem 1.1rem;font-size:.85rem;color:var(--muted)}
+.rqa-head > span:first-child{display:inline-flex;align-items:center;gap:.4rem;min-width:0}
+.rqa-head .licon{width:1rem;height:1rem;flex:none}
 .sp-list{display:flex;flex-direction:column}
 .sp-row{display:flex;align-items:center;gap:.55rem;padding:.45rem .75rem;font-size:.85rem}
 .sp-row + .sp-row{border-top:1px solid var(--line)}
