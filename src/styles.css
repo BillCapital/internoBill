@@ -271,7 +271,7 @@ button{font-family:inherit;cursor:pointer}
 .sal-right .cal td .slot.busy,.sal-right .cal td .slot.pending{min-height:26px;padding:.22rem .5rem;line-height:1.2}
 .sal-right .cal td .slot.slot-off{min-height:26px}
 .sal-right .cal .slot{min-width:130px}
-.sal-right .cal tr.lunch td{font-size:.72rem}
+.sal-right .cal tr.lunch td{font-size:.72rem;height:26px;vertical-align:middle}
 /* Calendario mensual */
 .cal-head{display:flex;align-items:center;gap:.8rem;margin:1rem 0 .6rem}
 .cal-nav{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:9px;width:34px;height:34px;font-size:1rem}
