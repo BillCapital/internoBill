@@ -30,7 +30,7 @@ button{font-family:inherit;cursor:pointer}
 .topbar-inner{padding:.6rem 1.2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
 .brand{display:flex;align-items:center;gap:.6rem;color:#fff;font-weight:600;font-size:1.15rem;flex:1 1 auto;min-width:0;overflow:hidden}
 .brand-mark{background:var(--lime);color:var(--accent-ink);font-weight:800;border-radius:9px;padding:.15rem .45rem;font-size:1rem;flex:none}
-.brand-logo{width:34px;height:34px;border-radius:8px;display:block;flex:none;object-fit:contain}
+.brand-logo{width:34px;height:34px;display:block;flex:none;object-fit:contain}
 .brand-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .top-right{display:flex;align-items:center;gap:.6rem;flex:0 0 auto}
 .iconbtn{width:40px;height:40px;border-radius:11px;background:#eef0f6;border:none;display:grid;place-items:center;font-size:1.1rem;position:relative}
@@ -459,7 +459,7 @@ tr:last-child td{border-bottom:none}
 .err{color:var(--danger);font-size:.85rem;margin-top:.5rem}
 
 /* MODO CLARO */
-body.light{ --bg:#eef0f4; --panel:#ffffff; --panel2:#f3f5f9; --soft:#f3f5f9; --topbar:#14213d; --sidebar:#f6f7fa; --line:#e4e7ec; --text:#14213d; --muted:#5b6472; --danger:#b5302a; --lime:#b4e48d; --lime-text:#4a7521; --accent-ink:#14213d; --ok:#2b8154; --warn:#8f5d12; --bad:#b5302a; --info:#2f6fb0; }
+body.light{ --bg:#dbdfe7; --panel:#ffffff; --panel2:#eef1f5; --soft:#eef1f5; --topbar:#14213d; --sidebar:#e8ebf1; --line:#d0d6e0; --text:#14213d; --muted:#54607a; --danger:#b5302a; --lime:#b4e48d; --lime-text:#456d1f; --accent-ink:#14213d; --ok:#2b8154; --warn:#8f5d12; --bad:#b5302a; --info:#2f6fb0; }
 /* Top bar navy (estilo app BillCapital) en tema claro */
 body.light .topbar{border-bottom-color:#243257}
 body.light .brand,body.light .brand-name{color:#ffffff}
