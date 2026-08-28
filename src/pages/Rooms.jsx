@@ -260,8 +260,9 @@ export default function Rooms() {
                   {Array.from({ length: form.maxDur }).map((_, i) => { const d = i + 1, mm = d * 30; return <option key={d} value={d}>{mm < 60 ? mm + ' min' : (mm / 60) + ' h'}</option> })}
                 </select></div>
             </div>
-            <label>Convocados <span className="muted">— se les crea la cita en su calendario 365</span></label>
-            <div className="att-picker">
+            <div className="mr-att">
+              <div className="mr-att-h"><Icon n="users" /> Convocados <span className="muted">— se les crea la cita en su calendario 365</span></div>
+              <div className="att-picker">
               <div className="att-inputwrap">
                 <span className="att-ico"><Icon n="search" /></span>
                 <input className="att-search" placeholder="Buscar persona por nombre o correo…" value={attQuery}
@@ -298,35 +299,34 @@ export default function Rooms() {
                 )
               })()}
             </div>
-            <div className="att-ext-lbl">o invita a un correo externo</div>
-            <div className="qc att-ext" style={{ gap: '.4rem' }}>
-              <input style={{ flex: 1 }} placeholder="nombre@empresa.com" value={extAtt}
-                onChange={(e) => setExtAtt(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('add-ext-att')?.click() } }} />
-              <button id="add-ext-att" className="btn-sm" type="button" onClick={() => {
-                const v = extAtt.trim().toLowerCase()
-                if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return alertDialog('Escribe un correo válido.')
-                setForm((f) => (f.att || []).some((a) => a.email === v) ? f : { ...f, att: [...(f.att || []), { email: v, name: v }] })
-                setExtAtt('')
-              }}>Agregar</button>
-            </div>
-            {(form.att || []).length > 0 && (
-              <div className="cart-box" style={{ marginTop: '.5rem' }}>
-                <div className="cart-head"><span><Icon n="users" /> Convocados</span><span className="cart-count">{form.att.length}</span></div>
-                <ul className="cart-list">
-                  {form.att.map((a) => (
-                    <li key={a.email}><span>{a.name && a.name !== a.email ? `${a.name} · ${a.email}` : a.email}</span>
-                      <button className="cart-x" title="Quitar" type="button" onClick={() => setForm((f) => ({ ...f, att: f.att.filter((x) => x.email !== a.email) }))}><Icon n="close" /></button></li>
-                  ))}
-                </ul>
+              <div className="mr-ext">
+                <input placeholder="o invita a un correo externo…" value={extAtt}
+                  onChange={(e) => setExtAtt(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('add-ext-att')?.click() } }} />
+                <button id="add-ext-att" className="btn-sm" type="button" onClick={() => {
+                  const v = extAtt.trim().toLowerCase()
+                  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return alertDialog('Escribe un correo válido.')
+                  setForm((f) => (f.att || []).some((a) => a.email === v) ? f : { ...f, att: [...(f.att || []), { email: v, name: v }] })
+                  setExtAtt('')
+                }}>Invitar</button>
               </div>
-            )}
-            <label className="self-chk">
+              {(form.att || []).length > 0 && (
+                <div className="mr-chips">
+                  {form.att.map((a) => (
+                    <span className="mr-chip" key={a.email} title={a.email}>
+                      <span className="mr-chip-av">{(a.name || a.email).charAt(0).toUpperCase()}</span>
+                      <span className="mr-chip-nm">{a.name && a.name !== a.email ? a.name : a.email}</span>
+                      <button className="mr-chip-x" title="Quitar" type="button" onClick={() => setForm((f) => ({ ...f, att: f.att.filter((x) => x.email !== a.email) }))}><Icon n="close" /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <label className="mr-self">
               <input type="checkbox" checked={form.includeSelf} onChange={(e) => setForm({ ...form, includeSelf: e.target.checked })} />
-              <span>Incluirme como participante</span>
+              <span className="mr-self-txt"><strong>Incluirme como participante</strong><span className="muted">Recibirás la invitación en tu Outlook.</span></span>
             </label>
-            <p className="self-hint muted">Recibirás la invitación en tu Outlook.</p>
-            <label>Justificación (obligatoria)</label>
+            <label>Justificación <span className="req-pill">obligatoria</span></label>
             <textarea value={form.just} onChange={(e) => setForm({ ...form, just: e.target.value })} placeholder="¿Para qué necesitas la sala?" />
             <div className="modal-actions"><button className="btn" onClick={() => setForm(null)}>Cancelar</button><button className="btn btn-primary" onClick={submitReserve}>Reservar</button></div>
           </div>

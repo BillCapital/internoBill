@@ -196,6 +196,27 @@ button{font-family:inherit;cursor:pointer}
 .modal-reserve .att-ext-lbl{font-size:.74rem;color:var(--muted);margin:.7rem 0 .25rem;display:flex;align-items:center;gap:.5rem}
 .modal-reserve .att-ext-lbl::before,.modal-reserve .att-ext-lbl::after{content:"";flex:1;height:1px;background:var(--line)}
 @media(max-width:520px){.modal-reserve .mr-grid{grid-template-columns:1fr}}
+/* Reservar sala — sección de convocados y controles rediseñados */
+.modal-reserve .mr-att{border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--soft) 50%,transparent);padding:.7rem .75rem;margin-top:.85rem;display:flex;flex-direction:column;gap:.55rem}
+.modal-reserve .mr-att-h{display:flex;align-items:center;gap:.4rem;font-size:.84rem;font-weight:600;color:var(--text)}
+.modal-reserve .mr-att-h .muted{font-weight:400;font-size:.76rem}
+.modal-reserve .mr-att-h .licon{width:1rem;height:1rem;color:var(--lime)}
+.modal-reserve .mr-att .att-picker{margin:0}
+.modal-reserve .mr-ext{display:flex;gap:.45rem}
+.modal-reserve .mr-ext input{flex:1;min-width:0}
+.modal-reserve .mr-ext .btn-sm{flex:0 0 auto;white-space:nowrap}
+.modal-reserve .mr-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.1rem}
+.mr-chip{display:inline-flex;align-items:center;gap:.45rem;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:.22rem .32rem;font-size:.82rem}
+.mr-chip-av{flex:0 0 auto;width:1.5rem;height:1.5rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.72rem;background:color-mix(in srgb,var(--lime) 22%,var(--panel2));color:var(--text)}
+.mr-chip-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px}
+.mr-chip-x{flex:0 0 auto;border:none;background:none;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:1.3rem;height:1.3rem;border-radius:50%;padding:0}
+.mr-chip-x:hover{background:color-mix(in srgb,var(--danger) 22%,transparent);color:var(--danger)}
+.mr-chip-x .licon{width:.85rem;height:.85rem}
+.modal-reserve .mr-self{display:flex;align-items:flex-start;gap:.6rem;margin:.9rem 0 0;padding:.65rem .75rem;border:1px solid var(--line);border-radius:11px;background:var(--soft);cursor:pointer}
+.modal-reserve .mr-self input{width:17px;height:17px;flex:none;margin-top:.15rem;padding:0}
+.modal-reserve .mr-self-txt{display:flex;flex-direction:column;gap:.12rem;font-size:.9rem;color:var(--text)}
+.modal-reserve .mr-self-txt .muted{font-size:.76rem;font-weight:400}
+.modal-reserve .req-pill{display:inline-block;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent);border-radius:999px;padding:.06rem .45rem;margin-left:.35rem;vertical-align:.08em}
 
 /* Cargos de gestión — tarjeta-cabecera de carpeta (flecha) y grupo desplegable */
 .kpi.mgmt-head .chev{position:absolute;top:.35rem;right:.45rem;font-size:.75rem;color:var(--muted);transition:transform .2s ease}
