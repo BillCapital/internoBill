@@ -130,7 +130,7 @@ export default function Layout() {
       <div className="topbar"><div className="topbar-inner">
         <div className="brand">
           <button className="hamb" title="Menú" onClick={() => setCollapsed((c) => !c)}>{TOP_ICONS.menu}</button>
-          <span className="brand-mark">B</span><span className="brand-name">Billcapital</span>
+          <img className="brand-logo" src="/logo.png" alt="BillCapital" width="34" height="34" /><span className="brand-name">Billcapital</span>
         </div>
         <div className="top-right">
           <button className="iconbtn" title="Modo claro / oscuro" onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? TOP_ICONS.moon : TOP_ICONS.sun}</button>
