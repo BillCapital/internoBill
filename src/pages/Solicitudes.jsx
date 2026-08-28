@@ -41,6 +41,7 @@ export default function Solicitudes() {
   const [availPeriph, setAvailPeriph] = useState(null) // periféricos con stock
   const [tecBusy, setTecBusy] = useState(false)
   const [attBusy, setAttBusy] = useState(false)
+  const [attPrev, setAttPrev] = useState({})       // vista previa por adjunto: { [id]: {open,loading,loaded,fileUrl,isImg,ogTitle,ogImage,price,currency,site,error} }
   const [glossOpen, setGlossOpen] = useState(false)
   const [availOpen, setAvailOpen] = useState({}) // carpetas de disponibilidad abiertas
   const [availSel, setAvailSel] = useState({})   // { key: label } equipos disponibles seleccionados
@@ -258,6 +259,25 @@ export default function Solicitudes() {
     if (a.kind === 'link') { window.open(/^https?:\/\//i.test(a.url) ? a.url : 'https://' + a.url, '_blank'); return }
     const { data } = await supabase.storage.from('cotizaciones').createSignedUrl(a.url, 3600)
     if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+  }
+  // Alterna la vista previa embebida de un adjunto (PDF/imagen del bucket o preview del link)
+  const toggleAttPreview = async (a) => {
+    const cur = attPrev[a.id]
+    if (cur?.open) { setAttPrev((p) => ({ ...p, [a.id]: { ...cur, open: false } })); return }
+    if (cur?.loaded) { setAttPrev((p) => ({ ...p, [a.id]: { ...cur, open: true } })); return }
+    setAttPrev((p) => ({ ...p, [a.id]: { open: true, loading: true } }))
+    try {
+      if (a.kind === 'file') {
+        const { data } = await supabase.storage.from('cotizaciones').createSignedUrl(a.url, 3600)
+        const isImg = /^image\//i.test(a.mime || '') || /\.(png|jpe?g|gif|webp|bmp)$/i.test(a.name || '')
+        setAttPrev((p) => ({ ...p, [a.id]: { open: true, loading: false, loaded: true, fileUrl: data?.signedUrl || '', isImg } }))
+      } else {
+        const r = await fetchLinkPreview(a.url)
+        setAttPrev((p) => ({ ...p, [a.id]: { open: true, loading: false, loaded: true, ogTitle: r?.title, ogImage: r?.image, price: r?.price, currency: r?.currency, site: r?.site, error: r?.ok ? null : (r?.error || 'Sin vista previa disponible') } }))
+      }
+    } catch {
+      setAttPrev((p) => ({ ...p, [a.id]: { open: true, loading: false, loaded: true, error: 'No se pudo cargar la vista previa.' } }))
+    }
   }
   const delAttach = async (a) => {
     if (!(await confirmDialog(`¿Quitar "${a.name}"?`, { title: 'Quitar adjunto', danger: true, okText: 'Quitar' }))) return
@@ -594,14 +614,42 @@ export default function Solicitudes() {
                   {atts.length === 0
                     ? <div className="muted att-empty">Aún no hay links ni cotizaciones. Agrega el producto que necesitas o la cotización.</div>
                     : <ul className="rqa-list">
-                        {atts.map((a) => (
-                          <li key={a.id} className="rqa-item">
-                            <span className="rqa-ico"><Icon n={a.kind === 'file' ? 'file' : 'cart'} /></span>
-                            <button className="rqa-name" onClick={() => openAttach(a)} title="Abrir">{a.name}</button>
-                            <span className="rqa-by muted">{nameById(a.uploaded_by)}</span>
-                            {(a.uploaded_by === profile?.id || isAdmin) && active && <button className="rqa-x" title="Quitar" onClick={() => delAttach(a)}><Icon n="close" /></button>}
+                        {atts.map((a) => {
+                          const pv = attPrev[a.id]
+                          const url = /^https?:\/\//i.test(a.url) ? a.url : 'https://' + a.url
+                          return (
+                          <li key={a.id} className="rqa-cell">
+                            <div className="rqa-item">
+                              <span className="rqa-ico"><Icon n={a.kind === 'file' ? 'file' : 'cart'} /></span>
+                              <button className="rqa-name" onClick={() => openAttach(a)} title="Abrir">{a.name}</button>
+                              <button className={`rqa-eye ${pv?.open ? 'on' : ''}`} title="Vista previa" onClick={() => toggleAttPreview(a)}><Icon n="eye" /></button>
+                              <span className="rqa-by muted">{nameById(a.uploaded_by)}</span>
+                              {(a.uploaded_by === profile?.id || isAdmin) && active && <button className="rqa-x" title="Quitar" onClick={() => delAttach(a)}><Icon n="close" /></button>}
+                            </div>
+                            {pv?.open && (
+                              <div className="rqa-prev">
+                                {pv.loading ? <div className="rqa-prev-load muted">Cargando vista previa…</div>
+                                  : a.kind === 'file'
+                                    ? (pv.fileUrl
+                                        ? (pv.isImg
+                                            ? <img className="rqa-prev-img" src={pv.fileUrl} alt={a.name} />
+                                            : <iframe className="rqa-prev-pdf" src={pv.fileUrl} title={a.name} />)
+                                        : <div className="rqa-prev-load muted">No se pudo abrir el archivo.</div>)
+                                    : ((!pv.ogImage && !pv.ogTitle)
+                                        ? <a className="rqa-prev-link" href={url} target="_blank" rel="noreferrer"><Icon n="link" /> {url}</a>
+                                        : <a className="rqa-prev-og" href={url} target="_blank" rel="noreferrer">
+                                            {pv.ogImage ? <img className="rqa-og-img" src={pv.ogImage} alt="" /> : <span className="rqa-og-ph"><Icon n="link" /></span>}
+                                            <span className="rqa-og-txt">
+                                              <span className="rqa-og-t">{pv.ogTitle || a.name}</span>
+                                              {pv.price ? <span className="rqa-og-price">{fmtMoney(pv.price, pv.currency)}</span> : null}
+                                              <span className="rqa-og-site muted">{pv.site || url.replace(/^https?:\/\//, '').split('/')[0]}</span>
+                                            </span>
+                                          </a>)}
+                              </div>
+                            )}
                           </li>
-                        ))}
+                          )
+                        })}
                       </ul>}
                 </div>
                 )
