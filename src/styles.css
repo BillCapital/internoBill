@@ -115,20 +115,21 @@ button{font-family:inherit;cursor:pointer}
 .tbl-compact input[type=checkbox]{width:1.05rem;height:1.05rem;cursor:pointer}
 
 /* ===== Inicio — tarjetas de pendientes de acción ===== */
-.todo-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.7rem;margin-bottom:1rem}
-.todo-card{display:flex;align-items:flex-start;gap:.75rem;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem 1.05rem;text-align:left;color:var(--text);cursor:pointer;position:relative;overflow:hidden;transition:transform .15s,border-color .15s;box-shadow:var(--shadow-sm)}
-.todo-card:hover{border-color:var(--lime);transform:translateY(-2px)}
-.todo-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--lime)}
+.todo-cards{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem}
+.todo-card{display:flex;align-items:center;gap:.65rem;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:.55rem .75rem;text-align:left;color:var(--text);cursor:pointer;position:relative;overflow:hidden;transition:transform .15s,border-color .15s;box-shadow:var(--shadow-sm)}
+.todo-card:hover{border-color:var(--lime);transform:translateX(2px)}
+.todo-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--lime)}
 .todo-card.warn::before{background:var(--warn)}.todo-card.info::before{background:var(--info)}.todo-card.ok::before{background:var(--ok)}
-.todo-card .tc-ic{flex:0 0 auto;width:2.3rem;height:2.3rem;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--lime) 16%,var(--panel2));color:var(--lime)}
+.todo-card .tc-ic{flex:0 0 auto;width:1.85rem;height:1.85rem;border-radius:8px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--lime) 16%,var(--panel2));color:var(--lime)}
+.todo-card .tc-ic .licon{width:1rem;height:1rem}
 .todo-card.warn .tc-ic{background:color-mix(in srgb,var(--warn) 16%,var(--panel2));color:var(--warn)}
 .todo-card.info .tc-ic{background:color-mix(in srgb,var(--info) 16%,var(--panel2));color:var(--info)}
 .todo-card.ok .tc-ic{background:color-mix(in srgb,var(--ok) 16%,var(--panel2));color:var(--ok)}
-.todo-card .tc-body{display:flex;flex-direction:column;min-width:0}
-.todo-card .tc-n{font-family:'Inter Tight',sans-serif;font-size:1.7rem;font-weight:800;line-height:1}
-.todo-card .tc-t{color:var(--muted);font-size:.85rem;margin-top:.15rem}
-.todo-card .tc-sub{color:var(--muted);font-size:.72rem;margin-top:.25rem;opacity:.85}
-.todo-card .tc-go{margin-left:auto;align-self:center;color:var(--muted);font-size:1.3rem}
+.todo-card .tc-body{display:flex;align-items:center;gap:.5rem;min-width:0;flex:1}
+.todo-card .tc-n{font-family:'Inter Tight',sans-serif;font-size:1.1rem;font-weight:800;line-height:1;flex:none}
+.todo-card .tc-t{color:var(--text);font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.todo-card .tc-sub{color:var(--muted);font-size:.72rem;margin-left:auto;padding-left:.5rem;white-space:nowrap;flex:none}
+.todo-card .tc-go{flex:none;align-self:center;color:var(--muted);font-size:1.2rem}
 /* Cabecera de la sección de pendientes: eyebrow + resumen a la derecha */
 .todo-head{display:flex;align-items:baseline;justify-content:space-between;gap:.6rem;flex-wrap:wrap;margin:0 .2rem .55rem}
 .th-eyebrow{color:var(--muted);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
