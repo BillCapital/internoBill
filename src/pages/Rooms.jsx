@@ -7,8 +7,11 @@ import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, alertDialog } from '../lib/ui'
 import { Icon } from '../lib/icons'
 
-const SLOTS = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '15:30', '16:00', '16:30', '17:00', '17:30']
-const LUNCH_AFTER = 8
+const MORNING = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30']
+const AFTERNOON = ['15:30', '16:00', '16:30', '17:00', '17:30']
+// Viernes: la jornada termina a las 16:00, por lo que sólo queda el bloque 15:30–16:00 en la tarde
+const daySlots = (ds) => [...MORNING, ...((ds && new Date(ds + 'T12:00:00').getDay() === 5) ? ['15:30'] : AFTERNOON)]
+const LUNCH_AFTER = MORNING.length
 const pad = (n) => String(n).padStart(2, '0')
 const iso = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const isWknd = (ds) => { const d = new Date(ds + 'T12:00:00').getDay(); return d === 0 || d === 6 }
@@ -56,13 +59,14 @@ export default function Rooms() {
     const [{ data: rms }, { data: rs }, { data: us }] = await Promise.all([
       supabase.from('rooms').select('id,name,location,capacity,description,is_active').eq('is_active', true).order('name'),
       supabase.from('reservations').select('id,room_id,title,starts_at,ends_at,status,justification,user_id,profiles!reservations_user_id_fkey(full_name,email)').neq('status', 'cancelled').neq('status', 'rejected'),
-      supabase.from('profiles').select('id,full_name,email,app_access').order('full_name'),
+      supabase.from('profiles').select('id,full_name,email,app_access,active').order('full_name'),
     ])
-    setRooms(rms ?? []); setRes(rs ?? []); setUsers((us ?? []).filter((u) => u.app_access !== false))
+    setRooms(rms ?? []); setRes(rs ?? []); setUsers((us ?? []).filter((u) => u.app_access !== false && u.active !== false))
   }, [])
   useEffect(() => { load() }, [load])
 
   const dayRes = useMemo(() => res.filter((r) => calDay && r.starts_at.slice(0, 10) === calDay), [res, calDay])
+  const slots = useMemo(() => daySlots(calDay), [calDay])
   const resAt = (roomId, t) => {
     const s = slotStart(calDay, t)
     return dayRes.find((r) => r.room_id === roomId && new Date(r.starts_at).getTime() === s.getTime())
@@ -74,14 +78,14 @@ export default function Rooms() {
   const durSlots = (r) => Math.round((new Date(r.ends_at) - new Date(r.starts_at)) / 1800000)
 
   const maxDur = (roomId, idx) => {
-    const blockEnd = idx < LUNCH_AFTER ? LUNCH_AFTER : SLOTS.length
+    const blockEnd = idx < LUNCH_AFTER ? LUNCH_AFTER : slots.length
     let firstBusy = blockEnd
-    for (let j = idx + 1; j < blockEnd; j++) { if (covered(roomId, SLOTS[j])) { firstBusy = j; break } }
+    for (let j = idx + 1; j < blockEnd; j++) { if (covered(roomId, slots[j])) { firstBusy = j; break } }
     return Math.min(6, blockEnd - idx, firstBusy - idx)
   }
 
   // Ventana horaria (ISO) de la reserva en edición
-  const resWindow = (f) => { const start = slotStart(calDay, SLOTS[f.slotIdx]); const end = addMin(start, f.dur * 30); return { starts_at: start.toISOString(), ends_at: end.toISOString() } }
+  const resWindow = (f) => { const start = slotStart(calDay, slots[f.slotIdx]); const end = addMin(start, f.dur * 30); return { starts_at: start.toISOString(), ends_at: end.toISOString() } }
   const durLabel = (f) => { const mm = f.dur * 30; return mm < 60 ? mm + ' min' : (mm / 60) + ' h' }
   // Consulta a 365 (Graph) qué correos ya tienen algo agendado en ese horario
   const checkBusy = async (emails, f) => {
@@ -95,7 +99,7 @@ export default function Rooms() {
   }
 
   const submitReserve = async () => {
-    const t = SLOTS[form.slotIdx]
+    const t = slots[form.slotIdx]
     const ns = nowSCL()
     if (calDay < ns.date || (calDay === ns.date && toMin(t) <= ns.min)) return alertDialog('Esa hora ya pasó (hora de Santiago). Elige un horario futuro.')
     const start = slotStart(calDay, t)
@@ -217,7 +221,7 @@ export default function Rooms() {
               </div>
               <div style={{ overflowX: 'auto' }}><table className="cal"><thead><tr><th>Bloque</th>{rooms.map((r) => <th key={r.id}>{r.name}</th>)}</tr></thead>
                 <tbody>
-                  {SLOTS.map((t, idx) => {
+                  {slots.map((t, idx) => {
                     const end = hhmm(addMin(slotStart(calDay, t), 30))
                     const slotPast = calDay === scl.date && toMin(t) <= scl.min
                     return (
@@ -227,7 +231,7 @@ export default function Rooms() {
                           const isCov = covered(r.id, t)
                           return { room: r, res: b, covered: isCov, idx, t }
                         })}
-                        resAt={resAt} covered={covered} durSlots={durSlots} idx={idx} t={t} slotList={SLOTS}
+                        resAt={resAt} covered={covered} durSlots={durSlots} idx={idx} t={t} slotList={slots}
                         canManageRooms={canManageRooms} profile={profile}
                         onReserve={(room) => { setExtAtt(''); setForm({ room: room.id, slotIdx: idx, dur: Math.min(2, maxDur(room.id, idx)) || 1, maxDur: maxDur(room.id, idx), title: 'Reunión', just: '', att: [], includeSelf: true }) }}
                         onOpen={(id) => setOpenRes(id)}
@@ -251,7 +255,7 @@ export default function Rooms() {
             <div className="mr-head">
               <span className="mr-ico"><Icon n="calendar" /></span>
               <div><h3>Reservar sala</h3>
-                <p className="mr-meta"><Icon n="clock" /> <span style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</span> · desde {SLOTS[form.slotIdx]}</p></div>
+                <p className="mr-meta"><Icon n="clock" /> <span style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</span> · desde {slots[form.slotIdx]}</p></div>
             </div>
             <div className="mr-grid">
               <div><label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
@@ -285,9 +289,9 @@ export default function Rooms() {
                         <button type="button" key={u.id} className="att-opt" onMouseDown={(e) => e.preventDefault()}
                           onClick={async () => {
                             setForm((f) => (f.att || []).some((a) => a.email === v) ? f : { ...f, att: [...(f.att || []), { email: v, name: nm }] })
-                            setAttQuery(''); setAttOpen(false)
+                            setAttQuery(''); setAttOpen(true)
                             const busy = await checkBusy([v], form)
-                            if (busy.length) alertDialog(`${nm} ya tiene una reunión agendada el ${dayLong(calDay)} desde las ${SLOTS[form.slotIdx]} (${durLabel(form)}). Considera elegir otro horario.`, { title: 'Convocado ocupado' })
+                            if (busy.length) alertDialog(`${nm} ya tiene una reunión agendada el ${dayLong(calDay)} desde las ${slots[form.slotIdx]} (${durLabel(form)}). Considera elegir otro horario.`, { title: 'Convocado ocupado' })
                           }}>
                           <span className="att-av">{(u.full_name || u.email).charAt(0).toUpperCase()}</span>
                           <span className="att-nm">{u.full_name || 'Sin nombre'}<br /><span className="muted">{u.email}</span></span>
