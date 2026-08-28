@@ -403,7 +403,7 @@ tr:last-child td{border-bottom:none}
 
 /* Salas */
 .cal{width:100%;border-collapse:collapse;background:var(--panel);border:1.5px solid var(--line);border-radius:var(--radius);overflow:hidden}
-.cal th,.cal td{border:1px solid var(--line);padding:.5rem;text-align:center;font-size:.85rem}
+.cal th,.cal td{border:1px solid var(--line);padding:.5rem;text-align:center;font-size:.85rem;vertical-align:middle}
 .cal thead th{background:var(--soft)}
 .slot{border:none;background:#213417;color:#b7ef4e;border-radius:8px;padding:.35rem .5rem;font-size:.78rem;width:100%}
 .slot:hover{background:var(--lime);color:#12210a}
