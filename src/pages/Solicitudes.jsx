@@ -42,6 +42,8 @@ export default function Solicitudes() {
   const [tecBusy, setTecBusy] = useState(false)
   const [attBusy, setAttBusy] = useState(false)
   const [attPrev, setAttPrev] = useState({})       // vista previa por adjunto: { [id]: {open,loading,loaded,fileUrl,isImg,ogTitle,ogImage,price,currency,site,error} }
+  const [prodForm, setProdForm] = useState({})     // formulario "agregar producto" por solicitud: { [reqId]: {open,name,url,file,busy} }
+  const [prodPrev, setProdPrev] = useState({})     // vista previa por producto (link y archivo): { [prodId]: {linkOpen,fileOpen,fileUrl,...} }
   const [glossOpen, setGlossOpen] = useState(false)
   const [availOpen, setAvailOpen] = useState({}) // carpetas de disponibilidad abiertas
   const [availSel, setAvailSel] = useState({})   // { key: label } equipos disponibles seleccionados
@@ -121,7 +123,7 @@ export default function Solicitudes() {
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('requests')
-      .select('id, status, kind, note, custom, department, needs_manager, l1_by, mgr_by, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock)), request_products(id,product_url,name,image_url,price,currency,quantity,status,reject_reason), request_attachments(id,kind,url,name,mime,size,uploaded_by,created_at)')
+      .select('id, status, kind, note, custom, department, needs_manager, l1_by, mgr_by, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock)), request_products(id,product_url,name,image_url,price,currency,quantity,status,reject_reason,file_url,file_name,file_mime), request_attachments(id,kind,url,name,mime,size,uploaded_by,created_at)')
       .order('created_at', { ascending: false })
     setRows(data ?? [])
     setLoading(false)
@@ -147,15 +149,18 @@ export default function Solicitudes() {
   const [hrApprovers, setHrApprovers] = useState([])       // RRHH (flujo tecnológico)
   const [itMgrs, setItMgrs] = useState([])                 // Gerente de TI (flujo tecnológico)
   const [approvals, setApprovals] = useState([])           // [{request_id, approver_id, decision}]
+  const [prodApprovals, setProdApprovals] = useState([])   // [{product_id, approver_id, decision, reason}] firma por producto
   const [deptMgrs, setDeptMgrs] = useState([])             // [{name, manager:{id,full_name,email}}]
   const [people, setPeople] = useState({})                 // { id: 'Nombre' } para resolver l1_by/mgr_by
   const loadMgr = useCallback(async () => {
-    const [{ data: flagged }, { data: ap }, { data: dm }, { data: pp }] = await Promise.all([
+    const [{ data: flagged }, { data: ap }, { data: dm }, { data: pp }, { data: pap }] = await Promise.all([
       supabase.from('profiles').select('id,full_name,email,is_tech_approver,is_hr,is_it_manager,role').eq('active', true),
       supabase.from('request_approvals').select('request_id, approver_id, decision, at'),
       supabase.from('departments').select('name, manager:manager_id(id,full_name,email)'),
       supabase.from('profiles').select('id,full_name,email'),
+      supabase.from('request_product_approvals').select('product_id, approver_id, decision, reason'),
     ])
+    setProdApprovals(pap || [])
     const F = flagged || []
     const roleOf = (p) => (p.role || '').toLowerCase()
     setTechApprovers(F.filter((p) => p.is_tech_approver))
@@ -279,6 +284,51 @@ export default function Solicitudes() {
       setAttPrev((p) => ({ ...p, [a.id]: { open: true, loading: false, loaded: true, error: 'No se pudo cargar la vista previa.' } }))
     }
   }
+  // ----- Productos de una solicitud tecnológica (cada uno con link + archivo, firma por firmante) -----
+  const prodDecisionFor = (productId, approverId) => (prodApprovals.find((x) => x.product_id === productId && x.approver_id === approverId) || {}).decision || null
+  const addTecProduct = async (reqId) => {
+    const f = prodForm[reqId] || {}
+    const name = (f.name || '').trim()
+    if (name.length < 2) return alertDialog('Ponle un nombre al producto.')
+    setProdForm((s) => ({ ...s, [reqId]: { ...f, busy: true } }))
+    try {
+      let fileUrl = null, fileName = null, fileMime = null
+      if (f.file) {
+        const path = `${reqId}/${Date.now()}_${(f.file.name || 'archivo').replace(/[^\w.\-]+/g, '_')}`
+        const { error: upErr } = await supabase.storage.from('cotizaciones').upload(path, f.file, { contentType: f.file.type || undefined, upsert: false })
+        if (upErr) throw upErr
+        fileUrl = path; fileName = f.file.name; fileMime = f.file.type || ''
+      }
+      let img = null, price = null, currency = 'CLP'
+      const url = (f.url || '').trim()
+      if (url) { try { const r = await fetchLinkPreview(/^https?:\/\//i.test(url) ? url : 'https://' + url); if (r && r.ok) { img = r.image || null; price = (r.price != null && r.price !== '') ? r.price : null; currency = r.currency || 'CLP' } } catch { /* sin preview */ } }
+      await api('tech_product_add', { p_request: reqId, p_name: name, p_url: url || null, p_image_url: img, p_price: price, p_currency: currency, p_quantity: 1, p_file_url: fileUrl, p_file_name: fileName, p_file_mime: fileMime })
+      setProdForm((s) => ({ ...s, [reqId]: { open: false, name: '', url: '', file: null, busy: false } }))
+    } catch (e) { alertDialog(e.message || 'No se pudo agregar el producto.'); setProdForm((s) => ({ ...s, [reqId]: { ...f, busy: false } })) }
+    finally { load() }
+  }
+  const decideTecProduct = async (p, approve) => {
+    let reason = ''
+    if (!approve) { const r = await promptDialog('Motivo del rechazo de este producto', { title: 'Rechazar producto', placeholder: 'Explica por qué…' }); if (r === null) return; reason = r || '' }
+    setProdApprovals((prev) => { const rest = prev.filter((x) => !(x.product_id === p.id && x.approver_id === profile?.id)); return [...rest, { product_id: p.id, approver_id: profile?.id, decision: approve ? 'approve' : 'reject', reason }] })
+    try { await api('tech_product_decide', { p_product: p.id, p_approve: approve, p_reason: reason }) } catch (e) { alertDialog(e.message) } finally { load() }
+  }
+  const delTecProduct = async (p) => {
+    if (!(await confirmDialog(`¿Quitar el producto "${p.name}"?`, { title: 'Quitar producto', danger: true, okText: 'Quitar' }))) return
+    try { if (p.file_url) await supabase.storage.from('cotizaciones').remove([p.file_url]); await api('tech_product_delete', { p_product: p.id }) } catch (e) { alertDialog(e.message) } finally { load() }
+  }
+  const toggleProdFile = async (p) => {
+    const cur = prodPrev[p.id] || {}
+    if (cur.fileOpen) { setProdPrev((s) => ({ ...s, [p.id]: { ...cur, fileOpen: false } })); return }
+    if (cur.fileUrl) { setProdPrev((s) => ({ ...s, [p.id]: { ...cur, fileOpen: true } })); return }
+    setProdPrev((s) => ({ ...s, [p.id]: { ...cur, fileOpen: true, fileLoading: true } }))
+    try {
+      const { data } = await supabase.storage.from('cotizaciones').createSignedUrl(p.file_url, 3600)
+      const isImg = /^image\//i.test(p.file_mime || '') || /\.(png|jpe?g|gif|webp|bmp)$/i.test(p.file_name || '')
+      setProdPrev((s) => ({ ...s, [p.id]: { ...(s[p.id] || {}), fileOpen: true, fileLoading: false, fileUrl: data?.signedUrl || '', fileIsImg: isImg } }))
+    } catch { setProdPrev((s) => ({ ...s, [p.id]: { ...(s[p.id] || {}), fileOpen: true, fileLoading: false, fileErr: true } })) }
+  }
+  const openProdFile = async (p) => { const { data } = await supabase.storage.from('cotizaciones').createSignedUrl(p.file_url, 3600); if (data?.signedUrl) window.open(data.signedUrl, '_blank') }
   const delAttach = async (a) => {
     if (!(await confirmDialog(`¿Quitar "${a.name}"?`, { title: 'Quitar adjunto', danger: true, okText: 'Quitar' }))) return
     try { if (a.kind === 'file' && a.url) await supabase.storage.from('cotizaciones').remove([a.url]); await api('request_attach_delete', { p_id: a.id }) } catch (e) { alertDialog(e.message) } finally { load() }
@@ -593,70 +643,95 @@ export default function Solicitudes() {
                   ))}
                 </div>
               )}
-              {/* Adjuntos (solicitud tecnológica): links y cotizaciones PDF, se guardan y se puede conversar */}
+              {/* Productos de una solicitud tecnológica: cada uno con link + cotización y firma por firmante */}
               {t.kind === 'tec' && (() => {
-                const canAttach = t.user_id === profile?.id || isAdmin || myIsSigner(t)
-                const atts = t.request_attachments || []
-                const active = t.status !== 'rejected' && t.status !== 'delivered'
+                const canAdd = t.user_id === profile?.id || isAdmin
+                const active = t.status !== 'rejected' && t.status !== 'delivered' && t.status !== 'approved'
+                const products = t.request_products || []
+                const req = requiredSigners(t)
+                const pf = prodForm[t.id] || {}
+                const canDecide = t.status === 'manager_review' && myIsSigner(t)
                 return (
                 <div className="rqa-box">
-                  <div className="rqa-head"><span><Icon n="file" /> Links y cotizaciones</span>
-                    {canAttach && active && (
-                      <span className="rqa-add">
-                        <button className="btn-sm" disabled={attBusy} onClick={() => addAttachLink(t.id)}><Icon n="cart" /> Link</button>
-                        <label className="btn-sm rqa-upl">{attBusy ? 'Subiendo…' : <><Icon n="plus" /> Archivo</>}
-                          <input type="file" accept=".pdf,image/*,application/pdf" hidden disabled={attBusy}
-                            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) uploadAttachFile(t.id, f) }} />
-                        </label>
-                      </span>
+                  <div className="rqa-head"><span><Icon n="cart" /> Productos solicitados</span>
+                    {canAdd && active && !pf.open && (
+                      <span className="rqa-add"><button className="btn-sm btn-lime" onClick={() => setProdForm((s) => ({ ...s, [t.id]: { open: true, name: '', url: '', file: null } }))}><Icon n="plus" /> Agregar producto</button></span>
                     )}
                   </div>
-                  {atts.length === 0
-                    ? <div className="muted att-empty">Aún no hay links ni cotizaciones. Agrega el producto que necesitas o la cotización.</div>
-                    : <ul className="rqa-list">
-                        {atts.map((a) => {
-                          const pv = attPrev[a.id]
-                          const url = /^https?:\/\//i.test(a.url) ? a.url : 'https://' + a.url
+
+                  {pf.open && (
+                    <div className="pf2">
+                      <div className="pf2-row"><label>Nombre del producto</label>
+                        <input value={pf.name || ''} placeholder="Ej: Notebook Lenovo V14 G5" onChange={(e) => setProdForm((s) => ({ ...s, [t.id]: { ...pf, name: e.target.value } }))} /></div>
+                      <div className="pf2-row"><label>Link del producto <span className="muted">(opcional)</span></label>
+                        <input value={pf.url || ''} placeholder="https://…" onChange={(e) => setProdForm((s) => ({ ...s, [t.id]: { ...pf, url: e.target.value } }))} /></div>
+                      <div className="pf2-row"><label>Cotización / archivo <span className="muted">(opcional)</span></label>
+                        <label className="pf2-file"><Icon n="file" /> {pf.file ? pf.file.name : 'Elegir archivo…'}
+                          <input type="file" accept=".pdf,image/*,application/pdf" hidden onChange={(e) => { const f = e.target.files?.[0]; setProdForm((s) => ({ ...s, [t.id]: { ...pf, file: f || null } })) }} /></label></div>
+                      <div className="pf2-actions">
+                        <button className="btn-sm" onClick={() => setProdForm((s) => ({ ...s, [t.id]: { open: false } }))} disabled={pf.busy}>Cancelar</button>
+                        <button className="btn-sm btn-lime" onClick={() => addTecProduct(t.id)} disabled={pf.busy}>{pf.busy ? 'Agregando…' : 'Agregar producto'}</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {products.length === 0
+                    ? <div className="muted att-empty">Aún no hay productos. Agrega el equipo o servicio que necesitas (nombre, link y cotización).</div>
+                    : <div className="rp2-list">
+                        {products.map((p) => {
+                          const pp = prodPrev[p.id] || {}
+                          const purl = p.product_url ? (/^https?:\/\//i.test(p.product_url) ? p.product_url : 'https://' + p.product_url) : null
                           return (
-                          <li key={a.id} className="rqa-cell">
-                            <div className="rqa-item">
-                              <span className="rqa-ico"><Icon n={a.kind === 'file' ? 'file' : 'cart'} /></span>
-                              <button className="rqa-name" onClick={() => openAttach(a)} title="Abrir">{a.name}</button>
-                              <button className={`rqa-eye ${pv?.open ? 'on' : ''}`} title="Vista previa" onClick={() => toggleAttPreview(a)}><Icon n="eye" /></button>
-                              <span className="rqa-by muted">{nameById(a.uploaded_by)}</span>
-                              {(a.uploaded_by === profile?.id || isAdmin) && active && <button className="rqa-x" title="Quitar" onClick={() => delAttach(a)}><Icon n="close" /></button>}
+                          <div className={`rp2-card ${p.status}`} key={p.id}>
+                            <div className="rp2-head">
+                              {p.image_url ? <img className="rp2-thumb" src={p.image_url} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} onClick={() => viewImage(p.image_url)} /> : <span className="rp2-thumb ph"><Icon n="box" /></span>}
+                              <div className="rp2-info">
+                                <strong className="rp2-name">{p.quantity > 1 ? `${p.quantity} × ` : ''}{p.name}</strong>
+                                <div className="rp2-meta">
+                                  {p.price != null ? <span className="rp2-price">{fmtMoney(p.price, p.currency)}{p.quantity > 1 ? <span className="muted"> c/u</span> : null}</span> : null}
+                                  {purl ? <a className="rp2-chip" href={purl} target="_blank" rel="noreferrer"><Icon n="link" /> Ver link</a> : null}
+                                  {p.file_url ? <button className={`rp2-chip ${pp.fileOpen ? 'on' : ''}`} onClick={() => toggleProdFile(p)}><Icon n="eye" /> Cotización</button> : null}
+                                </div>
+                              </div>
+                              <span className={`rp2-badge ${p.status}`}>{p.status === 'approved' ? 'Aprobado' : p.status === 'rejected' ? 'Rechazado' : 'Pendiente'}</span>
+                              {canAdd && active && p.status === 'pending' && <button className="rp2-del" title="Quitar" onClick={() => delTecProduct(p)}><Icon n="close" /></button>}
                             </div>
-                            {pv?.open && (
+
+                            {pp.fileOpen && (
                               <div className="rqa-prev">
-                                {pv.loading ? <div className="rqa-prev-load muted">Cargando vista previa…</div>
-                                  : a.kind === 'file'
-                                    ? (pv.fileUrl
-                                        ? (pv.isImg
-                                            ? <img className="rqa-prev-img" src={pv.fileUrl} alt={a.name} />
-                                            : <iframe className="rqa-prev-pdf" src={pv.fileUrl} title={a.name} />)
-                                        : <div className="rqa-prev-load muted">No se pudo abrir el archivo.</div>)
-                                    : ((!pv.ogImage && !pv.ogTitle)
-                                        ? <a className="rqa-prev-link" href={url} target="_blank" rel="noreferrer"><Icon n="link" /> {url}</a>
-                                        : <a className="rqa-prev-og" href={url} target="_blank" rel="noreferrer">
-                                            {pv.ogImage ? <img className="rqa-og-img" src={pv.ogImage} alt="" /> : <span className="rqa-og-ph"><Icon n="link" /></span>}
-                                            <span className="rqa-og-txt">
-                                              <span className="rqa-og-t">{pv.ogTitle || a.name}</span>
-                                              {pv.price ? <span className="rqa-og-price">{fmtMoney(pv.price, pv.currency)}</span> : null}
-                                              <span className="rqa-og-site muted">{pv.site || url.replace(/^https?:\/\//, '').split('/')[0]}</span>
-                                            </span>
-                                          </a>)}
+                                {pp.fileLoading ? <div className="rqa-prev-load muted">Cargando…</div>
+                                  : pp.fileErr ? <div className="rqa-prev-load muted">No se pudo abrir el archivo.</div>
+                                    : pp.fileIsImg ? <img className="rqa-prev-img" src={pp.fileUrl} alt={p.file_name} />
+                                      : <iframe className="rqa-prev-pdf" src={pp.fileUrl} title={p.file_name} />}
                               </div>
                             )}
-                          </li>
+
+                            {p.status === 'rejected' && p.reject_reason ? <div className="rp2-reason"><Icon n="ban" /> {p.reject_reason}</div> : null}
+
+                            {req.length > 0 && (
+                              <div className="rp2-signers">
+                                {req.map((s) => { const d = prodDecisionFor(p.id, s.id); const st = d === 'approve' ? 'ok' : d === 'reject' ? 'bad' : 'wait'
+                                  return <span key={s.id} className={`rp2-sig ${st}`}><Icon n={d === 'approve' ? 'check' : d === 'reject' ? 'ban' : 'clock'} /> {s.full_name || s.email} <span className="muted">· {signerRoleLabel(t, s) || 'Firmante'}</span></span> })}
+                              </div>
+                            )}
+
+                            {canDecide && p.status === 'pending' && (
+                              <div className="rp2-actions">
+                                <button className={`btn-sm ${prodDecisionFor(p.id, profile?.id) === 'approve' ? 'btn-lime' : ''}`} onClick={() => decideTecProduct(p, true)}><Icon n="check" /> Aprobar</button>
+                                <button className={`btn-sm ${prodDecisionFor(p.id, profile?.id) === 'reject' ? 'btn-danger' : ''}`} onClick={() => decideTecProduct(p, false)}><Icon n="ban" /> Rechazar</button>
+                                {prodDecisionFor(p.id, profile?.id) ? <span className="muted rp2-mine">Tu voto: {prodDecisionFor(p.id, profile?.id) === 'approve' ? 'aprobado' : 'rechazado'} · falta el resto</span> : null}
+                              </div>
+                            )}
+                          </div>
                           )
                         })}
-                      </ul>}
+                      </div>}
                 </div>
                 )
               })()}
 
-              {/* Aviso de autorización requerida */}
-              {t.needs_manager && requiredSigners(t).length > 0 && (t.status === 'pending' || t.status === 'manager_review')
+              {/* Aviso de autorización requerida (flujo catálogo; el tecnológico firma por producto) */}
+              {t.kind !== 'tec' && t.needs_manager && requiredSigners(t).length > 0 && (t.status === 'pending' || t.status === 'manager_review')
                 && !((canManageOrders || myIsSigner(t) || isAdmin || t.user_id === profile?.id) && t.status === 'manager_review') && (
                 <div className="twokey-note"><Icon n="key" /> {t.kind === 'tec'
                   ? <>Requiere la autorización de <strong>{requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}</strong> (RRHH, Gerente TI y encargado del área).</>
@@ -666,7 +741,7 @@ export default function Solicitudes() {
               {/* Panel de firmas — vista total: quién autorizó, quién rechazó y quién falta.
                   Para gestión/admin queda visible en todo el ciclo (revisión, aprobada, rechazada);
                   para los propios firmantes se muestra mientras está en revisión. */}
-              {t.needs_manager && requiredSigners(t).length > 0
+              {t.kind !== 'tec' && t.needs_manager && requiredSigners(t).length > 0
                 && (canManageOrders || myIsSigner(t) || isAdmin || t.user_id === profile?.id)
                 && ['manager_review', 'approved', 'rejected', 'delivered'].includes(t.status) && (() => {
                 const req = requiredSigners(t)
@@ -722,8 +797,8 @@ export default function Solicitudes() {
                 )
               })()}
 
-              {/* Firma (2ª/3ª llave): gerente de área + tecnología, todos deben firmar */}
-              {t.status === 'manager_review' && myIsSigner(t) && !iSigned(t.id) && (
+              {/* Firma a nivel-solicitud SOLO para el flujo catálogo; el tecnológico se firma por producto */}
+              {t.kind !== 'tec' && t.status === 'manager_review' && myIsSigner(t) && !iSigned(t.id) && (
                 <div className="adm-actions">
                   <button className="btn btn-lime" onClick={async () => {
                     const signedReq = signedFor(t.id).filter((id) => requiredSigners(t).some((s) => s.id === id)).length
@@ -736,10 +811,10 @@ export default function Solicitudes() {
                   <button className="btn btn-danger" onClick={async () => { const r = await promptDialog('Motivo del rechazo', { title: 'Rechazar compra', placeholder: 'Explica por qué se rechaza…' }); if (r !== null) act('tech_reject_request', t.id, { p_reason: r || '' }, 'rejected') }}>Rechazar</button>
                 </div>
               )}
-              {t.status === 'manager_review' && myIsSigner(t) && iSigned(t.id) && (
+              {t.kind !== 'tec' && t.status === 'manager_review' && myIsSigner(t) && iSigned(t.id) && (
                 <div className="cv-note">Ya diste tu autorización. Falta la firma del resto de autorizadores.</div>
               )}
-              {canManageOrders && t.status === 'manager_review' && !myIsSigner(t) && (
+              {t.kind !== 'tec' && canManageOrders && t.status === 'manager_review' && !myIsSigner(t) && (
                 <div className="cv-note">Esperando la autorización de los firmantes (RRHH, Gerente TI y encargado del área).</div>
               )}
 
