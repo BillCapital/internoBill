@@ -1260,6 +1260,14 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .rk.k-appr{--tone:#8fd94e}
 .rk.k-rej{--tone:#ff9b9b}
 .rk.k-deliv{--tone:#9aa3b4}
+/* Tema claro: tonos más saturados y tinte más marcado para que los íconos de los KPI se vean bien */
+body.light .rk-ico{background:color-mix(in srgb,var(--tone,var(--lime)) 20%,#ffffff)}
+body.light .rk.k-all{--tone:#4a7d2a}
+body.light .rk.k-pend{--tone:#2f6fb0}
+body.light .rk.k-rev{--tone:#a5741a}
+body.light .rk.k-appr{--tone:#2f8f4f}
+body.light .rk.k-rej{--tone:#c0392b}
+body.light .rk.k-deliv{--tone:#5b6472}
 @media(max-width:520px){.req-kpis{grid-template-columns:repeat(2,1fr)}.rk-n{font-size:1.3rem}}
 /* Glosario: botón + ventana superpuesta */
 .tec-topbar{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;margin-bottom:.7rem}
