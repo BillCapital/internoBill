@@ -163,14 +163,14 @@ button{font-family:inherit;cursor:pointer}
   background:color-mix(in srgb,var(--warn) 14%,var(--panel));color:var(--text);
   border:1px solid color-mix(in srgb,var(--warn) 30%,var(--line));border-left:3px solid var(--warn)}
 .cal td .slot.slot-off{background:transparent;border:1px dashed var(--line);color:var(--muted);min-height:34px;border-radius:9px}
-.cal tr.lunch td{background:repeating-linear-gradient(45deg,var(--soft),var(--soft) 8px,transparent 8px,transparent 16px);color:var(--muted);font-style:italic;text-align:center;font-size:.78rem;font-weight:600}
+.cal tr.lunch td{background:repeating-linear-gradient(45deg,var(--soft),var(--soft) 8px,transparent 8px,transparent 16px);color:var(--muted);font-style:normal;text-align:center;font-size:.78rem;font-weight:600}
 
 /* Selector de convocados con búsqueda (combobox) */
 .att-picker{position:relative}
 .att-inputwrap{position:relative}
 .att-picker .att-ico{position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;display:inline-flex}
 .att-picker .att-ico .licon{width:1rem;height:1rem}
-.modal input.att-search{padding-left:2.3rem}
+.att-picker .att-inputwrap input.att-search{padding-left:2.3rem}
 .att-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:20;max-height:264px;overflow:auto;
   background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.4);padding:.3rem}
 .att-empty{padding:.6rem .7rem;color:var(--muted);font-size:.85rem}
