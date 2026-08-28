@@ -614,8 +614,8 @@ export default function Solicitudes() {
                   {t.custom ? <li>{t.custom}</li> : null}</ul>)}
               </div>
 
-              {/* Productos con link (tecnológicos): tarjeta con vista previa + decisión por producto */}
-              {(t.request_products || []).length > 0 && (
+              {/* Productos con link (SOLO flujo catálogo antiguo; el tecnológico usa la sección Productos con firma por producto) */}
+              {t.kind !== 'tec' && (t.request_products || []).length > 0 && (
                 <div className="rp-cards">
                   {(t.request_products || []).map((p) => (
                     <div className={`rp-card ${p.status}`} key={p.id}>
