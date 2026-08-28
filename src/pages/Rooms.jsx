@@ -54,6 +54,7 @@ export default function Rooms() {
   const [extAtt, setExtAtt] = useState('')       // correo externo manual
   const [attQuery, setAttQuery] = useState('')   // búsqueda de convocados
   const [attOpen, setAttOpen] = useState(false)  // lista de convocados desplegada
+  const attChain = useRef(Promise.resolve())     // serializa el chequeo de disponibilidad al seleccionar rápido
 
   const load = useCallback(async () => {
     const [{ data: rms }, { data: rs }, { data: us }] = await Promise.all([
@@ -287,11 +288,14 @@ export default function Rooms() {
                       const v = u.email, nm = u.full_name || u.email
                       return (
                         <button type="button" key={u.id} className="att-opt" onMouseDown={(e) => e.preventDefault()}
-                          onClick={async () => {
+                          onClick={() => {
                             setForm((f) => (f.att || []).some((a) => a.email === v) ? f : { ...f, att: [...(f.att || []), { email: v, name: nm }] })
                             setAttQuery(''); setAttOpen(true)
-                            const busy = await checkBusy([v], form)
-                            if (busy.length) alertDialog(`${nm} ya tiene una reunión agendada el ${dayLong(calDay)} desde las ${slots[form.slotIdx]} (${durLabel(form)}). Considera elegir otro horario.`, { title: 'Convocado ocupado' })
+                            // Chequeo de disponibilidad en serie y NO intrusivo: marca el chip como "ocupado" en vez de abrir un modal
+                            attChain.current = attChain.current.then(async () => {
+                              const busy = await checkBusy([v], form)
+                              if (busy.length) setForm((f) => ({ ...f, att: (f.att || []).map((a) => a.email === v ? { ...a, busy: true } : a) }))
+                            }).catch(() => {})
                           }}>
                           <span className="att-av">{(u.full_name || u.email).charAt(0).toUpperCase()}</span>
                           <span className="att-nm">{u.full_name || 'Sin nombre'}<br /><span className="muted">{u.email}</span></span>
@@ -317,9 +321,10 @@ export default function Rooms() {
               {(form.att || []).length > 0 && (
                 <div className="mr-chips">
                   {form.att.map((a) => (
-                    <span className="mr-chip" key={a.email} title={a.email}>
+                    <span className={`mr-chip${a.busy ? ' busy' : ''}`} key={a.email} title={a.busy ? `${a.email} — ya tiene algo agendado en este horario` : a.email}>
                       <span className="mr-chip-av">{(a.name || a.email).charAt(0).toUpperCase()}</span>
                       <span className="mr-chip-nm">{a.name && a.name !== a.email ? a.name : a.email}</span>
+                      {a.busy && <span className="mr-chip-tag">ocupado</span>}
                       <button className="mr-chip-x" title="Quitar" type="button" onClick={() => setForm((f) => ({ ...f, att: f.att.filter((x) => x.email !== a.email) }))}><Icon n="close" /></button>
                     </span>
                   ))}

@@ -212,6 +212,8 @@ button{font-family:inherit;cursor:pointer}
 .mr-chip-x{flex:0 0 auto;border:none;background:none;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:1.3rem;height:1.3rem;border-radius:50%;padding:0}
 .mr-chip-x:hover{background:color-mix(in srgb,var(--danger) 22%,transparent);color:var(--danger)}
 .mr-chip-x .licon{width:.85rem;height:.85rem}
+.mr-chip.busy{border-color:color-mix(in srgb,var(--warn) 55%,var(--line));background:color-mix(in srgb,var(--warn) 12%,var(--panel))}
+.mr-chip-tag{flex:0 0 auto;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--warn);background:color-mix(in srgb,var(--warn) 18%,transparent);border-radius:999px;padding:.05rem .4rem}
 .modal-reserve .mr-self{display:flex;align-items:flex-start;gap:.6rem;margin:.9rem 0 0;padding:.65rem .75rem;border:1px solid var(--line);border-radius:11px;background:var(--soft);cursor:pointer}
 .modal-reserve .mr-self input{width:17px;height:17px;flex:none;margin-top:.15rem;padding:0}
 .modal-reserve .mr-self-txt{display:flex;flex-direction:column;gap:.12rem;font-size:.9rem;color:var(--text)}
