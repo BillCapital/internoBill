@@ -170,7 +170,7 @@ button{font-family:inherit;cursor:pointer}
 .att-inputwrap{position:relative}
 .att-picker .att-ico{position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;display:inline-flex}
 .att-picker .att-ico .licon{width:1rem;height:1rem}
-.modal input.att-search{padding-left:2.1rem}
+input.att-search{padding-left:2.3rem}
 .att-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:20;max-height:264px;overflow:auto;
   background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.4);padding:.3rem}
 .att-empty{padding:.6rem .7rem;color:var(--muted);font-size:.85rem}
@@ -261,6 +261,17 @@ button{font-family:inherit;cursor:pointer}
 .sal-cols{display:flex;gap:1.3rem;align-items:flex-start;flex-wrap:wrap;margin-top:.5rem}
 .sal-left{flex:0 0 auto}
 .sal-right{flex:1;min-width:300px}
+/* Salas: bloques del día más compactos y ordenados */
+.sal-right h3{margin:.2rem 0 .4rem}
+.sal-right .room-legend{margin:.15rem 0 .55rem}
+.sal-right .cal th,.sal-right .cal td{padding:.14rem .5rem}
+.sal-right .cal thead th{font-size:.62rem}
+.sal-right .cal td:first-child{font-size:.7rem}
+.sal-right .cal td .slot{min-height:26px;font-size:.74rem;padding:.1rem .4rem;border-radius:7px}
+.sal-right .cal td .slot.busy,.sal-right .cal td .slot.pending{min-height:26px;padding:.22rem .5rem;line-height:1.2}
+.sal-right .cal td .slot.slot-off{min-height:26px}
+.sal-right .cal .slot{min-width:130px}
+.sal-right .cal tr.lunch td{font-size:.72rem}
 /* Calendario mensual */
 .cal-head{display:flex;align-items:center;gap:.8rem;margin:1rem 0 .6rem}
 .cal-nav{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:9px;width:34px;height:34px;font-size:1rem}
@@ -1243,20 +1254,20 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .tec-back{flex:none;white-space:nowrap}
 .tec-info .licon{width:1rem;height:1rem;color:var(--lime);flex:none;margin-top:.15rem}
 /* Adjuntos de solicitud (links y cotizaciones) */
-.att-box{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:.7rem .8rem;margin:.7rem 0}
-.att-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;font-weight:600;font-size:.86rem;margin-bottom:.5rem}
-.att-add{display:flex;gap:.4rem;flex-wrap:wrap}
-.att-upl{cursor:pointer;display:inline-flex;align-items:center;gap:.3rem}
+.rqa-box{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:.7rem .8rem;margin:.7rem 0}
+.rqa-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;font-weight:600;font-size:.86rem;margin-bottom:.5rem}
+.rqa-add{display:flex;gap:.4rem;flex-wrap:wrap}
+.rqa-upl{cursor:pointer;display:inline-flex;align-items:center;gap:.3rem}
 .att-empty{font-size:.82rem}
-.att-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.4rem}
-.att-item{display:flex;align-items:center;gap:.55rem;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:.4rem .55rem;font-size:.85rem}
-.att-ico{flex:none;color:var(--lime);display:grid;place-items:center}
-.att-ico .licon{width:1rem;height:1rem}
-.att-name{flex:1;min-width:0;text-align:left;background:none;border:0;color:var(--text);font:inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--text) 35%,transparent)}
-.att-name:hover{color:var(--lime)}
-.att-by{flex:none;font-size:.74rem;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.att-x{flex:none;background:none;border:0;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:.1rem}
-.att-x:hover{color:var(--danger)}
+.rqa-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.4rem}
+.rqa-item{display:flex;align-items:center;gap:.55rem;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:.4rem .55rem;font-size:.85rem}
+.rqa-ico{flex:none;color:var(--lime);display:grid;place-items:center}
+.rqa-ico .licon{width:1rem;height:1rem}
+.rqa-name{flex:1;min-width:0;text-align:left;background:none;border:0;color:var(--text);font:inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--text) 35%,transparent)}
+.rqa-name:hover{color:var(--lime)}
+.rqa-by{flex:none;font-size:.74rem;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rqa-x{flex:none;background:none;border:0;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:.1rem}
+.rqa-x:hover{color:var(--danger)}
 /* Resaltado de fila consistente en las tablas de listas (accesos, correos, insumos, etc.) */
 .table-wrap table.tbl-compact tbody tr:not(.grp-row):not(.row-sel):hover td{background:color-mix(in srgb,var(--lime) 5%,transparent)}
 .gz-card table.tbl-compact tbody tr:hover td{background:transparent}

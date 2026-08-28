@@ -44,7 +44,7 @@ export default function Soporte() {
       <div className="page-head"><div className="row">
         <div><h2>{isAdmin ? 'Soporte · todas las conversaciones' : 'Soporte'}</h2>
           <p className="muted">Cada ticket es un chat con Soporte TI. Presiona un panel para filtrar.</p></div>
-        {!isAdmin && <button className="btn btn-lime" onClick={create}>＋ Nuevo ticket</button>}
+        <button className="btn btn-lime" onClick={create}>＋ Nuevo ticket</button>
       </div></div>
       <div className="kpi-grid compact">
         <button className={`kpi ${!status ? 'active' : ''}`} onClick={() => setStatus(null)}>

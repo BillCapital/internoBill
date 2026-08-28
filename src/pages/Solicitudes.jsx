@@ -567,12 +567,12 @@ export default function Solicitudes() {
                 const atts = t.request_attachments || []
                 const active = t.status !== 'rejected' && t.status !== 'delivered'
                 return (
-                <div className="att-box">
-                  <div className="att-head"><span><Icon n="file" /> Links y cotizaciones</span>
+                <div className="rqa-box">
+                  <div className="rqa-head"><span><Icon n="file" /> Links y cotizaciones</span>
                     {canAttach && active && (
-                      <span className="att-add">
+                      <span className="rqa-add">
                         <button className="btn-sm" disabled={attBusy} onClick={() => addAttachLink(t.id)}><Icon n="cart" /> Link</button>
-                        <label className="btn-sm att-upl">{attBusy ? 'Subiendo…' : <><Icon n="plus" /> Archivo</>}
+                        <label className="btn-sm rqa-upl">{attBusy ? 'Subiendo…' : <><Icon n="plus" /> Archivo</>}
                           <input type="file" accept=".pdf,image/*,application/pdf" hidden disabled={attBusy}
                             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) uploadAttachFile(t.id, f) }} />
                         </label>
@@ -581,13 +581,13 @@ export default function Solicitudes() {
                   </div>
                   {atts.length === 0
                     ? <div className="muted att-empty">Aún no hay links ni cotizaciones. Agrega el producto que necesitas o la cotización.</div>
-                    : <ul className="att-list">
+                    : <ul className="rqa-list">
                         {atts.map((a) => (
-                          <li key={a.id} className="att-item">
-                            <span className="att-ico"><Icon n={a.kind === 'file' ? 'file' : 'cart'} /></span>
-                            <button className="att-name" onClick={() => openAttach(a)} title="Abrir">{a.name}</button>
-                            <span className="att-by muted">{nameById(a.uploaded_by)}</span>
-                            {(a.uploaded_by === profile?.id || isAdmin) && active && <button className="att-x" title="Quitar" onClick={() => delAttach(a)}><Icon n="close" /></button>}
+                          <li key={a.id} className="rqa-item">
+                            <span className="rqa-ico"><Icon n={a.kind === 'file' ? 'file' : 'cart'} /></span>
+                            <button className="rqa-name" onClick={() => openAttach(a)} title="Abrir">{a.name}</button>
+                            <span className="rqa-by muted">{nameById(a.uploaded_by)}</span>
+                            {(a.uploaded_by === profile?.id || isAdmin) && active && <button className="rqa-x" title="Quitar" onClick={() => delAttach(a)}><Icon n="close" /></button>}
                           </li>
                         ))}
                       </ul>}
