@@ -107,24 +107,36 @@ export default function Soporte() {
 
       {nt && (
         <div className="backdrop open">
-          <div className="modal">
-            <h3>Nuevo ticket de soporte</h3>
-            <label>Asunto</label>
-            <input value={nt.subject} autoFocus placeholder="Ej: No enciende el equipo"
-              onChange={(e) => setNt((t) => ({ ...t, subject: e.target.value }))} />
-            <label>Describe el problema</label>
-            <textarea value={nt.desc} onPaste={onPasteImg} style={{ minHeight: '110px' }}
-              placeholder="Detalla qué ocurre, cuándo empezó, qué equipo… Puedes pegar una captura con Ctrl+V."
-              onChange={(e) => setNt((t) => ({ ...t, desc: e.target.value }))} />
-            <label>Imágenes <span className="muted">(opcional — adjunta o pega capturas)</span></label>
-            <div className="tk-imgs">
-              {nt.imgs.map((im, i) => (
-                <div className="tk-thumb" key={i}>
-                  <img src={im.preview} alt="" />
-                  <button type="button" className="tk-x" title="Quitar" onClick={() => removeImg(i)}><Icon n="close" /></button>
+          <div className="modal modal-ticket">
+            <div className="tk-head">
+              <span className="tk-ico"><Icon n="chat" /></span>
+              <div><h3>Nuevo ticket de soporte</h3>
+                <p className="tk-sub">Cuéntanos qué ocurre. Puedes adjuntar o pegar capturas.</p></div>
+            </div>
+            <div className="tk-field"><label>Asunto</label>
+              <input value={nt.subject} autoFocus placeholder="Ej: No enciende el equipo"
+                onChange={(e) => setNt((t) => ({ ...t, subject: e.target.value }))} /></div>
+            <div className="tk-field"><label>Describe el problema</label>
+              <textarea value={nt.desc} onPaste={onPasteImg} style={{ minHeight: '120px' }}
+                placeholder="Detalla qué ocurre, cuándo empezó, qué equipo… Puedes pegar una captura con Ctrl+V."
+                onChange={(e) => setNt((t) => ({ ...t, desc: e.target.value }))} /></div>
+            <div className="tk-field"><label>Capturas / imágenes <span className="muted">(opcional)</span></label>
+              {nt.imgs.length > 0 && (
+                <div className="tk-imgs">
+                  {nt.imgs.map((im, i) => (
+                    <div className="tk-thumb" key={i}>
+                      <img src={im.preview} alt="" />
+                      <button type="button" className="tk-x" title="Quitar" onClick={() => removeImg(i)}><Icon n="close" /></button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              <label className="tk-add"><Icon n="plus" /> Agregar
+              )}
+              <label className="tk-drop"
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('over') }}
+                onDragLeave={(e) => e.currentTarget.classList.remove('over')}
+                onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('over'); addFiles(e.dataTransfer.files) }}>
+                <span className="tk-drop-ic"><Icon n="image" /></span>
+                <span className="tk-drop-t">Arrastra, pega (Ctrl+V) o <u>haz clic</u> para agregar</span>
                 <input type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
               </label>
             </div>
