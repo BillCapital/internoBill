@@ -442,7 +442,7 @@ tr:last-child td{border-bottom:none}
 .tk-drop:hover,.tk-drop.over{border-color:var(--lime);color:var(--lime-text);background:color-mix(in srgb,var(--lime) 9%,var(--soft))}
 .tk-drop-ic{display:inline-flex;align-items:center;justify-content:center;color:var(--lime-text);flex:none}
 .tk-drop-ic .licon{width:1.05rem;height:1.05rem;display:block}
-.tk-drop-t{line-height:1.25}
+.tk-drop-t{line-height:1}
 .tk-drop u{text-decoration:underline}
 .b-system{align-self:center;background:#2a2450;color:#c3b6f5;font-size:.8rem;text-align:center;max-width:88%}
 .chat-in{display:flex;gap:.5rem;padding:.7rem 1.1rem;border-top:1px solid var(--line);background:var(--panel);align-items:center;flex-wrap:wrap}
