@@ -10,7 +10,7 @@ const VIEW = 260   // tamaño del recuadro de recorte en pantalla
 const OUT = 200    // tamaño final exportado (px)
 
 export default function Perfil() {
-  const { profile, role, roleLabel, isAdmin, patchProfile } = useAuth()
+  const { profile, role, roleLabel, isAdmin, patchProfile, refreshProfile } = useAuth()
   const [equipos, setEquipos] = useState([])
   const [form, setForm] = useState({ phone: '', work_mode: '', emergency_name: '', emergency_phone: '', birth_day: '', birth_month: '' })
   const [saving, setSaving] = useState(false)
