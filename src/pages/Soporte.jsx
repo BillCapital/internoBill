@@ -19,6 +19,7 @@ export default function Soporte() {
   const [rows, setRows] = useState([])
   const [status, setStatus] = useState(null)
   const [open, setOpen] = useState(null)
+  const [nt, setNt] = useState(null)   // nuevo ticket: { subject, desc, imgs:[{file,preview}], busy }
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('support_tickets')
@@ -28,11 +29,35 @@ export default function Soporte() {
   }, [])
   useEffect(() => { load() }, [load])
 
-  const create = async () => {
-    const subject = await promptDialog('Asunto del ticket', { title: 'Nuevo ticket', placeholder: 'Ej: No enciende el equipo' }); if (!subject) return
-    const description = await promptDialog('Describe el problema', { title: 'Nuevo ticket', placeholder: 'Detalla qué ocurre…' }); if (!description) return
-    try { await api('create_ticket', { p_subject: subject, p_description: description }); load() }
-    catch (e) { alertDialog(e.message) }
+  const addFiles = (files) => {
+    const arr = Array.from(files || []).filter((f) => f.type && f.type.startsWith('image/'))
+    if (arr.length) setNt((t) => ({ ...t, imgs: [...t.imgs, ...arr.map((f) => ({ file: f, preview: URL.createObjectURL(f) }))] }))
+  }
+  const onPasteImg = (e) => {
+    const items = e.clipboardData?.items || []
+    const files = []
+    for (const it of items) { if (it.type && it.type.startsWith('image/')) { const f = it.getAsFile(); if (f) files.push(f) } }
+    if (files.length) { e.preventDefault(); setNt((t) => ({ ...t, imgs: [...t.imgs, ...files.map((f) => ({ file: f, preview: URL.createObjectURL(f) }))] })) }
+  }
+  const removeImg = (i) => setNt((t) => ({ ...t, imgs: t.imgs.filter((_, j) => j !== i) }))
+  const submitTicket = async () => {
+    const subject = (nt.subject || '').trim(); const desc = (nt.desc || '').trim()
+    if (!subject || !desc) return alertDialog('El asunto y la descripción son obligatorios.')
+    setNt((t) => ({ ...t, busy: true }))
+    try {
+      const res = await api('create_ticket', { p_subject: subject, p_description: desc })
+      const tid = typeof res === 'string' ? res : (res?.id || res)
+      for (const im of nt.imgs) {
+        try {
+          const path = `${tid}/${Date.now()}_${(im.file.name || 'img').replace(/[^\w.\-]+/g, '_')}`
+          const { error } = await supabase.storage.from('soporte').upload(path, im.file, { contentType: im.file.type || undefined })
+          if (error) continue
+          const { data } = supabase.storage.from('soporte').getPublicUrl(path)
+          if (data?.publicUrl) await api('post_message', { p_type: 'ticket', p_id: tid, p_body: data.publicUrl })
+        } catch { /* continúa con las demás imágenes */ }
+      }
+      setNt(null); load()
+    } catch (e) { alertDialog(e.message); setNt((t) => ({ ...t, busy: false })) }
   }
   const changeStatus = async (id, p_status) => {
     try { await api('set_ticket_status', { p_id: id, p_status }); load() } catch (e) { alertDialog(e.message) }
@@ -44,7 +69,7 @@ export default function Soporte() {
       <div className="page-head"><div className="row">
         <div><h2>{isAdmin ? 'Soporte · todas las conversaciones' : 'Soporte'}</h2>
           <p className="muted">Cada ticket es un chat con Soporte TI. Presiona un panel para filtrar.</p></div>
-        <button className="btn btn-lime" onClick={create}>＋ Nuevo ticket</button>
+        <button className="btn btn-lime" onClick={() => setNt({ subject: '', desc: '', imgs: [], busy: false })}>＋ Nuevo ticket</button>
       </div></div>
       <div className="kpi-grid compact">
         <button className={`kpi ${!status ? 'active' : ''}`} onClick={() => setStatus(null)}>
@@ -79,6 +104,37 @@ export default function Soporte() {
           )}
         </div>
       ))}
+
+      {nt && (
+        <div className="backdrop open">
+          <div className="modal">
+            <h3>Nuevo ticket de soporte</h3>
+            <label>Asunto</label>
+            <input value={nt.subject} autoFocus placeholder="Ej: No enciende el equipo"
+              onChange={(e) => setNt((t) => ({ ...t, subject: e.target.value }))} />
+            <label>Describe el problema</label>
+            <textarea value={nt.desc} onPaste={onPasteImg} style={{ minHeight: '110px' }}
+              placeholder="Detalla qué ocurre, cuándo empezó, qué equipo… Puedes pegar una captura con Ctrl+V."
+              onChange={(e) => setNt((t) => ({ ...t, desc: e.target.value }))} />
+            <label>Imágenes <span className="muted">(opcional — adjunta o pega capturas)</span></label>
+            <div className="tk-imgs">
+              {nt.imgs.map((im, i) => (
+                <div className="tk-thumb" key={i}>
+                  <img src={im.preview} alt="" />
+                  <button type="button" className="tk-x" title="Quitar" onClick={() => removeImg(i)}><Icon n="close" /></button>
+                </div>
+              ))}
+              <label className="tk-add"><Icon n="plus" /> Agregar
+                <input type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
+              </label>
+            </div>
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setNt(null)} disabled={nt.busy}>Cancelar</button>
+              <button className="btn btn-primary" onClick={submitTicket} disabled={nt.busy}>{nt.busy ? 'Creando…' : 'Crear ticket'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {(isAdmin || canManageSupport) && <ActivityLog kinds={['Soporte']} title="Registro de soporte" />}
     </div>
