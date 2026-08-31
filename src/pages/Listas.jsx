@@ -25,7 +25,7 @@ const norm = (s) => (s || '').toLowerCase()
 
 export default function Listas() {
   const [groups, setGroups] = useState(null)
-  const [users, setUsers] = useState([])
+  const [users, setUsers] = useState(null)   // se carga bajo demanda al abrir "Agregar persona"
   const [sel, setSel] = useState(null)
   const [members, setMembers] = useState(null)
   const [q, setQ] = useState('')
@@ -34,13 +34,16 @@ export default function Listas() {
   const [addQ, setAddQ] = useState('')
   const [nw, setNw] = useState(null)       // modal nueva lista: { name, nick, desc, busy }
   const [err, setErr] = useState('')
+  const [syncing, setSyncing] = useState(false)
+  const [gloss, setGloss] = useState(false)
 
   const load = useCallback(async () => {
     setErr('')
     try { const g = await msGroups('list'); setGroups(g.groups || []) }
     catch (e) { setErr(e.message); setGroups([]) }
   }, [])
-  useEffect(() => { load(); msGroups('users').then((r) => setUsers(r.users || [])).catch(() => {}) }, [load])
+  useEffect(() => { load() }, [load])
+  const ensureUsers = async () => { if (users !== null) return; try { const r = await msGroups('users'); setUsers(r.users || []) } catch (e) { setUsers([]); alertDialog(e.message) } }
 
   const openGroup = async (g) => {
     setSel(g); setMembers(null); setAddOpen(false); setAddQ('')
@@ -76,19 +79,41 @@ export default function Listas() {
     catch (e) { alertDialog(e.message) }
   }
 
+  const sync = async () => {
+    setSyncing(true); setUsers(null)
+    try { await load(); if (sel) { const r = await msGroups('members', { id: sel.id }); setMembers(r.members || []) } }
+    catch (e) { alertDialog(e.message) } finally { setSyncing(false) }
+  }
+
   const shown = useMemo(() => (groups || []).filter((g) => !q || norm(g.displayName).includes(norm(q)) || norm(g.mail).includes(norm(q))), [groups, q])
   const memberIds = useMemo(() => new Set((members || []).map((m) => m.id)), [members])
-  const candidates = useMemo(() => users.filter((u) => !memberIds.has(u.id) && (norm(u.displayName).includes(norm(addQ)) || norm(u.mail).includes(norm(addQ)))).slice(0, 40), [users, memberIds, addQ])
+  const candidates = useMemo(() => (users || []).filter((u) => !memberIds.has(u.id) && (norm(u.displayName).includes(norm(addQ)) || norm(u.mail).includes(norm(addQ)))).slice(0, 40), [users, memberIds, addQ])
 
   return (
     <div>
       <div className="page-head"><div className="row">
         <div><h2>Listas de distribución</h2>
           <p className="muted">Grupos y listas de Microsoft 365. Agrega o quita personas, crea o elimina listas.</p></div>
-        <button className="btn btn-lime" onClick={() => setNw({ name: '', nick: '', desc: '', busy: false })}><Icon n="plus" /> Nueva lista</button>
+        <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
+          <button className={`btn ${gloss ? 'on' : ''}`} onClick={() => setGloss((v) => !v)}><Icon n="info" /> Glosario</button>
+          <button className={`btn ${syncing ? 'is-sync' : ''}`} onClick={sync} disabled={syncing}><Icon n="refresh" /> {syncing ? 'Sincronizando…' : 'Sincronizar'}</button>
+          <button className="btn btn-lime" onClick={() => setNw({ name: '', nick: '', desc: '', busy: false })}><Icon n="plus" /> Nueva lista</button>
+        </div>
       </div></div>
 
       {err && <div className="conv" style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--danger)' }}><Icon n="ban" /> {err}</div>}
+
+      {gloss && (
+        <div className="dl-gloss">
+          <div className="dl-gloss-title"><Icon n="info" /> Tipos de lista</div>
+          <ul className="dl-gloss-list">
+            <li><span className="dl-kind k-dist">Distribución</span><span>Lista de distribución <strong>clásica</strong> de Exchange. Solo para <strong>enviar correo</strong> a un conjunto de personas — sin buzón propio, Teams ni SharePoint.</span></li>
+            <li><span className="dl-kind k-m365">Microsoft 365</span><span>Grupo de Microsoft 365 (moderno). Funciona como lista de correo y además tiene <strong>buzón compartido, calendario, Teams y SharePoint</strong>. Es lo que se crea hoy por defecto.</span></li>
+            <li><span className="dl-kind k-sec">Seguridad · correo</span><span>Grupo de <strong>seguridad</strong> con correo habilitado. Se usa para dar permisos/accesos y también recibe correo.</span></li>
+          </ul>
+          <p className="muted dl-gloss-note">Al crear una <strong>Nueva lista</strong> se genera un grupo de Microsoft 365 (Graph no permite crear listas de distribución clásicas; el grupo M365 funciona igual como lista). Agregar o quitar personas funciona en las Microsoft 365 y de seguridad; algunas de distribución clásicas muy antiguas se gestionan solo desde Exchange.</p>
+        </div>
+      )}
 
       <div className="dl-wrap">
         {/* Panel izquierdo: listas */}
@@ -119,14 +144,15 @@ export default function Listas() {
 
             <div className="dl-members-head">
               <span className="th-eyebrow">Miembros {members ? `· ${members.length}` : ''}</span>
-              <button className="btn-sm btn-lime" onClick={() => setAddOpen((v) => !v)}><Icon n="plus" /> Agregar persona</button>
+              <button className="btn-sm btn-lime" onClick={() => setAddOpen((v) => { const nv = !v; if (nv) ensureUsers(); return nv })}><Icon n="plus" /> Agregar persona</button>
             </div>
 
             {addOpen && (
               <div className="dl-add">
                 <div className="dl-search"><Icon n="search" /><input autoFocus value={addQ} placeholder="Buscar persona por nombre o correo…" onChange={(e) => setAddQ(e.target.value)} /></div>
                 <div className="dl-cands">
-                  {candidates.length === 0 ? <div className="muted" style={{ padding: '.5rem' }}>Sin coincidencias.</div>
+                  {users === null ? <div className="muted" style={{ padding: '.5rem' }}>Cargando personas…</div>
+                    : candidates.length === 0 ? <div className="muted" style={{ padding: '.5rem' }}>Sin coincidencias.</div>
                     : candidates.map((u) => (
                       <button key={u.id} className="dl-cand" disabled={busy} onClick={() => addMember(u)}>
                         <span className="dl-info"><strong>{u.displayName}</strong><span className="dl-mail">{u.mail}</span></span>
