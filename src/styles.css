@@ -414,11 +414,12 @@ tr:last-child td{border-bottom:none}
 .cv-body{display:none;border-top:1px solid var(--line)}.conv.open .cv-body{display:block}
 .reqsum{padding:.7rem 1.1rem;background:var(--soft);border-bottom:1px solid var(--line);font-size:.85rem}
 .reqsum ul{margin:.3rem 0 0;padding-left:1.1rem}
-.chat{padding:1rem 1.1rem;display:flex;flex-direction:column;gap:.6rem;max-height:320px;overflow-y:auto;background:#16191f}
-.bubble{max-width:76%;padding:.55rem .8rem;border-radius:14px;font-size:.9rem;line-height:1.35}
+.chat{padding:1rem 1.1rem;display:flex;flex-direction:column;gap:.6rem;max-height:min(58vh,540px);min-height:260px;overflow-y:auto;background:#16191f}
+.bubble{max-width:60%;padding:.55rem .8rem;border-radius:14px;font-size:.9rem;line-height:1.35;overflow-wrap:anywhere}
 .bubble .meta{display:block;font-size:.68rem;margin-bottom:.2rem;font-weight:500;opacity:.75}
 .b-user{align-self:flex-end;background:var(--lime);color:var(--accent-ink);border-bottom-right-radius:4px}
 .b-support{align-self:flex-start;background:var(--panel2);color:var(--text);border-bottom-left-radius:4px}
+@media(max-width:640px){.bubble{max-width:86%}}
 .b-system{align-self:center;background:#2a2450;color:#c3b6f5;font-size:.8rem;text-align:center;max-width:88%}
 .chat-in{display:flex;gap:.5rem;padding:.7rem 1.1rem;border-top:1px solid var(--line);background:var(--panel);align-items:center;flex-wrap:wrap}
 .chat-in input[type=text]{flex:1;min-width:170px;padding:.55rem .7rem;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;background:var(--soft);color:var(--text)}
@@ -1268,6 +1269,12 @@ body.light .rk.k-rev{--tone:#a5741a}
 body.light .rk.k-appr{--tone:#2f8f4f}
 body.light .rk.k-rej{--tone:#c0392b}
 body.light .rk.k-deliv{--tone:#5b6472}
+/* Barra lateral en tema claro: ítem activo con verde de marca bien visible */
+body.light .menu-item.active{background:color-mix(in srgb,var(--lime) 30%,#ffffff);color:var(--text)}
+body.light .menu-item.active .mi{color:#3f7a1f}
+body.light .menu-item.active::before{background:#3f7a1f;width:3.5px}
+body.light .menu-item{color:#3b4356}
+body.light .menu-item:hover{background:#e6e9f0;color:var(--text)}
 @media(max-width:520px){.req-kpis{grid-template-columns:repeat(2,1fr)}.rk-n{font-size:1.3rem}}
 /* Glosario: botón + ventana superpuesta */
 .tec-topbar{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;margin-bottom:.7rem}
@@ -1313,8 +1320,8 @@ body.light .rk.k-deliv{--tone:#5b6472}
 .rqa-eye .licon{width:1rem;height:1rem}
 .rqa-prev{border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:.5rem;overflow:hidden}
 .rqa-prev-load{padding:1rem;text-align:center;font-size:.85rem}
-.rqa-prev-pdf{width:100%;height:440px;border:0;border-radius:8px;background:#fff}
-.rqa-prev-img{display:block;max-width:100%;max-height:460px;margin:0 auto;border-radius:8px}
+.rqa-prev-pdf{width:100%;height:min(78vh,760px);border:0;border-radius:8px;background:#fff}
+.rqa-prev-img{display:block;max-width:100%;max-height:min(78vh,760px);margin:0 auto;border-radius:8px}
 .rqa-prev-og{display:flex;gap:.7rem;align-items:center;text-decoration:none;color:var(--text)}
 .rqa-og-img{width:120px;height:82px;object-fit:cover;border-radius:8px;flex:none;background:var(--soft)}
 .rqa-og-ph{width:120px;height:82px;display:grid;place-items:center;border-radius:8px;background:var(--soft);color:var(--muted);flex:none}
