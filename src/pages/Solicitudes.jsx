@@ -44,6 +44,7 @@ export default function Solicitudes() {
   const [attPrev, setAttPrev] = useState({})       // vista previa por adjunto: { [id]: {open,loading,loaded,fileUrl,isImg,ogTitle,ogImage,price,currency,site,error} }
   const [prodForm, setProdForm] = useState({})     // formulario "agregar producto" por solicitud: { [reqId]: {open,name,url,file,busy} }
   const [prodPrev, setProdPrev] = useState({})     // vista previa por producto (link y archivo): { [prodId]: {linkOpen,fileOpen,fileUrl,...} }
+  const [budgetForm, setBudgetForm] = useState({}) // editor de rango de precio por solicitud: { [reqId]: {min, max, busy} }
   const [glossOpen, setGlossOpen] = useState(false)
   const [availOpen, setAvailOpen] = useState({}) // carpetas de disponibilidad abiertas
   const [availSel, setAvailSel] = useState({})   // { key: label } equipos disponibles seleccionados
@@ -123,7 +124,7 @@ export default function Solicitudes() {
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('requests')
-      .select('id, status, kind, note, custom, department, needs_manager, l1_by, mgr_by, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock)), request_products(id,product_url,name,image_url,price,currency,quantity,status,reject_reason,file_url,file_name,file_mime), request_attachments(id,kind,url,name,mime,size,uploaded_by,created_at)')
+      .select('id, status, kind, note, custom, department, needs_manager, l1_by, mgr_by, budget_min, budget_max, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock)), request_products(id,product_url,name,image_url,price,currency,quantity,status,reject_reason,file_url,file_name,file_mime), request_attachments(id,kind,url,name,mime,size,uploaded_by,created_at)')
       .order('created_at', { ascending: false })
     setRows(data ?? [])
     setLoading(false)
@@ -316,6 +317,28 @@ export default function Solicitudes() {
   const delTecProduct = async (p) => {
     if (!(await confirmDialog(`¿Quitar el producto "${p.name}"?`, { title: 'Quitar producto', danger: true, okText: 'Quitar' }))) return
     try { if (p.file_url) await supabase.storage.from('cotizaciones').remove([p.file_url]); await api('tech_product_delete', { p_product: p.id }) } catch (e) { alertDialog(e.message) } finally { load() }
+  }
+  // ----- Rango de precio autorizado (nivel solicitud; lo fija cualquier firmante) -----
+  const parseNum = (v) => { const n = parseFloat(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.')); return isNaN(n) ? null : n }
+  const saveBudget = async (reqId) => {
+    const f = budgetForm[reqId] || {}
+    const lo = parseNum(f.min), hi = parseNum(f.max)
+    if (lo != null && hi != null && lo > hi) return alertDialog('El mínimo no puede ser mayor que el máximo.')
+    setBudgetForm((s) => ({ ...s, [reqId]: { ...f, busy: true } }))
+    try { await api('tech_set_budget', { p_request: reqId, p_min: lo, p_max: hi }); setBudgetForm((s) => { const n = { ...s }; delete n[reqId]; return n }) }
+    catch (e) { alertDialog(e.message || 'No se pudo guardar el rango.'); setBudgetForm((s) => ({ ...s, [reqId]: { ...f, busy: false } })) }
+    finally { load() }
+  }
+  // total de una opción vs rango: fuera de rango si el total (precio × cantidad) queda bajo el mín o sobre el máx
+  const prodOutOfRange = (t, p) => {
+    if (p?.price == null) return false
+    const lo = t.budget_min == null ? null : Number(t.budget_min)
+    const hi = t.budget_max == null ? null : Number(t.budget_max)
+    if (lo == null && hi == null) return false
+    const total = Number(p.price) * Math.max(1, p.quantity || 1)
+    if (lo != null && total < lo) return 'low'
+    if (hi != null && total > hi) return 'high'
+    return false
   }
   const toggleProdFile = async (p) => {
     const cur = prodPrev[p.id] || {}
@@ -659,6 +682,34 @@ export default function Solicitudes() {
                     )}
                   </div>
 
+                  {(myIsSigner(t) || isAdmin || t.budget_min != null || t.budget_max != null) && (() => {
+                    const canEditBudget = myIsSigner(t) || isAdmin
+                    const bf = budgetForm[t.id]
+                    const hasRange = t.budget_min != null || t.budget_max != null
+                    return (
+                      <div className="rqa-budget">
+                        <span className="rqb-label"><Icon n="tag" /> Rango de precio autorizado</span>
+                        {bf ? (
+                          <span className="rqb-edit">
+                            <input type="text" inputMode="numeric" placeholder="Mín" value={bf.min ?? ''} onChange={(e) => setBudgetForm((s) => ({ ...s, [t.id]: { ...bf, min: e.target.value } }))} />
+                            <span className="rqb-dash">–</span>
+                            <input type="text" inputMode="numeric" placeholder="Máx" value={bf.max ?? ''} onChange={(e) => setBudgetForm((s) => ({ ...s, [t.id]: { ...bf, max: e.target.value } }))} />
+                            <button className="btn-sm btn-lime" onClick={() => saveBudget(t.id)} disabled={bf.busy}>{bf.busy ? 'Guardando…' : 'Guardar'}</button>
+                            <button className="btn-sm" onClick={() => setBudgetForm((s) => { const n = { ...s }; delete n[t.id]; return n })} disabled={bf.busy}>Cancelar</button>
+                          </span>
+                        ) : (
+                          <span className="rqb-view">
+                            {hasRange
+                              ? <strong>{t.budget_min != null ? fmtMoney(t.budget_min, 'CLP') : '—'} <span className="muted">a</span> {t.budget_max != null ? fmtMoney(t.budget_max, 'CLP') : '—'}</strong>
+                              : <span className="muted">Sin definir</span>}
+                            {canEditBudget && <button className="btn-sm rqb-set" onClick={() => setBudgetForm((s) => ({ ...s, [t.id]: { min: t.budget_min ?? '', max: t.budget_max ?? '' } }))}>{hasRange ? 'Editar' : 'Definir'}</button>}
+                          </span>
+                        )}
+                        <span className="rqb-hint muted">Se compara con el total (precio × cantidad) de cada opción.</span>
+                      </div>
+                    )
+                  })()}
+
                   {pf.open && (
                     <div className="pf2">
                       <div className="pf2-row"><label>Nombre del producto</label>
@@ -682,7 +733,7 @@ export default function Solicitudes() {
                           const pp = prodPrev[p.id] || {}
                           const purl = p.product_url ? (/^https?:\/\//i.test(p.product_url) ? p.product_url : 'https://' + p.product_url) : null
                           return (
-                          <div className={`rp2-card ${p.status}`} key={p.id}>
+                          <div className={`rp2-card ${p.status} ${prodOutOfRange(t, p) ? 'oor' : ''}`} key={p.id}>
                             <div className="rp2-head">
                               {p.image_url ? <img className="rp2-thumb" src={p.image_url} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} onClick={() => viewImage(p.image_url)} /> : <span className="rp2-thumb ph"><Icon n="box" /></span>}
                               <div className="rp2-info">
@@ -691,6 +742,7 @@ export default function Solicitudes() {
                                   {p.price != null ? <span className="rp2-price">{fmtMoney(p.price, p.currency)}{p.quantity > 1 ? <span className="muted"> c/u</span> : null}</span> : null}
                                   {purl ? <a className="rp2-chip" href={purl} target="_blank" rel="noreferrer"><Icon n="link" /> Ver link</a> : null}
                                   {p.file_url ? <button className={`rp2-chip ${pp.fileOpen ? 'on' : ''}`} onClick={() => toggleProdFile(p)}><Icon n="eye" /> Cotización</button> : null}
+                                  {(() => { const o = prodOutOfRange(t, p); return o ? <span className={`rp2-oor ${o}`} title="El total de esta opción queda fuera del rango autorizado"><Icon n="ban" /> {o === 'high' ? 'Sobre el rango' : 'Bajo el rango'}</span> : null })()}
                                 </div>
                               </div>
                               <span className={`rp2-badge ${p.status}`}>{p.status === 'approved' ? 'Aprobado' : p.status === 'rejected' ? 'Rechazado' : 'Pendiente'}</span>
