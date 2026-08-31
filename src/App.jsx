@@ -15,6 +15,7 @@ const EquipoDetalle = lazy(() => import('./pages/EquipoDetalle'))
 const EquipoMobile = lazy(() => import('./pages/EquipoMobile'))
 const Insumos = lazy(() => import('./pages/Insumos'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
+const Listas = lazy(() => import('./pages/Listas'))
 const Roles = lazy(() => import('./pages/Roles'))
 const Perfil = lazy(() => import('./pages/Perfil'))
 const Gastos = lazy(() => import('./pages/Gastos'))
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="inventario" element={<Protected need="inventory"><Inventario /></Protected>} />
           <Route path="equipo/:id" element={<Protected need="inventory"><EquipoDetalle /></Protected>} />
           <Route path="usuarios" element={<Protected need="users"><Usuarios /></Protected>} />
+          <Route path="listas" element={<Protected need="users"><Listas /></Protected>} />
           <Route path="roles" element={<Protected need="users"><Roles /></Protected>} />
           <Route path="perfil" element={<Perfil />} />
           <Route path="gastos" element={<Protected need="admin"><Gastos /></Protected>} />

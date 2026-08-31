@@ -1,0 +1,176 @@
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { supabase } from '../lib/supabase'
+import { confirmDialog, alertDialog } from '../lib/ui'
+import { Icon } from '../lib/icons'
+
+// Llama a la función de listas/grupos de Microsoft 365 (ms-groups)
+async function msGroups(op, payload = {}) {
+  const { data, error } = await supabase.functions.invoke('ms-groups', { body: { op, ...payload } })
+  if (error) {
+    let msg = error.message || 'Error'
+    try { const j = await error.context?.json?.(); if (j?.error) msg = j.error } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+  if (data && data.error) throw new Error(data.error)
+  return data
+}
+
+const KIND = {
+  m365: { label: 'Microsoft 365', cls: 'k-m365' },
+  distribution: { label: 'Distribución', cls: 'k-dist' },
+  'mail-security': { label: 'Seguridad · correo', cls: 'k-sec' },
+  security: { label: 'Seguridad', cls: 'k-sec' },
+}
+const norm = (s) => (s || '').toLowerCase()
+
+export default function Listas() {
+  const [groups, setGroups] = useState(null)
+  const [users, setUsers] = useState([])
+  const [sel, setSel] = useState(null)
+  const [members, setMembers] = useState(null)
+  const [q, setQ] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [addQ, setAddQ] = useState('')
+  const [nw, setNw] = useState(null)       // modal nueva lista: { name, nick, desc, busy }
+  const [err, setErr] = useState('')
+
+  const load = useCallback(async () => {
+    setErr('')
+    try { const g = await msGroups('list'); setGroups(g.groups || []) }
+    catch (e) { setErr(e.message); setGroups([]) }
+  }, [])
+  useEffect(() => { load(); msGroups('users').then((r) => setUsers(r.users || [])).catch(() => {}) }, [load])
+
+  const openGroup = async (g) => {
+    setSel(g); setMembers(null); setAddOpen(false); setAddQ('')
+    try { const r = await msGroups('members', { id: g.id }); setMembers(r.members || []) }
+    catch (e) { alertDialog(e.message); setMembers([]) }
+  }
+  const reloadMembers = async (gid) => { const r = await msGroups('members', { id: gid }); setMembers(r.members || []) }
+
+  const addMember = async (u) => {
+    setBusy(true)
+    try { await msGroups('addMember', { id: sel.id, userId: u.id }); await reloadMembers(sel.id); setAddQ('') }
+    catch (e) { alertDialog(e.message) } finally { setBusy(false) }
+  }
+  const removeMember = async (m) => {
+    if (!(await confirmDialog(`¿Quitar a ${m.displayName} de "${sel.displayName}"?`, { title: 'Quitar de la lista', okText: 'Quitar', danger: true }))) return
+    setBusy(true)
+    try { await msGroups('removeMember', { id: sel.id, userId: m.id }); await reloadMembers(sel.id) }
+    catch (e) { alertDialog(e.message) } finally { setBusy(false) }
+  }
+  const createGroup = async () => {
+    const name = (nw.name || '').trim(); const nick = (nw.nick || '').trim().replace(/[^a-zA-Z0-9._-]/g, '')
+    if (name.length < 2 || nick.length < 2) return alertDialog('Ponle un nombre y un alias de correo (mínimo 2 caracteres).')
+    setNw((s) => ({ ...s, busy: true }))
+    try {
+      const r = await msGroups('create', { displayName: name, mailNickname: nick, description: nw.desc || '' })
+      setNw(null); await load()
+      if (r?.id) openGroup({ id: r.id, displayName: name, mail: r.mail, kind: 'm365' })
+    } catch (e) { alertDialog(e.message); setNw((s) => ({ ...s, busy: false })) }
+  }
+  const delGroup = async (g) => {
+    if (!(await confirmDialog(`¿Eliminar la lista "${g.displayName}" por completo? No se puede deshacer.`, { title: 'Eliminar lista', danger: true, okText: 'Eliminar' }))) return
+    try { await msGroups('delete', { id: g.id }); if (sel?.id === g.id) { setSel(null); setMembers(null) }; await load() }
+    catch (e) { alertDialog(e.message) }
+  }
+
+  const shown = useMemo(() => (groups || []).filter((g) => !q || norm(g.displayName).includes(norm(q)) || norm(g.mail).includes(norm(q))), [groups, q])
+  const memberIds = useMemo(() => new Set((members || []).map((m) => m.id)), [members])
+  const candidates = useMemo(() => users.filter((u) => !memberIds.has(u.id) && (norm(u.displayName).includes(norm(addQ)) || norm(u.mail).includes(norm(addQ)))).slice(0, 40), [users, memberIds, addQ])
+
+  return (
+    <div>
+      <div className="page-head"><div className="row">
+        <div><h2>Listas de distribución</h2>
+          <p className="muted">Grupos y listas de Microsoft 365. Agrega o quita personas, crea o elimina listas.</p></div>
+        <button className="btn btn-lime" onClick={() => setNw({ name: '', nick: '', desc: '', busy: false })}><Icon n="plus" /> Nueva lista</button>
+      </div></div>
+
+      {err && <div className="conv" style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--danger)' }}><Icon n="ban" /> {err}</div>}
+
+      <div className="dl-wrap">
+        {/* Panel izquierdo: listas */}
+        <div className="dl-list">
+          <div className="dl-search"><Icon n="search" /><input value={q} placeholder="Buscar lista…" onChange={(e) => setQ(e.target.value)} /></div>
+          {groups === null ? <div className="muted dl-empty">Cargando listas…</div>
+            : shown.length === 0 ? <div className="muted dl-empty">No hay listas{q ? ' que coincidan' : ''}.</div>
+              : shown.map((g) => {
+                const k = KIND[g.kind] || KIND.distribution
+                return (
+                  <button key={g.id} className={`dl-item ${sel?.id === g.id ? 'on' : ''}`} onClick={() => openGroup(g)}>
+                    <span className="dl-ic"><Icon n="mail" /></span>
+                    <span className="dl-info"><strong>{g.displayName}</strong><span className="dl-mail">{g.mail || '—'}</span></span>
+                    <span className={`dl-kind ${k.cls}`}>{k.label}</span>
+                  </button>
+                )
+              })}
+        </div>
+
+        {/* Panel derecho: miembros */}
+        <div className="dl-detail">
+          {!sel ? <div className="muted dl-empty" style={{ padding: '2rem 1rem' }}>Selecciona una lista para ver y editar sus miembros.</div> : <>
+            <div className="dl-detail-head">
+              <div><h3 style={{ margin: 0 }}>{sel.displayName}</h3>
+                <span className="muted" style={{ fontSize: '.82rem' }}>{sel.mail || '—'} · {(KIND[sel.kind] || KIND.distribution).label}</span></div>
+              <button className="btn-sm btn-danger" onClick={() => delGroup(sel)}><Icon n="trash" /> Eliminar lista</button>
+            </div>
+
+            <div className="dl-members-head">
+              <span className="th-eyebrow">Miembros {members ? `· ${members.length}` : ''}</span>
+              <button className="btn-sm btn-lime" onClick={() => setAddOpen((v) => !v)}><Icon n="plus" /> Agregar persona</button>
+            </div>
+
+            {addOpen && (
+              <div className="dl-add">
+                <div className="dl-search"><Icon n="search" /><input autoFocus value={addQ} placeholder="Buscar persona por nombre o correo…" onChange={(e) => setAddQ(e.target.value)} /></div>
+                <div className="dl-cands">
+                  {candidates.length === 0 ? <div className="muted" style={{ padding: '.5rem' }}>Sin coincidencias.</div>
+                    : candidates.map((u) => (
+                      <button key={u.id} className="dl-cand" disabled={busy} onClick={() => addMember(u)}>
+                        <span className="dl-info"><strong>{u.displayName}</strong><span className="dl-mail">{u.mail}</span></span>
+                        <span className="dl-add-ic"><Icon n="plus" /></span>
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {members === null ? <div className="muted dl-empty">Cargando miembros…</div>
+              : members.length === 0 ? <div className="muted dl-empty">Esta lista no tiene miembros aún.</div>
+                : <div className="dl-members">
+                  {members.map((m) => (
+                    <div className="dl-member" key={m.id}>
+                      <span className="dl-info"><strong>{m.displayName}</strong><span className="dl-mail">{m.mail}</span></span>
+                      <button className="dl-rm" title="Quitar" disabled={busy} onClick={() => removeMember(m)}><Icon n="close" /></button>
+                    </div>
+                  ))}
+                </div>}
+          </>}
+        </div>
+      </div>
+
+      {/* Modal nueva lista */}
+      {nw && (
+        <div className="backdrop open">
+          <div className="modal" style={{ maxWidth: 460 }}>
+            <h3 style={{ marginTop: 0 }}>Nueva lista</h3>
+            <p className="muted" style={{ fontSize: '.82rem', marginTop: 0 }}>Se crea como grupo de Microsoft 365 (con buzón), que funciona como lista de distribución.</p>
+            <div className="tk-field"><label>Nombre</label>
+              <input value={nw.name} autoFocus placeholder="Ej: Equipo Comercial" onChange={(e) => setNw((s) => ({ ...s, name: e.target.value }))} /></div>
+            <div className="tk-field"><label>Alias de correo</label>
+              <input value={nw.nick} placeholder="equipo-comercial" onChange={(e) => setNw((s) => ({ ...s, nick: e.target.value.replace(/[^a-zA-Z0-9._-]/g, '') }))} />
+              <span className="muted" style={{ fontSize: '.75rem' }}>{nw.nick ? `${nw.nick}@billcapital.com` : 'se usará como dirección de la lista'}</span></div>
+            <div className="tk-field"><label>Descripción <span className="muted">(opcional)</span></label>
+              <input value={nw.desc} onChange={(e) => setNw((s) => ({ ...s, desc: e.target.value }))} /></div>
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setNw(null)} disabled={nw.busy}>Cancelar</button>
+              <button className="btn btn-primary" onClick={createGroup} disabled={nw.busy}>{nw.busy ? 'Creando…' : 'Crear lista'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

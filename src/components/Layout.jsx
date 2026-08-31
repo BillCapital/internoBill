@@ -24,6 +24,7 @@ const NAV_ICONS = {
   lock: <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>,
   logout: <svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="M10 17l-5-5 5-5" /><path d="M5 12h11" /></svg>,
   gastos: <svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3" /><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6" /><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" /></svg>,
+  mail: <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3.5 7 8.5 6 8.5-6" /></svg>,
 }
 // Íconos de línea de la barra superior (rediseño 2026)
 const TOP_ICONS = {
@@ -111,6 +112,7 @@ export default function Layout() {
     ...(canManageSupplies ? [{ to: '/insumos', icon: 'inbox', label: 'Insumos' }] : []),
     ...(canManageInventory ? [{ to: '/inventario', icon: 'grid', label: 'Inventario' }] : []),
     ...(canManageUsers ? [{ to: '/usuarios', icon: 'users', label: 'Usuarios' }] : []),
+    ...(canManageUsers ? [{ to: '/listas', icon: 'mail', label: 'Listas' }] : []),
     ...(canManageUsers ? [{ to: '/roles', icon: 'lock', label: 'Accesos' }] : []),
     ...(isAdmin ? [{ to: '/gastos', icon: 'gastos', label: 'Gastos' }] : []),
   ]
