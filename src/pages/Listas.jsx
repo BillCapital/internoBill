@@ -85,7 +85,14 @@ export default function Listas() {
     catch (e) { alertDialog(e.message) } finally { setSyncing(false) }
   }
 
-  const shown = useMemo(() => (groups || []).filter((g) => !q || norm(g.displayName).includes(norm(q)) || norm(g.mail).includes(norm(q))), [groups, q])
+  const [kindFilter, setKindFilter] = useState(null) // null | 'm365' | 'distribution' | 'seguridad'
+  const inKind = (g, f) => !f || (f === 'seguridad' ? (g.kind === 'mail-security' || g.kind === 'security') : g.kind === f)
+  const counts = useMemo(() => {
+    const c = { all: 0, m365: 0, distribution: 0, seguridad: 0 }
+    for (const g of groups || []) { c.all++; if (g.kind === 'm365') c.m365++; else if (g.kind === 'distribution') c.distribution++; else c.seguridad++ }
+    return c
+  }, [groups])
+  const shown = useMemo(() => (groups || []).filter((g) => inKind(g, kindFilter) && (!q || norm(g.displayName).includes(norm(q)) || norm(g.mail).includes(norm(q)))), [groups, q, kindFilter])
   const memberIds = useMemo(() => new Set((members || []).map((m) => m.id)), [members])
   const candidates = useMemo(() => (users || []).filter((u) => !memberIds.has(u.id) && (norm(u.displayName).includes(norm(addQ)) || norm(u.mail).includes(norm(addQ)))).slice(0, 40), [users, memberIds, addQ])
 
@@ -119,6 +126,12 @@ export default function Listas() {
         {/* Panel izquierdo: listas */}
         <div className="dl-list">
           <div className="dl-search"><Icon n="search" /><input value={q} placeholder="Buscar lista…" onChange={(e) => setQ(e.target.value)} /></div>
+          <div className="dl-filters">
+            <button className={`dl-chip ${!kindFilter ? 'on' : ''}`} onClick={() => setKindFilter(null)}>Todas <span>{counts.all}</span></button>
+            {counts.m365 > 0 && <button className={`dl-chip ${kindFilter === 'm365' ? 'on' : ''}`} onClick={() => setKindFilter('m365')}>Microsoft 365 <span>{counts.m365}</span></button>}
+            {counts.distribution > 0 && <button className={`dl-chip ${kindFilter === 'distribution' ? 'on' : ''}`} onClick={() => setKindFilter('distribution')}>Distribución <span>{counts.distribution}</span></button>}
+            {counts.seguridad > 0 && <button className={`dl-chip ${kindFilter === 'seguridad' ? 'on' : ''}`} onClick={() => setKindFilter('seguridad')}>Seguridad <span>{counts.seguridad}</span></button>}
+          </div>
           {groups === null ? <div className="muted dl-empty">Cargando listas…</div>
             : shown.length === 0 ? <div className="muted dl-empty">No hay listas{q ? ' que coincidan' : ''}.</div>
               : shown.map((g) => {

@@ -1964,3 +1964,14 @@ body.light .role-badge.rrhh{background:#6b4fd0;color:#fff}
 .dl-gloss-list li{display:flex;align-items:flex-start;gap:.7rem;font-size:.86rem;line-height:1.45;color:var(--text)}
 .dl-gloss-list .dl-kind{margin-top:.1rem;flex:none}
 .dl-gloss-note{font-size:.78rem;line-height:1.5;margin:.8rem 0 0;padding-top:.7rem;border-top:1px solid var(--line)}
+
+/* Filtros por tipo en Listas */
+.dl-filters{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem}
+.dl-chip{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:600;padding:.26rem .6rem;border-radius:999px;border:1px solid var(--line);background:var(--soft);color:var(--muted);cursor:pointer;font-family:inherit}
+.dl-chip span{font-size:.68rem;background:var(--panel2);color:var(--text);border-radius:999px;padding:.02rem .4rem;min-width:1.3em;text-align:center}
+.dl-chip:hover{color:var(--text)}
+.dl-chip.on{border-color:color-mix(in srgb,var(--lime) 45%,transparent);background:color-mix(in srgb,var(--lime) 12%,var(--panel2));color:var(--lime-text)}
+.dl-chip.on span{background:color-mix(in srgb,var(--lime) 25%,transparent);color:var(--lime-text)}
+/* tamaños consistentes de la fila */
+.dl-item{min-height:3.1rem}
+.dl-kind{white-space:nowrap}
