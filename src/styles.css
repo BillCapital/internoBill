@@ -389,8 +389,9 @@ tr:last-child td{border-bottom:none}
   .usr-cards th:nth-child(4),.usr-cards td:nth-child(4),
   .usr-cards th:nth-child(5),.usr-cards td:nth-child(5),
   .usr-cards th:nth-child(6),.usr-cards td:nth-child(6){text-align:center}
-  .usr-cards td.actions{display:flex;gap:.3rem;justify-content:flex-start;flex-wrap:nowrap;align-items:center}
-  .usr-cards td.actions .btn-sm{padding:.3rem .5rem;font-size:.75rem;white-space:nowrap}
+  .usr-cards td.actions{white-space:nowrap;text-align:left}
+  .usr-cards td.actions .btn-sm{padding:.3rem .5rem;font-size:.75rem;white-space:nowrap;display:inline-flex;align-items:center;vertical-align:middle}
+  .usr-cards td.actions .btn-sm+.btn-sm{margin-left:.15rem}
   .usr-cards .th-filter{padding:.2rem .4rem}
   .usr-cards .avatar.sm,.usr-cards .avatar-img{width:34px;height:34px}
 }
