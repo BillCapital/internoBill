@@ -1395,6 +1395,9 @@ body.light .menu-item:hover{background:#e6e9f0;color:var(--text)}
 .rp2-chip{display:inline-flex;align-items:center;gap:.3rem;font-size:.76rem;color:var(--text);background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:.15rem .5rem;cursor:pointer;text-decoration:none}
 .rp2-chip:hover,.rp2-chip.on{border-color:var(--lime-text);color:var(--lime-text)}
 .rp2-chip .licon{width:.85rem;height:.85rem}
+.rp2-up{border-style:dashed;color:var(--lime-text)}
+.rp2-up:hover{background:color-mix(in srgb,var(--lime) 10%,var(--soft))}
+.rp2-up.busy{opacity:.6;pointer-events:none}
 .rp2-badge{flex:none;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:.12rem .5rem;border-radius:999px;background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
 .rp2-badge.approved{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
 .rp2-badge.rejected{background:color-mix(in srgb,var(--danger) 18%,transparent);color:var(--danger)}

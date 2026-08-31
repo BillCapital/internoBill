@@ -45,6 +45,7 @@ export default function Solicitudes() {
   const [prodForm, setProdForm] = useState({})     // formulario "agregar producto" por solicitud: { [reqId]: {open,name,url,file,busy} }
   const [prodPrev, setProdPrev] = useState({})     // vista previa por producto (link y archivo): { [prodId]: {linkOpen,fileOpen,fileUrl,...} }
   const [budgetForm, setBudgetForm] = useState({}) // editor de rango de precio por solicitud: { [reqId]: {min, max, busy} }
+  const [upBusy, setUpBusy] = useState({})         // subiendo cotización a un producto existente: { [prodId]: true }
   const [glossOpen, setGlossOpen] = useState(false)
   const [availOpen, setAvailOpen] = useState({}) // carpetas de disponibilidad abiertas
   const [availSel, setAvailSel] = useState({})   // { key: label } equipos disponibles seleccionados
@@ -328,6 +329,18 @@ export default function Solicitudes() {
     try { await api('tech_set_budget', { p_request: reqId, p_min: lo, p_max: hi }); setBudgetForm((s) => { const n = { ...s }; delete n[reqId]; return n }) }
     catch (e) { alertDialog(e.message || 'No se pudo guardar el rango.'); setBudgetForm((s) => ({ ...s, [reqId]: { ...f, busy: false } })) }
     finally { load() }
+  }
+  // adjuntar una cotización (PDF/imagen) a un producto ya creado
+  const attachProdFile = async (reqId, p, file) => {
+    if (!file) return
+    setUpBusy((s) => ({ ...s, [p.id]: true }))
+    try {
+      const path = `${reqId}/${Date.now()}_${(file.name || 'cotizacion').replace(/[^\w.\-]+/g, '_')}`
+      const { error: upErr } = await supabase.storage.from('cotizaciones').upload(path, file, { contentType: file.type || undefined, upsert: false })
+      if (upErr) throw upErr
+      await api('tech_product_set_file', { p_product: p.id, p_file_url: path, p_file_name: file.name, p_file_mime: file.type || '' })
+    } catch (e) { alertDialog(e.message || 'No se pudo subir la cotización.') }
+    finally { setUpBusy((s) => { const n = { ...s }; delete n[p.id]; return n }); load() }
   }
   // total de una opción vs rango: fuera de rango si el total (precio × cantidad) queda bajo el mín o sobre el máx
   const prodOutOfRange = (t, p) => {
@@ -743,6 +756,13 @@ export default function Solicitudes() {
                                   {purl ? <a className="rp2-chip" href={purl} target="_blank" rel="noreferrer"><Icon n="link" /> Ver link</a> : null}
                                   {p.file_url ? <button className={`rp2-chip ${pp.fileOpen ? 'on' : ''}`} onClick={() => toggleProdFile(p)}><Icon n="eye" /> Cotización</button> : null}
                                   {(() => { const o = prodOutOfRange(t, p); return o ? <span className={`rp2-oor ${o}`} title="El total de esta opción queda fuera del rango autorizado"><Icon n="ban" /> {o === 'high' ? 'Sobre el rango' : 'Bajo el rango'}</span> : null })()}
+                                  {!p.file_url && canAdd && active ? (
+                                    <label className={`rp2-chip rp2-up ${upBusy[p.id] ? 'busy' : ''}`}>
+                                      <Icon n="upload" /> {upBusy[p.id] ? 'Subiendo…' : 'Subir cotización'}
+                                      <input type="file" accept=".pdf,image/*,application/pdf" hidden disabled={!!upBusy[p.id]}
+                                        onChange={(e) => { const f = e.target.files?.[0]; attachProdFile(t.id, p, f); e.target.value = '' }} />
+                                    </label>
+                                  ) : null}
                                 </div>
                               </div>
                               <span className={`rp2-badge ${p.status}`}>{p.status === 'approved' ? 'Aprobado' : p.status === 'rejected' ? 'Rechazado' : 'Pendiente'}</span>
