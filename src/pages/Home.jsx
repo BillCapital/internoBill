@@ -114,6 +114,16 @@ export default function Home() {
         <p className="muted">{subtitle}</p>
       </div>
 
+      {/* Acciones rápidas arriba */}
+      {showPanel && <div className="th-eyebrow" style={{ margin: '.2rem 0 .5rem .2rem' }}>Acciones rápidas</div>}
+      <div className={`act-grid three ${showPanel ? 'compact' : ''}`} style={{ marginBottom: showPanel ? '1.5rem' : 0 }}>
+        {opts.map((o) => (
+          <button key={o[0]} className="act-card" onClick={() => nav(o[0])}>
+            <span className="ico"><Icon n={o[1]} /></span><strong>{o[2]}</strong>{!showPanel && <span className="muted">{o[3]}</span>}
+          </button>
+        ))}
+      </div>
+
       {/* Carga: silueta del panel de pendientes mientras llegan los datos (solo para roles con panel) */}
       {loading && showPanel && (
         <>
@@ -149,15 +159,6 @@ export default function Home() {
           )}
         </>
       )}
-
-      {showPanel && <div className="th-eyebrow" style={{ margin: '1.4rem 0 .5rem .2rem' }}>Acciones rápidas</div>}
-      <div className={`act-grid three ${showPanel ? 'compact' : ''}`} style={{ marginTop: showPanel ? 0 : 0 }}>
-        {opts.map((o) => (
-          <button key={o[0]} className="act-card" onClick={() => nav(o[0])}>
-            <span className="ico"><Icon n={o[1]} /></span><strong>{o[2]}</strong>{!showPanel && <span className="muted">{o[3]}</span>}
-          </button>
-        ))}
-      </div>
 
       {canManage && <ActivityLog kinds={['Anuncio']} title="Registro de anuncios" />}
     </div>

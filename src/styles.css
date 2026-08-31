@@ -1413,6 +1413,15 @@ body.light .menu-item:hover{background:#e6e9f0;color:var(--text)}
 .rp2-sig.bad{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--line))}
 .rp2-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;padding-top:.15rem}
 .rp2-mine{font-size:.74rem}
+.rp2-voted{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;padding-top:.15rem}
+.rp2-done{display:inline-flex;align-items:center;gap:.35rem;font-size:.82rem;font-weight:600;border-radius:8px;padding:.3rem .6rem}
+.rp2-done .licon{width:.9rem;height:.9rem;flex:none}
+.rp2-done.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 13%,transparent)}
+.rp2-done.bad{color:var(--danger);background:color-mix(in srgb,var(--danger) 13%,transparent)}
+.rp2-waitrest{font-size:.75rem}
+.rp2-changevote{background:none;border:0;color:var(--muted);font-family:inherit;font-size:.78rem;text-decoration:underline;cursor:pointer;padding:.2rem}
+.rp2-changevote:hover{color:var(--lime-text)}
+.rp2-cancelvote{opacity:.85}
 /* Tema claro: en claro --soft y --panel2 coinciden, así que damos jerarquía con tarjetas blancas */
 body.light .rqa-box{background:#eef1f6;border-color:#e2e5eb}
 body.light .pf2{background:#ffffff;border-color:#e2e5eb}

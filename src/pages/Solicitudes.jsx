@@ -46,6 +46,7 @@ export default function Solicitudes() {
   const [prodPrev, setProdPrev] = useState({})     // vista previa por producto (link y archivo): { [prodId]: {linkOpen,fileOpen,fileUrl,...} }
   const [budgetForm, setBudgetForm] = useState({}) // editor de rango de precio por solicitud: { [reqId]: {min, max, busy} }
   const [upBusy, setUpBusy] = useState({})         // subiendo cotización a un producto existente: { [prodId]: true }
+  const [changeVote, setChangeVote] = useState({}) // firmante quiere cambiar su voto de un producto: { [prodId]: true }
   const [glossOpen, setGlossOpen] = useState(false)
   const [availOpen, setAvailOpen] = useState({}) // carpetas de disponibilidad abiertas
   const [availSel, setAvailSel] = useState({})   // { key: label } equipos disponibles seleccionados
@@ -787,13 +788,24 @@ export default function Solicitudes() {
                               </div>
                             )}
 
-                            {canDecide && p.status === 'pending' && (
-                              <div className="rp2-actions">
-                                <button className={`btn-sm ${prodDecisionFor(p.id, profile?.id) === 'approve' ? 'btn-lime' : ''}`} onClick={() => decideTecProduct(p, true)}><Icon n="check" /> Aprobar</button>
-                                <button className={`btn-sm ${prodDecisionFor(p.id, profile?.id) === 'reject' ? 'btn-danger' : ''}`} onClick={() => decideTecProduct(p, false)}><Icon n="ban" /> Rechazar</button>
-                                {prodDecisionFor(p.id, profile?.id) ? <span className="muted rp2-mine">Tu voto: {prodDecisionFor(p.id, profile?.id) === 'approve' ? 'aprobado' : 'rechazado'} · falta el resto</span> : null}
-                              </div>
-                            )}
+                            {canDecide && p.status === 'pending' && (() => {
+                              const mine = prodDecisionFor(p.id, profile?.id)
+                              const editing = !mine || changeVote[p.id]
+                              const clearChange = () => setChangeVote((s) => { const n = { ...s }; delete n[p.id]; return n })
+                              return editing ? (
+                                <div className="rp2-actions">
+                                  <button className={`btn-sm ${mine === 'approve' ? 'btn-lime' : ''}`} onClick={() => { decideTecProduct(p, true); clearChange() }}><Icon n="check" /> Aprobar</button>
+                                  <button className={`btn-sm ${mine === 'reject' ? 'btn-danger' : ''}`} onClick={() => { decideTecProduct(p, false); clearChange() }}><Icon n="ban" /> Rechazar</button>
+                                  {mine ? <button className="btn-sm rp2-cancelvote" onClick={clearChange}>Cancelar</button> : null}
+                                </div>
+                              ) : (
+                                <div className="rp2-voted">
+                                  <span className={`rp2-done ${mine === 'approve' ? 'ok' : 'bad'}`}><Icon n={mine === 'approve' ? 'check' : 'ban'} /> {mine === 'approve' ? 'Aprobaste esta opción' : 'Rechazaste esta opción'}</span>
+                                  <span className="muted rp2-waitrest">· faltan los demás firmantes</span>
+                                  <button className="rp2-changevote" onClick={() => setChangeVote((s) => ({ ...s, [p.id]: true }))}>Cambiar</button>
+                                </div>
+                              )
+                            })()}
                           </div>
                           )
                         })}

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 import { alertDialog } from '../lib/ui'
 
 const AuthContext = createContext(null)
@@ -31,6 +32,8 @@ export function AuthProvider({ children }) {
       return
     }
     setProfile(data ?? null)
+    // Registra el último acceso real (la sesión SSO persiste, así que last_sign_in_at de auth queda viejo)
+    if (data) { try { api('touch_seen').catch(() => {}) } catch { /* noop */ } }
     const roleKey = data?.role ?? 'user'
     const { data: r } = await supabase.from('roles').select('label, permissions').eq('key', roleKey).single()
     // Salvaguarda: el admin nunca pierde acceso total aunque falle la lectura
