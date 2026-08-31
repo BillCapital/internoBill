@@ -135,7 +135,6 @@ export default function Soporte() {
                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('over') }}
                 onDragLeave={(e) => e.currentTarget.classList.remove('over')}
                 onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('over'); addFiles(e.dataTransfer.files) }}>
-                <span className="tk-drop-ic"><Icon n="upload" /></span>
                 <span className="tk-drop-t">Arrastra, pega (Ctrl+V) o <u>haz clic</u> para agregar</span>
                 <input type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
               </label>
