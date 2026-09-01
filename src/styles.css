@@ -90,6 +90,10 @@ button{font-family:inherit;cursor:pointer}
 .kpi-grid.compact .kpi .ico{font-size:.95rem}
 .kpi-grid.compact .kpi .num{font-size:1.05rem;margin-top:.02rem}
 .kpi-grid.compact .kpi .lbl{font-size:.66rem;line-height:1.2;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+/* Tarjetas agrupadas por categoría (Resumen / Rol / País / Dominio) */
+.kpi-cats{display:flex;flex-direction:column;gap:.6rem;margin:.9rem 0 1.1rem}
+.kpi-cat-t{font-family:'JetBrains Mono',monospace;font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 .35rem}
+.kpi-cats .kpi-grid.compact{margin:0}
 
 /* ===== Perfil — mis equipos asignados ===== */
 .pf-eq-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem}

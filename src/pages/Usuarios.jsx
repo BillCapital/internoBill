@@ -303,9 +303,10 @@ export default function Usuarios() {
       await load()
       const byDom = r?.byDomain ? Object.entries(r.byDomain).sort((a, b) => b[1] - a[1]).map(([d, n]) => `  · @${d}: ${n}`).join('\n') : ''
       const extra = [
-        byDom ? `\nDominios en M365 (${r.totalM365} en total):\n${byDom}` : '',
-        r?.guests ? `\nInvitados externos: ${r.guests} (quedan en el directorio SIN acceso a la app)` : '',
-        (r?.skipped?.length) ? `\nSin correo válido, omitidos: ${r.skipped.length}` : '',
+        byDom ? `\nDominios importables (${r.totalM365} usuarios en M365):\n${byDom}` : '',
+        (r?.guestsSeen !== undefined) ? `\nInvitados que Graph devolvió: ${r.guestsSeen}` : '',
+        r?.guests ? `\nInvitados con correo usable: ${r.guests} (entran SIN acceso a la app)` : '',
+        (r?.skipped?.length) ? `\nOmitidos (sin correo usable): ${r.skipped.length} — ${(r.skipped || []).slice(0, 5).join(', ')}${r.skipped.length > 5 ? '…' : ''}` : '',
       ].join('')
       if (r?.created) {
         const names = (r.added || []).slice(0, 12).join(', ')
@@ -463,36 +464,60 @@ export default function Usuarios() {
       </div></div>
 
       {loading && <SkeletonKpis n={10} />}
-      {!loading && <div className="kpi-grid compact kpi-sm">
-        <button className={`kpi ${!roleFilter && !mgmtFilter && statusFilter === 'active' && !countryFilter && !domainFilter && !missingFilter ? 'active' : ''}`} onClick={() => { setRoleFilter(null); setMgmtFilter(false); setCountryFilter(''); setDomainFilter(''); setStatusFilter('active'); setMissingFilter('') }}>
-          <div className="ico"><Icon n="users" /></div><div className="num">{rows.length}</div><div className="lbl">Todos</div>
-        </button>
-        <button className={`kpi mgmt-head ${mgmtFilter ? 'active' : ''} ${rolesOpen ? 'folder-open' : ''}`} onClick={() => { const willOpen = !rolesOpen; setRolesOpen(willOpen); setMgmtFilter(willOpen); setRoleFilter(null); setStatusFilter('active'); setMissingFilter('') }} title="Cargos por encima de Usuario (con acceso a la app). Ábrela para ver el detalle por rol; se puede combinar con un país.">
-          <div className="ico"><Icon n="shield" /></div><div className="num">{mgmtCount}</div><div className="lbl">Cargos</div>
-          <span className="chev">▾</span>
-        </button>
-        {roles.filter((r) => ['user', 'sistema', 'mic'].includes(r.key)).map((r) => (
-          <button className={`kpi ${roleFilter === r.key ? 'active' : ''}`} key={r.key} onClick={() => { setRoleFilter(roleFilter === r.key ? null : r.key); setMgmtFilter(false); setRolesOpen(false); setStatusFilter('active'); setMissingFilter('') }}>
-            <div className="ico"><Icon n={r.key === 'sistema' ? 'gear' : r.key === 'mic' ? 'building' : 'user'} /></div>
-            <div className="num">{rows.filter((u) => u.role === r.key && u.active !== false).length}</div><div className="lbl">{r.label}</div>
-          </button>
-        ))}
-        {COUNTRIES.map(([name]) => (
-          <button className={`kpi ${countryFilter === name ? 'active' : ''}`} key={name} onClick={() => { setCountryFilter(countryFilter === name ? '' : name); setStatusFilter('active'); setMissingFilter('') }}>
-            <div className="ico"><Icon n="pin" /></div>
-            <div className="num">{rows.filter((u) => (u.country || '') === name && u.active !== false).length}</div><div className="lbl">{name}</div>
-          </button>
-        ))}
-        {domainList.map((dom) => (
-          <button className={`kpi ${domainFilter === dom ? 'active' : ''}`} key={dom} onClick={() => { setDomainFilter(domainFilter === dom ? '' : dom); setStatusFilter('active'); setMissingFilter('') }} title={domainLabel(dom)}>
-            <div className="ico"><Icon n={domainIcon(dom)} /></div>
-            <div className="num">{domainCounts[dom]}</div><div className="lbl">{dom === 'sin dominio' ? 'Sin correo' : `@${dom}`}</div>
-          </button>
-        ))}
-        <button className={`kpi ${statusFilter === 'disabled' ? 'active' : ''}`} onClick={() => { setStatusFilter(statusFilter === 'disabled' ? 'active' : 'disabled'); setRoleFilter(null); setCountryFilter(''); setDomainFilter(''); setMissingFilter('') }}>
-          <div className="ico"><Icon n="lock" /></div>
-          <div className="num">{disabledCount}</div><div className="lbl">Deshabilitados</div>
-        </button>
+      {!loading && <div className="kpi-cats">
+        {/* Resumen */}
+        <div className="kpi-cat">
+          <div className="kpi-cat-t">Resumen</div>
+          <div className="kpi-grid compact kpi-sm">
+            <button className={`kpi ${!roleFilter && !mgmtFilter && statusFilter === 'active' && !countryFilter && !domainFilter && !missingFilter ? 'active' : ''}`} onClick={() => { setRoleFilter(null); setMgmtFilter(false); setCountryFilter(''); setDomainFilter(''); setStatusFilter('active'); setMissingFilter('') }}>
+              <div className="ico"><Icon n="users" /></div><div className="num">{rows.length}</div><div className="lbl">Todos</div>
+            </button>
+            <button className={`kpi mgmt-head ${mgmtFilter ? 'active' : ''} ${rolesOpen ? 'folder-open' : ''}`} onClick={() => { const willOpen = !rolesOpen; setRolesOpen(willOpen); setMgmtFilter(willOpen); setRoleFilter(null); setStatusFilter('active'); setMissingFilter('') }} title="Cargos por encima de Usuario (con acceso a la app). Ábrela para ver el detalle por rol; se puede combinar con un país.">
+              <div className="ico"><Icon n="shield" /></div><div className="num">{mgmtCount}</div><div className="lbl">Cargos</div>
+              <span className="chev">▾</span>
+            </button>
+            <button className={`kpi ${statusFilter === 'disabled' ? 'active' : ''}`} onClick={() => { setStatusFilter(statusFilter === 'disabled' ? 'active' : 'disabled'); setRoleFilter(null); setCountryFilter(''); setDomainFilter(''); setMissingFilter('') }}>
+              <div className="ico"><Icon n="lock" /></div>
+              <div className="num">{disabledCount}</div><div className="lbl">Deshabilitados</div>
+            </button>
+          </div>
+        </div>
+        {/* Por rol */}
+        <div className="kpi-cat">
+          <div className="kpi-cat-t">Por rol</div>
+          <div className="kpi-grid compact kpi-sm">
+            {roles.filter((r) => ['user', 'sistema', 'mic'].includes(r.key)).map((r) => (
+              <button className={`kpi ${roleFilter === r.key ? 'active' : ''}`} key={r.key} onClick={() => { setRoleFilter(roleFilter === r.key ? null : r.key); setMgmtFilter(false); setRolesOpen(false); setStatusFilter('active'); setMissingFilter('') }}>
+                <div className="ico"><Icon n={r.key === 'sistema' ? 'gear' : r.key === 'mic' ? 'building' : 'user'} /></div>
+                <div className="num">{rows.filter((u) => u.role === r.key && u.active !== false).length}</div><div className="lbl">{r.label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Por país */}
+        <div className="kpi-cat">
+          <div className="kpi-cat-t">Por país</div>
+          <div className="kpi-grid compact kpi-sm">
+            {COUNTRIES.map(([name]) => (
+              <button className={`kpi ${countryFilter === name ? 'active' : ''}`} key={name} onClick={() => { setCountryFilter(countryFilter === name ? '' : name); setStatusFilter('active'); setMissingFilter('') }}>
+                <div className="ico"><Icon n="pin" /></div>
+                <div className="num">{rows.filter((u) => (u.country || '') === name && u.active !== false).length}</div><div className="lbl">{name}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Por dominio */}
+        <div className="kpi-cat">
+          <div className="kpi-cat-t">Por dominio de correo</div>
+          <div className="kpi-grid compact kpi-sm">
+            {domainList.map((dom) => (
+              <button className={`kpi ${domainFilter === dom ? 'active' : ''}`} key={dom} onClick={() => { setDomainFilter(domainFilter === dom ? '' : dom); setStatusFilter('active'); setMissingFilter('') }} title={domainLabel(dom)}>
+                <div className="ico"><Icon n={domainIcon(dom)} /></div>
+                <div className="num">{domainCounts[dom]}</div><div className="lbl">{dom === 'sin dominio' ? 'Sin correo' : `@${dom}`}</div>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>}
 
       {/* Carpeta "Cargos de gestión": detalle por rol, desplegable desde la tarjeta de arriba */}
