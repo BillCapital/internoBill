@@ -234,11 +234,12 @@ export default function Inventario() {
     () => ((view === 'mant' || view === 'perif' || view === 'stock') ? [] : sections.filter((s) => !CRED.has(s.name))),
     [sections, view, CRED]
   )
-  // Stock disponible: equipos SIN asignar agrupados por su tipo (sección)
+  // Stock: equipos DISPONIBLES (liberados y listos para entregar) agrupados por su tipo (sección).
+  // "Disponible" = sin asignar Y marcado attributes.disponible === true.
   const stockEquip = useMemo(() => sections
     .filter((s) => !CRED.has(s.name))
     .map((s) => {
-      const list = (bySection[s.id] || []).filter((e) => !(e.assigned_to_name || e.assigned_to_email))
+      const list = (bySection[s.id] || []).filter((e) => !(e.assigned_to_name || e.assigned_to_email) && e.attributes?.disponible === true)
       return { id: s.id, name: s.name, icon: s.icon, items: list, n: list.length }
     })
     .filter((g) => g.n > 0), [sections, bySection, CRED])
@@ -263,9 +264,11 @@ export default function Inventario() {
     [visibleSections, bySection]
   )
   // Equipos sin asignar (de las secciones visibles) — para la tarjeta de resumen
+  // "Sin asignar" = existe pero no sabemos de quién (sin asignar y SIN marcar como disponible).
+  // Los marcados como disponible viven en la pestaña Stock, no aquí.
   const sinAsignarItems = useMemo(() => {
     const visIds = new Set(visibleSections.map((s) => s.id))
-    return fItems.filter((e) => visIds.has(e.section_id) && !(e.assigned_to_name || e.assigned_to_email))
+    return fItems.filter((e) => visIds.has(e.section_id) && !(e.assigned_to_name || e.assigned_to_email) && e.attributes?.disponible !== true)
   }, [fItems, visibleSections])
   // Equipos en mantenimiento (de las secciones visibles) — para la tarjeta de resumen
   const enMantItems = useMemo(() => {
@@ -325,7 +328,18 @@ export default function Inventario() {
     for (const f of (s?.fields || [])) {
       if (f.required && !String(edit.attributes?.[f.key] ?? '').trim()) return alertDialog(`El campo "${f.label}" es obligatorio.`)
     }
-    try { await api('equipment_upsert', { p: edit }); setEdit(null); load() } catch (e) { alertDialog(e.message) }
+    // Si se asigna a alguien, deja de ser stock disponible.
+    const p = (edit.assigned_to_name || edit.assigned_to_email)
+      ? { ...edit, attributes: { ...(edit.attributes || {}), disponible: false } }
+      : edit
+    try { await api('equipment_upsert', { p }); setEdit(null); load() } catch (e) { alertDialog(e.message) }
+  }
+  // Marca / quita un equipo del stock disponible sin abrir el formulario.
+  const setDisponible = async (e, val) => {
+    try {
+      await api('equipment_upsert', { p: { ...emptyEquip(e.section_id), ...e, attributes: { ...(e.attributes || {}), disponible: !!val } } })
+      load()
+    } catch (err) { alertDialog(err.message) }
   }
   const delEquip = async (e) => {
     if (!(await confirmDialog(`¿Estás seguro de eliminar "${e.name} ${e.brand} ${e.model}"?\nEsta acción no se puede deshacer.`, { title: 'Eliminar equipo', danger: true, okText: 'Sí, eliminar', cancelText: 'No, cancelar' }))) return
@@ -626,6 +640,7 @@ export default function Inventario() {
                       <td><span className="muted">{secById[e.section_id]?.name}</span></td>
                       <td><span className="badge">{e.condition}</span></td>
                       <td className="actions">
+                        <button className="btn-sm btn-lime" onClick={() => setDisponible(e, true)}>Marcar disponible</button>{' '}
                         <button className="btn-sm" onClick={() => nav(`/equipo/${e.id}`)}>Ver / Editar</button>{' '}
                         <button className="btn-sm btn-danger" onClick={() => delEquip(e)}>Eliminar</button>
                       </td>
@@ -715,9 +730,9 @@ export default function Inventario() {
       {/* ==== Pestaña Stock (disponible / sin asignar) ==== */}
       {view === 'stock' && (
         <div>
-          <div className="muted" style={{ fontSize: '.82rem', margin: '0 0 .6rem' }}>Stock disponible — unidades que no están asignadas a nadie, listas para entregar.</div>
-          <h4 className="det-sub">Equipos sin asignar</h4>
-          {stockEquip.length === 0 && <p className="muted">No hay equipos sin asignar.</p>}
+          <div className="muted" style={{ fontSize: '.82rem', margin: '0 0 .6rem' }}>Stock disponible — equipos liberados y marcados como <strong>Disponible</strong>, listos para entregar. (Los que existen pero no sabemos de quién son están en «Sin asignar», no aquí.)</div>
+          <h4 className="det-sub">Equipos disponibles</h4>
+          {stockEquip.length === 0 && <p className="muted">No hay equipos disponibles en stock. Marca un equipo como «Disponible» desde su ficha o desde «Sin asignar».</p>}
           {stockEquip.map((g) => {
             const isOpen = !!openStock[g.id]
             return (
@@ -735,7 +750,7 @@ export default function Inventario() {
                         <td><strong>{e.name}</strong> {e.brand} {e.model}</td>
                         <td>{e.serial_number || <span className="muted">—</span>}</td>
                         <td><span className="badge">{e.condition}</span></td>
-                        <td className="actions"><button className="btn-sm" onClick={() => nav(`/equipo/${e.id}`)}>Ver / Asignar</button></td>
+                        <td className="actions"><button className="btn-sm" onClick={() => nav(`/equipo/${e.id}`)}>Ver / Asignar</button>{' '}<button className="btn-sm" onClick={() => setDisponible(e, false)}>Quitar de stock</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -964,6 +979,12 @@ export default function Inventario() {
                       {[...LOCS, ...(edit.location && !LOCS.includes(edit.location) ? [edit.location] : [])].map((o) => <option key={o}>{o}</option>)}
                     </select></div>
                   <div><label>Estado</label><select value={edit.condition} onChange={(e) => setEdit({ ...edit, condition: e.target.value })}>{CONDS.map((c) => <option key={c}>{c}</option>)}</select></div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '.5rem', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={edit.attributes?.disponible === true} onChange={(ev) => setEdit({ ...edit, attributes: { ...(edit.attributes || {}), disponible: ev.target.checked } })} />
+                      <span>Disponible en stock <span className="muted">(liberado y listo para entregar — aparece en la pestaña Stock)</span></span>
+                    </label>
+                  </div>
                   {(() => {
                     const asgUser = edit.assigned_to_email ? users.find((u) => normc(u.email) === normc(edit.assigned_to_email)) : null
                     const derived = asgUser ? (asgUser.country || 'Chile') : null

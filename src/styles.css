@@ -1921,13 +1921,13 @@ body.light .role-badge.rrhh{background:#6b4fd0;color:#fff}
 
 /* ===== Listas de distribución (Microsoft 365) ===== */
 .dl-wrap{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:1rem;align-items:stretch;--dl-h:min(70vh,640px)}
-.dl-list{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:.7rem;display:flex;flex-direction:column;gap:.3rem;height:var(--dl-h);overflow:auto}
+.dl-list{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:.7rem;display:flex;flex-direction:column;gap:.45rem;height:var(--dl-h);overflow:auto}
 .dl-search{display:flex;align-items:center;gap:.45rem;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:10px;background:var(--soft);margin-bottom:.35rem}
 .dl-search .licon{width:1rem;height:1rem;color:var(--muted);flex:none}
 .dl-search input{flex:1;border:0;background:none;color:var(--text);font-family:inherit;font-size:.88rem;outline:none;min-width:0}
-.dl-item{display:flex;align-items:center;gap:.6rem;text-align:left;padding:.55rem .6rem;border:1px solid transparent;border-radius:10px;background:none;color:var(--text);cursor:pointer;width:100%}
-.dl-item:hover{background:var(--soft)}
-.dl-item.on{background:color-mix(in srgb,var(--lime) 12%,var(--panel2));border-color:color-mix(in srgb,var(--lime) 35%,transparent)}
+.dl-item{display:flex;align-items:center;gap:.6rem;text-align:left;padding:.6rem .65rem;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text);cursor:pointer;width:100%}
+.dl-item:hover{background:var(--soft);border-color:color-mix(in srgb,var(--lime) 28%,var(--line))}
+.dl-item.on{background:color-mix(in srgb,var(--lime) 12%,var(--panel2));border-color:color-mix(in srgb,var(--lime) 45%,transparent)}
 .dl-ic{display:grid;place-items:center;width:2rem;height:2rem;border-radius:9px;background:color-mix(in srgb,var(--lime) 16%,var(--panel2));color:var(--lime-text);flex:none}
 .dl-ic .licon{width:1.05rem;height:1.05rem}
 .dl-info{display:flex;flex-direction:column;min-width:0;flex:1}

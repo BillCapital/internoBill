@@ -214,7 +214,10 @@ export default function EquipoDetalle() {
     if (!(fk.name || '').trim()) return alertDialog('Indica el tipo/nombre del equipo.')
     setSavingFk(true)
     try {
-      await api('equipment_upsert', { p: savePayload(fk, swForm) }); alertDialog('Cambios guardados.'); load()
+      const pay = savePayload(fk, swForm)
+      // Si queda asignado a alguien, deja de ser stock disponible.
+      if (pay.assigned_to_name || pay.assigned_to_email) pay.attributes = { ...(pay.attributes || {}), disponible: false }
+      await api('equipment_upsert', { p: pay }); alertDialog('Cambios guardados.'); load()
     } catch (e) { alertDialog(e.message) } finally { setSavingFk(false) }
   }
 
