@@ -99,14 +99,21 @@ export default function Usuarios() {
   const [panelSkus, setPanelSkus] = useState(null)
   const [panelBusy, setPanelBusy] = useState(false)
   const M365_SUBS_URL = 'https://admin.microsoft.com/Adminportal/Home#/subscriptions'
+  const loadPanelSkus = async () => {
+    if (panelSkus || panelBusy) return
+    setPanelBusy(true)
+    try { const r = await msUsers('listSkus'); setPanelSkus(r?.skus || []) }
+    catch (e) { setPanelSkus([]); alertDialog('No se pudieron cargar las licencias: ' + e.message) }
+    finally { setPanelBusy(false) }
+  }
   const openLicPanel = async () => {
     const willOpen = !licPanelOpen; setLicPanelOpen(willOpen)
-    if (willOpen && !panelSkus) {
-      setPanelBusy(true)
-      try { const r = await msUsers('listSkus'); setPanelSkus(r?.skus || []) }
-      catch (e) { setPanelSkus([]); alertDialog('No se pudieron cargar las licencias: ' + e.message) }
-      finally { setPanelBusy(false) }
-    }
+    if (willOpen) loadPanelSkus()
+  }
+  // Botón superior: abre el panel de licencias y baja hasta él
+  const goToLicenses = async () => {
+    setLicPanelOpen(true); loadPanelSkus()
+    setTimeout(() => document.getElementById('lic-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 90)
   }
   const [licPick, setLicPick] = useState('')
   const [compTarget, setCompTarget] = useState('')   // cantidad objetivo de computadores (crea faltantes)
@@ -473,6 +480,7 @@ export default function Usuarios() {
             { label: 'Estado', value: (u) => u.active === false ? 'Deshabilitado' : 'Activo' },
           ], data)} title="Descarga la lista visible (respeta filtros) a Excel/CSV"><Icon n="download" /> Exportar</button>
           <button className="btn" disabled={syncBusy} onClick={syncM365} title="Trae de Microsoft 365 los usuarios que aún no están en la app">{syncBusy ? 'Sincronizando…' : <><Icon n="refresh" /> Sincronizar M365</>}</button>
+          <button className="btn" onClick={goToLicenses} title="Estado de asientos de licencias y comprar más"><Icon n="shield" /> Licencias</button>
           <button className="btn btn-lime" onClick={() => setNewUser({ displayName: '', upnLocal: '', domain: 'billcapital.com', upnEdited: false, password: genPwd(), showPwd: true, jobTitle: '', department: '', phone: '', country: 'Chile', role: 'user', appAccess: true, forceChange: true })}>＋ Crear usuario (M365)</button>
         </div>
       </div></div>
@@ -634,7 +642,7 @@ export default function Usuarios() {
       </table></div></div></div>
 
       {/* Licencias Microsoft 365 (compra guiada + estado de asientos) */}
-      <div className={`section ${licPanelOpen ? 'open' : ''}`} style={{ marginTop: '1rem' }}>
+      <div id="lic-panel" className={`section ${licPanelOpen ? 'open' : ''}`} style={{ marginTop: '1rem' }}>
         <button className="sec-head compact" onClick={openLicPanel}>
           <span className="ico"><Icon n="shield" /></span>
           <span className="t"><strong>Licencias Microsoft 365</strong><br /><span className="muted">Asientos comprados, usados y disponibles · comprar</span></span>
@@ -643,23 +651,46 @@ export default function Usuarios() {
         {licPanelOpen && <div className="sec-body">
           {panelBusy && <p className="muted">Cargando licencias…</p>}
           {!panelBusy && panelSkus && panelSkus.length === 0 && <p className="muted">No se pudieron leer las licencias del tenant.</p>}
-          {!panelBusy && panelSkus && panelSkus.length > 0 && (<>
-            <div className="lic-grid">
-              {panelSkus.slice().sort((a, b) => b.total - a.total).map((s) => {
-                const disp = s.available
-                const pct = s.total ? Math.min(100, Math.round((s.used / s.total) * 100)) : 0
-                return (
-                  <div className={`lic-card ${disp <= 0 ? 'is-full' : ''}`} key={s.skuId}>
-                    <div className="lic-name">{skuName(s.skuPartNumber)}</div>
-                    <div className="lic-nums"><strong>{disp}</strong> disponible(s) <span className="muted">· {s.used}/{s.total} usados</span></div>
-                    <div className="lic-bar"><span className={disp <= 0 ? 'full' : ''} style={{ width: `${pct}%` }} /></div>
-                    <button type="button" className={`btn-sm ${disp <= 0 ? 'btn-lime' : ''}`} onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')}>{disp <= 0 ? 'Comprar asientos' : 'Agregar asientos'}</button>
-                  </div>
-                )
-              })}
-            </div>
-            <p className="muted pf-hint">El pago se finaliza en el Centro de administración de Microsoft 365 (Microsoft no permite comprar por API). Al terminar, vuelve y asigna la licencia desde la ficha de la persona — el cupo nuevo aparece aquí al reabrir el panel.</p>
-          </>)}
+          {!panelBusy && panelSkus && panelSkus.length > 0 && (() => {
+            const tot = panelSkus.reduce((a, s) => a + (s.total || 0), 0)
+            const used = panelSkus.reduce((a, s) => a + (s.used || 0), 0)
+            const avail = panelSkus.reduce((a, s) => a + (s.available || 0), 0)
+            const noStock = panelSkus.filter((s) => s.available <= 0).length
+            const sorted = panelSkus.slice().sort((a, b) => (a.available - b.available) || (b.total - a.total))
+            return (<>
+              {/* Resumen general + compra */}
+              <div className="lic-summary">
+                <div className="lic-sum-stats">
+                  <div className="lic-stat"><span className="lic-stat-n">{tot}</span><span className="lic-stat-l">Asientos comprados</span></div>
+                  <div className="lic-stat"><span className="lic-stat-n">{used}</span><span className="lic-stat-l">En uso</span></div>
+                  <div className="lic-stat"><span className={`lic-stat-n ${avail <= 0 ? 'danger' : 'ok'}`}>{avail}</span><span className="lic-stat-l">Disponibles</span></div>
+                </div>
+                <div className="lic-sum-actions">
+                  {noStock > 0 && <span className="lic-warn"><Icon n="alert" /> {noStock} plan(es) sin cupo</span>}
+                  <button type="button" className="btn btn-lime" onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')} title="Abre el Centro de administración de Microsoft 365 para comprar o agregar asientos">＋ Comprar / administrar en M365</button>
+                </div>
+              </div>
+              <div className="lic-grid">
+                {sorted.map((s) => {
+                  const disp = s.available
+                  const pct = s.total ? Math.min(100, Math.round((s.used / s.total) * 100)) : 0
+                  const full = disp <= 0
+                  return (
+                    <div className={`lic-card ${full ? 'is-full' : ''}`} key={s.skuId}>
+                      <div className="lic-card-top">
+                        <span className="lic-name">{skuName(s.skuPartNumber)}</span>
+                        <span className={`lic-pill ${full ? 'danger' : 'ok'}`}>{full ? 'Sin cupo' : `${disp} libre${disp === 1 ? '' : 's'}`}</span>
+                      </div>
+                      <div className="lic-bar" title={`${s.used} de ${s.total} usados`}><span className={full ? 'full' : ''} style={{ width: `${pct}%` }} /></div>
+                      <div className="lic-meta"><span className="lic-frac">{s.used}<span className="muted"> / {s.total}</span> usados</span><span className="muted">{pct}%</span></div>
+                      <button type="button" className={`lic-buy ${full ? 'is-full' : ''}`} onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')}>{full ? 'Comprar asientos' : 'Agregar asientos'}</button>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="muted pf-hint">El pago se finaliza en el Centro de administración de Microsoft 365 (Microsoft no permite comprar por API). Al terminar, asigna la licencia desde la ficha de la persona; el cupo nuevo se refleja al reabrir este panel.</p>
+            </>)
+          })()}
         </div>}
       </div>
 
@@ -798,8 +829,9 @@ export default function Usuarios() {
                       ))}
                     </select>
                     <button type="button" className="btn-sm btn-lime" disabled={licBusy || !licPick} onClick={() => assignLic(licPick)}>{licBusy ? 'Aplicando…' : 'Asignar'}</button>
+                    <button type="button" className="btn-sm" onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')} title="Comprar o agregar asientos en el Centro de administración de Microsoft 365">Comprar en M365</button>
                   </div>
-                  <p className="muted pf-hint">Solo se muestran licencias con unidades disponibles. Asignar una licencia habilita sus servicios (Office, Exchange/Outlook, etc.) para la persona.</p>
+                  <p className="muted pf-hint">Solo se muestran licencias con unidades disponibles. ¿No queda cupo? Usa <strong>Comprar en M365</strong> para agregar asientos (el pago se hace en el portal de Microsoft), y luego asígnalo aquí.</p>
                 </>)}
               </div>
             )}

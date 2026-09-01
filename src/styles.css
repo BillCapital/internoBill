@@ -98,16 +98,34 @@ button{font-family:inherit;cursor:pointer}
 .kpi-cats .kpi-grid.compact .kpi{width:104px;flex:none;min-height:74px;display:flex;flex-direction:column;justify-content:flex-start;box-sizing:border-box}
 @media(max-width:900px){.kpi-cats{gap:.7rem 1rem}.kpi-cat{flex:1 1 100%}}
 /* Panel de licencias M365 */
-.lic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.7rem}
-.lic-card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:.7rem .8rem;display:flex;flex-direction:column;gap:.4rem}
-.lic-card.is-full{border-color:color-mix(in srgb,var(--danger) 45%,var(--line))}
-.lic-name{font-weight:700;font-size:.9rem}
-.lic-nums{font-size:.82rem}
-.lic-nums strong{font-size:1.05rem;color:var(--lime-text)}
-.lic-card.is-full .lic-nums strong{color:var(--danger)}
-.lic-bar{height:6px;border-radius:99px;background:var(--soft);overflow:hidden}
-.lic-bar span{display:block;height:100%;background:var(--lime);border-radius:99px}
+.lic-summary{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:.8rem 1rem;margin-bottom:.9rem}
+.lic-sum-stats{display:flex;gap:1.6rem;flex-wrap:wrap}
+.lic-stat{display:flex;flex-direction:column;line-height:1.1}
+.lic-stat-n{font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums}
+.lic-stat-n.ok{color:var(--lime-text)}
+.lic-stat-n.danger{color:var(--danger)}
+.lic-stat-l{font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:.15rem}
+.lic-sum-actions{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+.lic-warn{display:inline-flex;align-items:center;gap:.3rem;font-size:.78rem;color:var(--danger);font-weight:600}
+.lic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.7rem}
+.lic-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:.85rem .9rem;display:flex;flex-direction:column;gap:.5rem;position:relative;overflow:hidden}
+.lic-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--lime)}
+.lic-card.is-full::before{background:var(--danger)}
+.lic-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem}
+.lic-name{font-weight:700;font-size:.92rem;line-height:1.25}
+.lic-pill{flex:none;font-size:.66rem;font-weight:700;padding:.15rem .5rem;border-radius:999px;white-space:nowrap;text-transform:uppercase;letter-spacing:.02em}
+.lic-pill.ok{background:color-mix(in srgb,var(--lime) 20%,transparent);color:var(--lime-text)}
+.lic-pill.danger{background:color-mix(in srgb,var(--danger) 20%,transparent);color:var(--danger)}
+.lic-bar{height:7px;border-radius:99px;background:var(--soft);overflow:hidden}
+.lic-bar span{display:block;height:100%;background:var(--lime);border-radius:99px;transition:width .3s ease}
 .lic-bar span.full{background:var(--danger)}
+.lic-meta{display:flex;align-items:center;justify-content:space-between;font-size:.78rem}
+.lic-frac{font-weight:600;font-variant-numeric:tabular-nums}
+.lic-buy{margin-top:.1rem;font-size:.78rem;font-weight:600;padding:.4rem .5rem;border-radius:9px;border:1px solid var(--line);background:var(--soft);color:var(--text);cursor:pointer;transition:.15s}
+.lic-buy:hover{border-color:color-mix(in srgb,var(--lime) 45%,var(--line));background:color-mix(in srgb,var(--lime) 8%,var(--soft))}
+.lic-buy.is-full{background:var(--lime);color:var(--lime-text);border-color:transparent}
+.lic-buy.is-full:hover{filter:brightness(1.05)}
+@media(max-width:640px){.lic-summary{flex-direction:column;align-items:stretch}.lic-sum-actions{justify-content:space-between}}
 
 /* ===== Perfil — mis equipos asignados ===== */
 .pf-eq-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem}
