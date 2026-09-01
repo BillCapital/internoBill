@@ -661,6 +661,13 @@ body.light input:not([type=checkbox]):not([type=radio]),body.light select,body.l
 /* Fila separadora por dominio/proveedor en la lista de usuarios */
 .usr-cards tr.grp-row td{background:var(--soft);font-weight:700;font-size:.8rem;letter-spacing:.02em;padding:.4rem .6rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--text)}
 .usr-cards tr.grp-row .grp-ico{margin-right:.35rem}
+/* Carpetas colapsables por dominio */
+.usr-cards tr.grp-folder td{padding:0}
+.usr-cards .grp-toggle{width:100%;display:flex;align-items:center;gap:.4rem;background:none;border:0;color:inherit;font:inherit;font-weight:700;letter-spacing:.02em;padding:.5rem .6rem;cursor:pointer;text-align:left}
+.usr-cards .grp-toggle:hover{background:color-mix(in srgb,var(--lime) 6%,transparent)}
+.usr-cards .grp-folder .grp-ico{margin-right:0;display:inline-flex;align-items:center}
+.usr-cards .grp-toggle .chev{display:inline-flex;transition:transform .15s ease;transform:rotate(-90deg);opacity:.7}
+.usr-cards tr.grp-folder.open .grp-toggle .chev{transform:rotate(0)}
 /* Tarjeta de aviso (categoría/departamento sin asignar) */
 .kpi.kpi-warn{border-color:var(--danger)}
 .kpi.kpi-warn .lbl{color:var(--danger)}
