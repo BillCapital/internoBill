@@ -90,10 +90,13 @@ button{font-family:inherit;cursor:pointer}
 .kpi-grid.compact .kpi .ico{font-size:.95rem}
 .kpi-grid.compact .kpi .num{font-size:1.05rem;margin-top:.02rem}
 .kpi-grid.compact .kpi .lbl{font-size:.66rem;line-height:1.2;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
-/* Tarjetas agrupadas por categoría (Resumen / Rol / País / Dominio) */
-.kpi-cats{display:flex;flex-direction:column;gap:.6rem;margin:.9rem 0 1.1rem}
+/* Tarjetas agrupadas por categoría (Resumen / Rol / País / Dominio), en clústeres lado a lado */
+.kpi-cats{display:flex;flex-wrap:wrap;align-items:flex-start;gap:.9rem 1.4rem;margin:.9rem 0 1.1rem}
+.kpi-cat{flex:0 1 auto}
 .kpi-cat-t{font-family:'JetBrains Mono',monospace;font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 .35rem}
-.kpi-cats .kpi-grid.compact{margin:0}
+.kpi-cats .kpi-grid.compact{display:flex;flex-wrap:wrap;gap:.45rem;margin:0;width:max-content;max-width:100%}
+.kpi-cats .kpi-grid.compact .kpi{width:104px;flex:none}
+@media(max-width:900px){.kpi-cats{gap:.7rem 1rem}.kpi-cat{flex:1 1 100%}}
 
 /* ===== Perfil — mis equipos asignados ===== */
 .pf-eq-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem}
