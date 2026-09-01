@@ -213,7 +213,7 @@ export default function Rooms() {
         {calDay && !isWknd(calDay) && (
           <div className="sal-right" ref={salRightRef}>
             <>
-              <h3 style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</h3>
+              <h3 className="sal-date">{dayLong(calDay)}</h3>
               <div className="room-legend">
                 <span className="rl-item free"><span className="dot" />Disponible</span>
                 <span className="rl-item resv"><span className="dot" />Reservado</span>

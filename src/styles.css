@@ -329,6 +329,7 @@ button{font-family:inherit;cursor:pointer}
 .sal-right{flex:1;min-width:300px}
 /* Salas: bloques del día más compactos y ordenados */
 .sal-right h3{margin:.2rem 0 .4rem}
+.sal-date{text-transform:capitalize;letter-spacing:.02em;line-height:1.35;font-weight:700}
 .sal-right .room-legend{margin:.15rem 0 .55rem}
 .sal-right .cal th,.sal-right .cal td{padding:.14rem .5rem}
 .sal-right .cal thead th{font-size:.62rem}

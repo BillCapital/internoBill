@@ -92,7 +92,12 @@ export default function Listas() {
     for (const g of groups || []) { c.all++; if (g.kind === 'm365') c.m365++; else if (g.kind === 'distribution') c.distribution++; else c.seguridad++ }
     return c
   }, [groups])
-  const shown = useMemo(() => (groups || []).filter((g) => inKind(g, kindFilter) && (!q || norm(g.displayName).includes(norm(q)) || norm(g.mail).includes(norm(q)))), [groups, q, kindFilter])
+  // Orden: primero Microsoft 365, luego Distribución, luego Seguridad; dentro de cada grupo, alfabético.
+  const kindRank = (k) => (k === 'm365' ? 0 : k === 'distribution' ? 1 : 2)
+  const shown = useMemo(() => (groups || [])
+    .filter((g) => inKind(g, kindFilter) && (!q || norm(g.displayName).includes(norm(q)) || norm(g.mail).includes(norm(q))))
+    .slice()
+    .sort((a, b) => (kindRank(a.kind) - kindRank(b.kind)) || norm(a.displayName).localeCompare(norm(b.displayName), 'es')), [groups, q, kindFilter])
   const memberIds = useMemo(() => new Set((members || []).map((m) => m.id)), [members])
   const candidates = useMemo(() => (users || []).filter((u) => !memberIds.has(u.id) && (norm(u.displayName).includes(norm(addQ)) || norm(u.mail).includes(norm(addQ)))).slice(0, 40), [users, memberIds, addQ])
 
