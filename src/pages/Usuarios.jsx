@@ -472,10 +472,6 @@ export default function Usuarios() {
             <button className={`kpi ${!roleFilter && !mgmtFilter && statusFilter === 'active' && !countryFilter && !domainFilter && !missingFilter ? 'active' : ''}`} onClick={() => { setRoleFilter(null); setMgmtFilter(false); setCountryFilter(''); setDomainFilter(''); setStatusFilter('active'); setMissingFilter('') }}>
               <div className="ico"><Icon n="users" /></div><div className="num">{rows.length}</div><div className="lbl">Todos</div>
             </button>
-            <button className={`kpi mgmt-head ${mgmtFilter ? 'active' : ''} ${rolesOpen ? 'folder-open' : ''}`} onClick={() => { const willOpen = !rolesOpen; setRolesOpen(willOpen); setMgmtFilter(willOpen); setRoleFilter(null); setStatusFilter('active'); setMissingFilter('') }} title="Cargos por encima de Usuario (con acceso a la app). Ábrela para ver el detalle por rol; se puede combinar con un país.">
-              <div className="ico"><Icon n="shield" /></div><div className="num">{mgmtCount}</div><div className="lbl">Cargos</div>
-              <span className="chev">▾</span>
-            </button>
             <button className={`kpi ${statusFilter === 'disabled' ? 'active' : ''}`} onClick={() => { setStatusFilter(statusFilter === 'disabled' ? 'active' : 'disabled'); setRoleFilter(null); setCountryFilter(''); setDomainFilter(''); setMissingFilter('') }}>
               <div className="ico"><Icon n="lock" /></div>
               <div className="num">{disabledCount}</div><div className="lbl">Deshabilitados</div>
@@ -486,6 +482,10 @@ export default function Usuarios() {
         <div className="kpi-cat">
           <div className="kpi-cat-t">Por rol</div>
           <div className="kpi-grid compact kpi-sm">
+            <button className={`kpi mgmt-head ${mgmtFilter ? 'active' : ''} ${rolesOpen ? 'folder-open' : ''}`} onClick={() => { const willOpen = !rolesOpen; setRolesOpen(willOpen); setMgmtFilter(willOpen); setRoleFilter(null); setStatusFilter('active'); setMissingFilter('') }} title="Cargos de gestión (con acceso a la app, rol distinto de Usuario). Ábrela para ver el detalle por cada rol.">
+              <div className="ico"><Icon n="shield" /></div><div className="num">{mgmtCount}</div><div className="lbl">Cargos</div>
+              <span className="chev">▾</span>
+            </button>
             {roles.filter((r) => ['user', 'sistema', 'mic'].includes(r.key)).map((r) => (
               <button className={`kpi ${roleFilter === r.key ? 'active' : ''}`} key={r.key} onClick={() => { setRoleFilter(roleFilter === r.key ? null : r.key); setMgmtFilter(false); setRolesOpen(false); setStatusFilter('active'); setMissingFilter('') }}>
                 <div className="ico"><Icon n={r.key === 'sistema' ? 'gear' : r.key === 'mic' ? 'building' : 'user'} /></div>
