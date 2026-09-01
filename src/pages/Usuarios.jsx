@@ -92,13 +92,6 @@ export default function Usuarios() {
   const [msBusy, setMsBusy] = useState(false)
   const [syncBusy, setSyncBusy] = useState(false)
   const [groupByDomain, setGroupByDomain] = useState(true)
-  const [openDoms, setOpenDoms] = useState({})   // carpetas por dominio abiertas (por defecto todas cerradas)
-  const groupRefs = useRef({})                    // para hacer scroll a una carpeta al abrirla
-  const toggleDom = (dom) => setOpenDoms((o) => ({ ...o, [dom]: !o[dom] }))
-  const openScrollDom = (dom) => {
-    setOpenDoms((o) => ({ ...o, [dom]: true }))
-    setTimeout(() => groupRefs.current[dom]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 70)
-  }
   const [msSkus, setMsSkus] = useState([])            // catálogo de licencias del tenant
   const [msLic, setMsLic] = useState(null)            // licencias del usuario en edición
   const [licBusy, setLicBusy] = useState(false)
@@ -431,8 +424,6 @@ export default function Usuarios() {
     if (sys.length) out.push(['__sistema__', sys])
     return out
   }, [data, groupByDomain])
-  // Con cualquier filtro o búsqueda activa, se abren todas las carpetas para ver los resultados.
-  const forceOpenGroups = !!(roleFilter || countryFilter || domainFilter || missingFilter || mgmtFilter || deptFilter || q)
   // Ordenar al tocar el encabezado (alterna asc/desc si es la misma columna)
   const setSort = (f) => { if (sortField === f) setSortDir(sortDir === 'asc' ? 'desc' : 'asc'); else { setSortField(f); setSortDir('asc') } }
   const thSort = (f, label) => {
@@ -493,7 +484,7 @@ export default function Usuarios() {
           </button>
         ))}
         {domainList.map((dom) => (
-          <button className={`kpi ${openDoms[dom] ? 'active' : ''}`} key={dom} onClick={() => openScrollDom(dom)} title={`Abrir la carpeta ${domainLabel(dom)}`}>
+          <button className={`kpi ${domainFilter === dom ? 'active' : ''}`} key={dom} onClick={() => { setDomainFilter(domainFilter === dom ? '' : dom); setStatusFilter('active'); setMissingFilter('') }} title={domainLabel(dom)}>
             <div className="ico"><Icon n={domainIcon(dom)} /></div>
             <div className="num">{domainCounts[dom]}</div><div className="lbl">{dom === 'sin dominio' ? 'Sin correo' : `@${dom}`}</div>
           </button>
@@ -575,21 +566,10 @@ export default function Usuarios() {
         <tbody>
           {loading && <SkeletonTableRows rows={8} cols={7} />}
           {!loading && data.length === 0 && <tr><td colSpan={7} className="muted" style={{ padding: '.8rem' }}>Sin usuarios.</td></tr>}
-          {!loading && groups.map(([dom, us]) => {
-            const isOpen = !groupByDomain || forceOpenGroups || !!openDoms[dom]
-            return (
+          {!loading && groups.map(([dom, us]) => (
             <Fragment key={dom}>
-              {groupByDomain && (
-                <tr className={`grp-row grp-folder ${isOpen ? 'open' : ''}`} ref={(el) => { groupRefs.current[dom] = el }}>
-                  <td colSpan={7}>
-                    <button type="button" className="grp-toggle" onClick={() => toggleDom(dom)}>
-                      <span className="chev">▾</span>
-                      <span className="grp-ico"><Icon n={domainIcon(dom)} /></span> {domainLabel(dom)} <span className="muted">· {us.length}</span>
-                    </button>
-                  </td>
-                </tr>
-              )}
-              {isOpen && us.map((u) => (
+              {groupByDomain && <tr className="grp-row"><td colSpan={7}><span className="grp-ico">{domainIcon(dom)}</span> {domainLabel(dom)} <span className="muted">· {us.length}</span></td></tr>}
+              {us.map((u) => (
                 <tr key={u.id}>
                   <td><div className="row" style={{ justifyContent: 'flex-start', gap: '.5rem' }}>
                     {u.avatar_url ? <img className="avatar-img" src={u.avatar_url} alt="" loading="lazy" decoding="async" /> : <div className="avatar sm">{initials(u.full_name || u.email)}</div>}
@@ -610,8 +590,7 @@ export default function Usuarios() {
                 </tr>
               ))}
             </Fragment>
-            )
-          })}
+          ))}
         </tbody>
       </table></div></div></div>
 
