@@ -391,12 +391,13 @@ export default function Usuarios() {
 
   const disabledCount = useMemo(() => rows.filter((u) => u.active === false).length, [rows])
   // Dominios de correo presentes (para las tarjetas de filtro por proveedor)
+  // Conteo por dominio SIEMPRE sobre activos (igual que país/rol), independiente del filtro de estado,
+  // para que el set de tarjetas no cambie ni salte el layout al alternar "Deshabilitados".
   const domainCounts = useMemo(() => {
     const m = {}; rows.forEach((u) => {
-      const passStatus = statusFilter === 'all' || (statusFilter === 'disabled' ? u.active === false : u.active !== false)
-      if (passStatus) { const d = domainOf(u.email); m[d] = (m[d] || 0) + 1 }
+      if (u.active !== false) { const d = domainOf(u.email); m[d] = (m[d] || 0) + 1 }
     }); return m
-  }, [rows, statusFilter])
+  }, [rows])
   const domainList = useMemo(() => {
     const rank = (d) => d === 'billcapital.com' ? 0 : isBillDomain(d) ? 1 : d === 'sin dominio' ? 3 : 2
     return Object.keys(domainCounts).sort((a, b) => (rank(a) - rank(b)) || a.localeCompare(b))
