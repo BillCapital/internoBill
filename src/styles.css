@@ -709,6 +709,12 @@ body.light input:not([type=checkbox]):not([type=radio]),body.light select,body.l
 .usr-cards td.usr-empty{padding:1.4rem 1rem;text-align:center;color:var(--muted);font-size:.9rem}
 .usr-cards td.usr-empty .licon{width:1.1rem;height:1.1rem;vertical-align:-3px;margin-right:.35rem;opacity:.7}
 .usr-cards td.usr-empty strong{color:var(--text)}
+/* Gastos · precio de licencia editable */
+.gz-clickable{cursor:pointer}
+.gz-clickable:hover{border-color:var(--lime-text)}
+.lic-price-in{display:inline-flex;align-items:center;gap:.15rem;justify-content:flex-end}
+.lic-price-in input{width:80px;text-align:right;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:.25rem .4rem;color:var(--text);font-family:inherit;font-size:.85rem;font-variant-numeric:tabular-nums}
+.lic-price-in input:focus{outline:none;border-color:var(--lime-text)}
 /* Tarjeta de aviso (categoría/departamento sin asignar) */
 .kpi.kpi-warn{border-color:var(--danger)}
 .kpi.kpi-warn .lbl{color:var(--danger)}

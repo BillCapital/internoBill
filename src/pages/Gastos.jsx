@@ -27,8 +27,32 @@ function Money({ value, strong }) {
   return <span className="mny"><span className="mny-s">{sym}</span><Num className="mny-n">{n}</Num></span>
 }
 
+// Nombres amigables de licencias M365 (skuPartNumber → nombre)
+const SKU_NAMES = {
+  O365_BUSINESS_ESSENTIALS: 'Microsoft 365 Empresa Básico', O365_BUSINESS_PREMIUM: 'Microsoft 365 Empresa Estándar',
+  O365_BUSINESS: 'Microsoft 365 Aplicaciones para Empresas', SPB: 'Microsoft 365 Empresa Premium',
+  SPE_E3: 'Microsoft 365 E3', SPE_E5: 'Microsoft 365 E5', ENTERPRISEPACK: 'Office 365 E3', ENTERPRISEPREMIUM: 'Office 365 E5',
+  STANDARDPACK: 'Office 365 E1', EXCHANGESTANDARD: 'Exchange Online (Plan 1)', EXCHANGEENTERPRISE: 'Exchange Online (Plan 2)',
+  POWER_BI_STANDARD: 'Power BI (gratis)', FLOW_FREE: 'Power Automate (gratis)', TEAMS_EXPLORATORY: 'Teams Exploratory',
+}
+const skuName = (part) => SKU_NAMES[part] || (part || '').replace(/_/g, ' ')
+const isFreeSku = (s) => /gratis/i.test(skuName(s.skuPartNumber)) || (s.total || 0) >= 100000
+// Las licencias M365 se facturan en USD; formateo dedicado.
+const usd = (n) => 'US$ ' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+async function msUsers(op, payload = {}) {
+  const { data, error } = await supabase.functions.invoke('ms-users', { body: { op, ...payload } })
+  if (error) { let m = ''; try { m = (await error.context?.json())?.error } catch { /* noop */ } throw new Error(m || error.message || 'Error') }
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
 export default function Gastos() {
   const [tab, setTab] = useState('resumen')
+  // ---- Licencias M365 ----
+  const [licSkus, setLicSkus] = useState(null)
+  const [licPrices, setLicPrices] = useState({})   // sku_part_number -> monthly_price
+  const [licLoaded, setLicLoaded] = useState(false)
+  const [licErr, setLicErr] = useState('')
   const [lines, setLines] = useState([])
   const [docs, setDocs] = useState([])
   const [depts, setDepts] = useState([])
@@ -77,6 +101,33 @@ export default function Gastos() {
       setLoading(false)
     })()
   }, [loadDocs])
+
+  // ---- Licencias M365 ----
+  const loadLicenses = useCallback(async () => {
+    setLicErr('')
+    try {
+      const [r, { data: pr }] = await Promise.all([
+        msUsers('listSkus'),
+        supabase.from('license_prices').select('sku_part_number,monthly_price'),
+      ])
+      setLicSkus(r?.skus || [])
+      setLicPrices(Object.fromEntries((pr || []).map((x) => [x.sku_part_number, Number(x.monthly_price) || 0])))
+    } catch (e) { setLicErr(e.message || 'No se pudieron cargar las licencias'); setLicSkus([]) }
+    finally { setLicLoaded(true) }
+  }, [])
+  useEffect(() => { loadLicenses() }, [loadLicenses])
+  const setPrice = async (part, value) => {
+    const price = num(value)
+    setLicPrices((m) => ({ ...m, [part]: price }))
+    try { await supabase.from('license_prices').upsert({ sku_part_number: part, monthly_price: price, currency: 'USD', updated_at: new Date().toISOString() }) }
+    catch (e) { alertDialog('No se pudo guardar el precio: ' + e.message) }
+  }
+  // Planes de pago (con asientos finitos), con su precio y costo mensual = precio × comprados
+  const licRows = useMemo(() => (licSkus || []).filter((s) => (s.total || 0) > 0 && !isFreeSku(s))
+    .map((s) => { const price = licPrices[s.skuPartNumber] || 0; return { ...s, name: skuName(s.skuPartNumber), price, monthly: price * (s.total || 0), usedMonthly: price * (s.used || 0) } })
+    .sort((a, b) => b.monthly - a.monthly), [licSkus, licPrices])
+  const licMensual = useMemo(() => licRows.reduce((a, r) => a + r.monthly, 0), [licRows])        // facturado (comprados)
+  const licEnUso = useMemo(() => licRows.reduce((a, r) => a + r.usedMonthly, 0), [licRows])       // costo de las que se usan
 
   // ---- Telefonía ----
   const totalMensual = useMemo(() => lines.reduce((a, l) => a + l.cargo, 0), [lines])
@@ -137,7 +188,7 @@ export default function Gastos() {
     setViewer({ ...d, url: data?.signedUrl })
   }
 
-  const TABS = [['resumen', 'Resumen', 'grid'], ['telefonia', 'Telefonía', 'phone'], ['facturas', 'Facturas', 'file']]
+  const TABS = [['resumen', 'Resumen', 'grid'], ['telefonia', 'Telefonía', 'phone'], ['licencias', 'Licencias', 'shield'], ['facturas', 'Facturas', 'file']]
 
   return (
     <div>
@@ -160,7 +211,44 @@ export default function Gastos() {
               <div className="gk-txt"><div className="gk-num">{fmtMoney(totalFacturas)}</div><div className="gk-lbl">Total en facturas ({docs.length})</div></div></div>
             <div className="gz-kpi"><span className="gk-ico"><Icon n="clock" /></span>
               <div className="gk-txt"><div className="gk-num">{fmtMoney(pendiente)}</div><div className="gk-lbl">Pendiente de pago ({nPendientes})</div></div></div>
+            <div className="gz-kpi gz-clickable" onClick={() => setTab('licencias')} title="Ver detalle de licencias Microsoft 365"><span className="gk-ico"><Icon n="shield" /></span>
+              <div className="gk-txt"><div className="gk-num">{licLoaded ? usd(licMensual) : '—'}</div><div className="gk-lbl">Licencias M365 / mes{!licLoaded ? ' · abrir' : ''}</div></div></div>
           </div>
+        )}
+
+        {tab === 'licencias' && (
+          <>
+            <div className="gz-kpis">
+              <div className="gz-kpi accent"><span className="gk-ico"><Icon n="shield" /></span>
+                <div className="gk-txt"><div className="gk-num">{usd(licMensual)}</div><div className="gk-lbl">Facturado / mes (compradas)</div></div></div>
+              <div className="gz-kpi"><span className="gk-ico"><Icon n="users" /></span>
+                <div className="gk-txt"><div className="gk-num">{usd(licEnUso)}</div><div className="gk-lbl">En uso / mes ({licRows.reduce((a, r) => a + (r.used || 0), 0)} asignadas)</div></div></div>
+              <div className="gz-kpi"><span className="gk-ico"><Icon n="tag" /></span>
+                <div className="gk-txt"><div className="gk-num">{usd(licMensual * 12)}</div><div className="gk-lbl">Estimado anual</div></div></div>
+            </div>
+            <div className="conv gz-card">
+              <div className="gz-head"><Icon n="clipboard" /> Costo por plan <span className="muted" style={{ fontWeight: 400, fontSize: '.8rem' }}>· precio mensual por licencia (lo defines tú)</span></div>
+              {!licLoaded && <p className="muted" style={{ padding: '.6rem .2rem' }}>Cargando licencias…</p>}
+              {licErr && <p style={{ color: 'var(--danger)', padding: '.6rem .2rem' }}>{licErr}</p>}
+              {licLoaded && !licErr && (
+                <div className="table-wrap"><table className="tbl-compact">
+                  <thead><tr><th>Plan</th><th className="tr">Licencias</th><th className="mny-h">Precio / licencia (US$/mes)</th><th className="mny-h">Subtotal / mes</th></tr></thead>
+                  <tbody>{licRows.map((r) => (
+                    <tr key={r.skuId}>
+                      <td><strong>{r.name}</strong></td>
+                      <td className="tr">{r.total}</td>
+                      <td className="mny-cell"><span className="lic-price-in"><span className="mny-s">US$</span><input type="number" min="0" step="0.01" value={licPrices[r.skuPartNumber] || ''} placeholder="0,00" onChange={(e) => setLicPrices((m) => ({ ...m, [r.skuPartNumber]: num(e.target.value) }))} onBlur={(e) => setPrice(r.skuPartNumber, e.target.value)} /></span></td>
+                      <td className="mny-cell"><strong>{usd(r.monthly)}</strong></td>
+                    </tr>
+                  ))}
+                  {licRows.length === 0 && <tr><td colSpan={4} className="muted" style={{ padding: '.8rem' }}>No hay licencias de pago con asientos.</td></tr>}
+                  </tbody>
+                  <tfoot><tr><td><strong>Total / mes</strong></td><td className="tr"><strong>{licRows.reduce((a, r) => a + (r.total || 0), 0)}</strong></td><td></td><td className="mny-cell"><strong>{usd(licMensual)}</strong></td></tr></tfoot>
+                </table></div>
+              )}
+              <p className="muted" style={{ fontSize: '.78rem', margin: '.5rem .2rem 0' }}>El precio por licencia lo ingresas tú (Microsoft no lo entrega por API). El costo mensual = precio × licencias compradas. Los planes gratis/ilimitados no se incluyen.</p>
+            </div>
+          </>
         )}
 
         {tab === 'telefonia' && (
