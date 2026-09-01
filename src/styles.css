@@ -95,9 +95,11 @@ button{font-family:inherit;cursor:pointer}
 .kpi-cat{flex:0 1 auto}
 .kpi-cat-t{font-family:'JetBrains Mono',monospace;font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 .35rem}
 .kpi-cats .kpi-grid.compact{display:flex;flex-wrap:wrap;gap:.45rem;margin:0;width:max-content;max-width:100%}
-.kpi-cats .kpi-grid.compact .kpi{width:104px;flex:none;box-sizing:border-box}
-/* La etiqueta reserva 2 líneas para que todas las tarjetas queden del mismo alto sin hueco extra */
-.kpi-cats .kpi-grid.compact .kpi .lbl{display:block;min-height:2.15em}
+.kpi-cats .kpi-grid.compact .kpi{width:92px;flex:none;box-sizing:border-box;padding:.35rem .45rem;border-width:1px;border-radius:11px}
+.kpi-cats .kpi-grid.compact .kpi .ico{font-size:.82rem}
+.kpi-cats .kpi-grid.compact .kpi .num{font-size:.95rem}
+.kpi-cats .kpi-grid.compact .kpi .lbl{display:block;min-height:2em;font-size:.62rem}
+.kpi-cats .kpi-grid.compact .kpi .chev{font-size:.6rem}
 @media(max-width:900px){.kpi-cats{gap:.7rem 1rem}.kpi-cat{flex:1 1 100%}}
 /* Panel de licencias M365 */
 .lic-summary{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:.8rem 1rem;margin-bottom:.9rem}
@@ -697,8 +699,12 @@ body.light input:not([type=checkbox]):not([type=radio]),body.light select,body.l
 .pass-eye{border:none;background:none;cursor:pointer;padding:0 .1rem;font-size:.9rem;line-height:1;opacity:.7}
 .pass-eye:hover{opacity:1}
 /* Fila separadora por dominio/proveedor en la lista de usuarios */
-.usr-cards tr.grp-row td{background:var(--soft);font-weight:700;font-size:.8rem;letter-spacing:.02em;padding:.4rem .6rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--text)}
-.usr-cards tr.grp-row .grp-ico{margin-right:.35rem}
+.usr-cards tr.grp-row td{background:var(--soft);font-size:.78rem;letter-spacing:.01em;padding:.45rem .7rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--text)}
+.usr-cards tr.grp-row td{display:flex;align-items:center;gap:.45rem}
+.usr-cards tr.grp-row .grp-ico{display:inline-flex;align-items:center;color:var(--muted)}
+.usr-cards tr.grp-row .grp-ico .licon{width:1rem;height:1rem}
+.usr-cards tr.grp-row .grp-lbl{font-weight:700}
+.usr-cards tr.grp-row .grp-count{margin-left:.15rem;font-size:.68rem;font-weight:700;padding:.05rem .45rem;border-radius:999px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
 /* Tarjeta de aviso (categoría/departamento sin asignar) */
 .kpi.kpi-warn{border-color:var(--danger)}
 .kpi.kpi-warn .lbl{color:var(--danger)}

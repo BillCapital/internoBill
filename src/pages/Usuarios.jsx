@@ -615,7 +615,7 @@ export default function Usuarios() {
           {!loading && data.length === 0 && <tr><td colSpan={7} className="muted" style={{ padding: '.8rem' }}>Sin usuarios.</td></tr>}
           {!loading && groups.map(([dom, us]) => (
             <Fragment key={dom}>
-              {groupByDomain && <tr className="grp-row"><td colSpan={7}><span className="grp-ico">{domainIcon(dom)}</span> {domainLabel(dom)} <span className="muted">· {us.length}</span></td></tr>}
+              {groupByDomain && <tr className="grp-row"><td colSpan={7}><span className="grp-ico"><Icon n={domainIcon(dom)} /></span><span className="grp-lbl">{domainLabel(dom)}</span><span className="grp-count">{us.length}</span></td></tr>}
               {us.map((u) => (
                 <tr key={u.id}>
                   <td><div className="row" style={{ justifyContent: 'flex-start', gap: '.5rem' }}>
