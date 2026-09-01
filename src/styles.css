@@ -95,7 +95,7 @@ button{font-family:inherit;cursor:pointer}
 .kpi-cat{flex:0 1 auto}
 .kpi-cat-t{font-family:'JetBrains Mono',monospace;font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 .35rem}
 .kpi-cats .kpi-grid.compact{display:flex;flex-wrap:wrap;gap:.45rem;margin:0;width:max-content;max-width:100%}
-.kpi-cats .kpi-grid.compact .kpi{width:104px;flex:none}
+.kpi-cats .kpi-grid.compact .kpi{width:104px;flex:none;min-height:74px;display:flex;flex-direction:column;justify-content:flex-start;box-sizing:border-box}
 @media(max-width:900px){.kpi-cats{gap:.7rem 1rem}.kpi-cat{flex:1 1 100%}}
 /* Panel de licencias M365 */
 .lic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.7rem}
