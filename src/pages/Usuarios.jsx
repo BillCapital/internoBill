@@ -92,6 +92,7 @@ export default function Usuarios() {
   const [msBusy, setMsBusy] = useState(false)
   const [syncBusy, setSyncBusy] = useState(false)
   const [groupByDomain, setGroupByDomain] = useState(true)
+  const [revealUsers, setRevealUsers] = useState(false)   // la lista arranca cerrada; se muestra al elegir un apartado
   const [msSkus, setMsSkus] = useState([])            // catálogo de licencias del tenant
   const [msLic, setMsLic] = useState(null)            // licencias del usuario en edición
   const [licBusy, setLicBusy] = useState(false)
@@ -491,7 +492,7 @@ export default function Usuarios() {
         <div className="kpi-cat">
           <div className="kpi-cat-t" aria-hidden="true">&nbsp;</div>
           <div className="kpi-grid compact kpi-sm">
-            <button className={`kpi ${!roleFilter && !mgmtFilter && statusFilter === 'active' && !countryFilter && !domainFilter && !missingFilter ? 'active' : ''}`} onClick={() => { setRoleFilter(null); setMgmtFilter(false); setCountryFilter(''); setDomainFilter(''); setStatusFilter('active'); setMissingFilter('') }}>
+            <button className={`kpi ${revealUsers && !roleFilter && !mgmtFilter && statusFilter === 'active' && !countryFilter && !domainFilter && !missingFilter ? 'active' : ''}`} onClick={() => { setRoleFilter(null); setMgmtFilter(false); setCountryFilter(''); setDomainFilter(''); setStatusFilter('active'); setMissingFilter(''); setRevealUsers(true) }}>
               <div className="ico"><Icon n="users" /></div><div className="num">{rows.length}</div><div className="lbl">Todos</div>
             </button>
             <button className={`kpi ${statusFilter === 'disabled' ? 'active' : ''}`} onClick={() => { setStatusFilter(statusFilter === 'disabled' ? 'active' : 'disabled'); setRoleFilter(null); setCountryFilter(''); setDomainFilter(''); setMissingFilter('') }}>
@@ -612,8 +613,12 @@ export default function Usuarios() {
           </th></tr></thead>
         <tbody>
           {loading && <SkeletonTableRows rows={8} cols={7} />}
-          {!loading && data.length === 0 && <tr><td colSpan={7} className="muted" style={{ padding: '.8rem' }}>Sin usuarios.</td></tr>}
-          {!loading && groups.map(([dom, us]) => (
+          {(() => {
+            const showRows = revealUsers || !!(roleFilter || countryFilter || domainFilter || missingFilter || mgmtFilter || deptFilter || q || statusFilter === 'disabled')
+            if (loading) return null
+            if (!showRows) return <tr><td colSpan={7} className="usr-empty"><Icon n="users" /> Elige un apartado de arriba (rol, país, dominio…), toca <strong>Todos</strong> o busca para ver los usuarios.</td></tr>
+            if (data.length === 0) return <tr><td colSpan={7} className="muted" style={{ padding: '.8rem' }}>Sin usuarios que coincidan.</td></tr>
+            return groups.map(([dom, us]) => (
             <Fragment key={dom}>
               {groupByDomain && <tr className="grp-row"><td colSpan={7}><span className="grp-ico"><Icon n={domainIcon(dom)} /></span><span className="grp-lbl">{domainLabel(dom)}</span><span className="grp-count">{us.length}</span></td></tr>}
               {us.map((u) => (
@@ -637,7 +642,8 @@ export default function Usuarios() {
                 </tr>
               ))}
             </Fragment>
-          ))}
+          ))
+          })()}
         </tbody>
       </table></div></div></div>
 
@@ -645,7 +651,7 @@ export default function Usuarios() {
       <div id="lic-panel" className={`section ${licPanelOpen ? 'open' : ''}`} style={{ marginTop: '1rem' }}>
         <button className="sec-head compact" onClick={openLicPanel}>
           <span className="ico"><Icon n="shield" /></span>
-          <span className="t"><strong>Licencias Microsoft 365</strong><br /><span className="muted">Asientos comprados, usados y disponibles · comprar</span></span>
+          <span className="t"><strong>Licencias Microsoft 365</strong><br /><span className="muted">Licencias compradas, usadas y disponibles · comprar</span></span>
           <span className="chev">▾</span>
         </button>
         {licPanelOpen && <div className="sec-body">
@@ -666,7 +672,7 @@ export default function Usuarios() {
               {/* Resumen general + compra (solo licencias de pago) */}
               <div className="lic-summary">
                 <div className="lic-sum-stats">
-                  <div className="lic-stat"><span className="lic-stat-n">{tot}</span><span className="lic-stat-l">Asientos de pago</span></div>
+                  <div className="lic-stat"><span className="lic-stat-n">{tot}</span><span className="lic-stat-l">Licencias de pago</span></div>
                   <div className="lic-stat"><span className="lic-stat-n">{used}</span><span className="lic-stat-l">En uso</span></div>
                   <div className="lic-stat"><span className={`lic-stat-n ${avail <= 0 ? 'danger' : 'ok'}`}>{avail}</span><span className="lic-stat-l">Disponibles</span></div>
                 </div>
@@ -688,7 +694,7 @@ export default function Usuarios() {
                       </div>
                       <div className="lic-bar" title={`${s.used} de ${s.total} usados`}><span className={full ? 'full' : ''} style={{ width: `${pct}%` }} /></div>
                       <div className="lic-meta"><span className="lic-frac">{s.used}<span className="muted"> / {s.total}</span> usados</span><span className="muted">{pct}%</span></div>
-                      <button type="button" className={`lic-buy ${full ? 'is-full' : ''}`} onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')}>{full ? 'Comprar asientos' : 'Agregar asientos'}</button>
+                      <button type="button" className={`lic-buy ${full ? 'is-full' : ''}`} onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')}>{full ? 'Comprar licencias' : 'Agregar licencias'}</button>
                     </div>
                   )
                 })}
@@ -836,7 +842,7 @@ export default function Usuarios() {
                     <button type="button" className="btn-sm btn-lime" disabled={licBusy || !licPick} onClick={() => assignLic(licPick)}>{licBusy ? 'Aplicando…' : 'Asignar'}</button>
                     <button type="button" className="btn-sm" onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')} title="Comprar o agregar asientos en el Centro de administración de Microsoft 365">Comprar en M365</button>
                   </div>
-                  <p className="muted pf-hint">Solo se muestran licencias con unidades disponibles. ¿No queda cupo? Usa <strong>Comprar en M365</strong> para agregar asientos (el pago se hace en el portal de Microsoft), y luego asígnalo aquí.</p>
+                  <p className="muted pf-hint">Solo se muestran licencias con unidades disponibles. ¿No queda cupo? Usa <strong>Comprar en M365</strong> para agregar licencias (el pago se hace en el portal de Microsoft), y luego asígnala aquí.</p>
                 </>)}
               </div>
             )}
