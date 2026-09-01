@@ -95,7 +95,9 @@ button{font-family:inherit;cursor:pointer}
 .kpi-cat{flex:0 1 auto}
 .kpi-cat-t{font-family:'JetBrains Mono',monospace;font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 .35rem}
 .kpi-cats .kpi-grid.compact{display:flex;flex-wrap:wrap;gap:.45rem;margin:0;width:max-content;max-width:100%}
-.kpi-cats .kpi-grid.compact .kpi{width:104px;flex:none;min-height:74px;display:flex;flex-direction:column;justify-content:flex-start;box-sizing:border-box}
+.kpi-cats .kpi-grid.compact .kpi{width:104px;flex:none;box-sizing:border-box}
+/* La etiqueta reserva 2 líneas para que todas las tarjetas queden del mismo alto sin hueco extra */
+.kpi-cats .kpi-grid.compact .kpi .lbl{display:block;min-height:2.15em}
 @media(max-width:900px){.kpi-cats{gap:.7rem 1rem}.kpi-cat{flex:1 1 100%}}
 /* Panel de licencias M365 */
 .lic-summary{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:.8rem 1rem;margin-bottom:.9rem}
