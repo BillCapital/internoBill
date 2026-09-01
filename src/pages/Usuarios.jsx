@@ -135,7 +135,7 @@ export default function Usuarios() {
       supabase.from('roles').select('key,label,permissions,sort').order('sort'),
       supabase.from('audit_log').select('id,actor_name,target_name,detail,created_at').gt('created_at', since).order('created_at', { ascending: false }),
       supabase.from('equipment_sections').select('id,name'),
-      supabase.from('equipment').select('id,name,brand,model,serial_number,condition,user_id,assigned_to_email,section_id'),
+      supabase.from('equipment').select('id,name,brand,model,serial_number,condition,user_id,assigned_to_email,section_id,attributes'),
       supabase.from('peripherals').select('id,name,model,total_qty'),
       supabase.from('peripheral_assignments').select('peripheral_id,user_id,qty'),
     ])
@@ -166,8 +166,8 @@ export default function Usuarios() {
     return compEquip.filter((e) => e.user_id === u.id || (e.assigned_to_email || '').toLowerCase() === em)
   }, [compEquip])
 
-  // Computadores existentes sin asignar (para asignar a la persona)
-  const freeComps = useMemo(() => compEquip.filter((e) => !e.user_id && !((e.assigned_to_email || '').trim())), [compEquip])
+  // Computadores en STOCK (disponibles) para asignar a la persona: sin asignar Y marcados como disponible.
+  const freeComps = useMemo(() => compEquip.filter((e) => !e.user_id && !((e.assigned_to_email || '').trim()) && e.attributes?.disponible === true), [compEquip])
 
   // Al abrir la edición, precargar la cantidad actual; se refresca tras crear
   useEffect(() => { if (edit) setCompTarget(String(compsOf(edit).length)) }, [edit?.id, compEquip])
@@ -301,11 +301,17 @@ export default function Usuarios() {
     try {
       const r = await msUsers('syncFromM365')
       await load()
+      const byDom = r?.byDomain ? Object.entries(r.byDomain).sort((a, b) => b[1] - a[1]).map(([d, n]) => `  · @${d}: ${n}`).join('\n') : ''
+      const extra = [
+        byDom ? `\nDominios en M365 (${r.totalM365} en total):\n${byDom}` : '',
+        r?.guests ? `\nInvitados externos: ${r.guests} (quedan en el directorio SIN acceso a la app)` : '',
+        (r?.skipped?.length) ? `\nSin correo válido, omitidos: ${r.skipped.length}` : '',
+      ].join('')
       if (r?.created) {
         const names = (r.added || []).slice(0, 12).join(', ')
-        alertDialog(`Se agregaron ${r.created} usuario(s) desde Microsoft 365${names ? ':\n' + names : ''}${(r.added || []).length > 12 ? '…' : ''}`)
+        alertDialog(`Se agregaron ${r.created} usuario(s) desde Microsoft 365${names ? ':\n' + names : ''}${(r.added || []).length > 12 ? '…' : ''}${extra}`)
       } else {
-        alertDialog('Todo al día: no había usuarios nuevos en Microsoft 365.')
+        alertDialog(`Todo al día: no había usuarios nuevos en Microsoft 365.${extra}`)
       }
     } catch (e) { alertDialog('No se pudo sincronizar: ' + e.message) } finally { setSyncBusy(false) }
   }
@@ -661,7 +667,7 @@ export default function Usuarios() {
               ) : <p className="muted pf-empty">Sin computadores asignados.</p>}
               <div className="pf-assign">
                 <select value={assignPick} onChange={(e) => setAssignPick(e.target.value)}>
-                  <option value="">Asignar uno existente (sin asignar)…</option>
+                  <option value="">Asignar uno del stock (disponible)…</option>
                   {freeComps.map((c) => <option key={c.id} value={c.id}>{[c.name, c.brand, c.model].filter(Boolean).join(' ') || 'Computador'}{c.serial_number ? ` · ${c.serial_number}` : ''}</option>)}
                 </select>
                 <button type="button" className="btn-sm" disabled={compBusy || !assignPick} onClick={assignExisting}>Asignar</button>
