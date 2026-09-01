@@ -652,16 +652,21 @@ export default function Usuarios() {
           {panelBusy && <p className="muted">Cargando licencias…</p>}
           {!panelBusy && panelSkus && panelSkus.length === 0 && <p className="muted">No se pudieron leer las licencias del tenant.</p>}
           {!panelBusy && panelSkus && panelSkus.length > 0 && (() => {
-            const tot = panelSkus.reduce((a, s) => a + (s.total || 0), 0)
-            const used = panelSkus.reduce((a, s) => a + (s.used || 0), 0)
-            const avail = panelSkus.reduce((a, s) => a + (s.available || 0), 0)
-            const noStock = panelSkus.filter((s) => s.available <= 0).length
-            const sorted = panelSkus.slice().sort((a, b) => (a.available - b.available) || (b.total - a.total))
+            // Ocultar planes vacíos (0 asientos: trials/exploratorios que no importan).
+            // "De pago" = con asientos finitos; se excluyen los gratis/ilimitados del total para que sea real.
+            const isFree = (s) => /gratis/i.test(skuName(s.skuPartNumber)) || (s.total || 0) >= 100000
+            const shown = panelSkus.filter((s) => (s.total || 0) > 0)
+            const paid = shown.filter((s) => !isFree(s))
+            const tot = paid.reduce((a, s) => a + (s.total || 0), 0)
+            const used = paid.reduce((a, s) => a + (s.used || 0), 0)
+            const avail = paid.reduce((a, s) => a + (s.available || 0), 0)
+            const noStock = paid.filter((s) => s.available <= 0).length
+            const sorted = shown.slice().sort((a, b) => (isFree(a) - isFree(b)) || (a.available - b.available) || (b.total - a.total))
             return (<>
-              {/* Resumen general + compra */}
+              {/* Resumen general + compra (solo licencias de pago) */}
               <div className="lic-summary">
                 <div className="lic-sum-stats">
-                  <div className="lic-stat"><span className="lic-stat-n">{tot}</span><span className="lic-stat-l">Asientos comprados</span></div>
+                  <div className="lic-stat"><span className="lic-stat-n">{tot}</span><span className="lic-stat-l">Asientos de pago</span></div>
                   <div className="lic-stat"><span className="lic-stat-n">{used}</span><span className="lic-stat-l">En uso</span></div>
                   <div className="lic-stat"><span className={`lic-stat-n ${avail <= 0 ? 'danger' : 'ok'}`}>{avail}</span><span className="lic-stat-l">Disponibles</span></div>
                 </div>
