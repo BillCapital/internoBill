@@ -465,9 +465,9 @@ export default function Usuarios() {
 
       {loading && <SkeletonKpis n={10} />}
       {!loading && <div className="kpi-cats">
-        {/* Resumen */}
+        {/* Totales (sin encabezado) */}
         <div className="kpi-cat">
-          <div className="kpi-cat-t">Resumen</div>
+          <div className="kpi-cat-t" aria-hidden="true">&nbsp;</div>
           <div className="kpi-grid compact kpi-sm">
             <button className={`kpi ${!roleFilter && !mgmtFilter && statusFilter === 'active' && !countryFilter && !domainFilter && !missingFilter ? 'active' : ''}`} onClick={() => { setRoleFilter(null); setMgmtFilter(false); setCountryFilter(''); setDomainFilter(''); setStatusFilter('active'); setMissingFilter('') }}>
               <div className="ico"><Icon n="users" /></div><div className="num">{rows.length}</div><div className="lbl">Todos</div>
