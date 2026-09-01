@@ -97,6 +97,17 @@ button{font-family:inherit;cursor:pointer}
 .kpi-cats .kpi-grid.compact{display:flex;flex-wrap:wrap;gap:.45rem;margin:0;width:max-content;max-width:100%}
 .kpi-cats .kpi-grid.compact .kpi{width:104px;flex:none}
 @media(max-width:900px){.kpi-cats{gap:.7rem 1rem}.kpi-cat{flex:1 1 100%}}
+/* Panel de licencias M365 */
+.lic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.7rem}
+.lic-card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:.7rem .8rem;display:flex;flex-direction:column;gap:.4rem}
+.lic-card.is-full{border-color:color-mix(in srgb,var(--danger) 45%,var(--line))}
+.lic-name{font-weight:700;font-size:.9rem}
+.lic-nums{font-size:.82rem}
+.lic-nums strong{font-size:1.05rem;color:var(--lime-text)}
+.lic-card.is-full .lic-nums strong{color:var(--danger)}
+.lic-bar{height:6px;border-radius:99px;background:var(--soft);overflow:hidden}
+.lic-bar span{display:block;height:100%;background:var(--lime);border-radius:99px}
+.lic-bar span.full{background:var(--danger)}
 
 /* ===== Perfil — mis equipos asignados ===== */
 .pf-eq-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem}

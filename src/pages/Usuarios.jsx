@@ -95,6 +95,19 @@ export default function Usuarios() {
   const [msSkus, setMsSkus] = useState([])            // catálogo de licencias del tenant
   const [msLic, setMsLic] = useState(null)            // licencias del usuario en edición
   const [licBusy, setLicBusy] = useState(false)
+  const [licPanelOpen, setLicPanelOpen] = useState(false)  // panel general de licencias del tenant
+  const [panelSkus, setPanelSkus] = useState(null)
+  const [panelBusy, setPanelBusy] = useState(false)
+  const M365_SUBS_URL = 'https://admin.microsoft.com/Adminportal/Home#/subscriptions'
+  const openLicPanel = async () => {
+    const willOpen = !licPanelOpen; setLicPanelOpen(willOpen)
+    if (willOpen && !panelSkus) {
+      setPanelBusy(true)
+      try { const r = await msUsers('listSkus'); setPanelSkus(r?.skus || []) }
+      catch (e) { setPanelSkus([]); alertDialog('No se pudieron cargar las licencias: ' + e.message) }
+      finally { setPanelBusy(false) }
+    }
+  }
   const [licPick, setLicPick] = useState('')
   const [compTarget, setCompTarget] = useState('')   // cantidad objetivo de computadores (crea faltantes)
   const [compBusy, setCompBusy] = useState(false)
@@ -619,6 +632,36 @@ export default function Usuarios() {
           ))}
         </tbody>
       </table></div></div></div>
+
+      {/* Licencias Microsoft 365 (compra guiada + estado de asientos) */}
+      <div className={`section ${licPanelOpen ? 'open' : ''}`} style={{ marginTop: '1rem' }}>
+        <button className="sec-head compact" onClick={openLicPanel}>
+          <span className="ico"><Icon n="shield" /></span>
+          <span className="t"><strong>Licencias Microsoft 365</strong><br /><span className="muted">Asientos comprados, usados y disponibles · comprar</span></span>
+          <span className="chev">▾</span>
+        </button>
+        {licPanelOpen && <div className="sec-body">
+          {panelBusy && <p className="muted">Cargando licencias…</p>}
+          {!panelBusy && panelSkus && panelSkus.length === 0 && <p className="muted">No se pudieron leer las licencias del tenant.</p>}
+          {!panelBusy && panelSkus && panelSkus.length > 0 && (<>
+            <div className="lic-grid">
+              {panelSkus.slice().sort((a, b) => b.total - a.total).map((s) => {
+                const disp = s.available
+                const pct = s.total ? Math.min(100, Math.round((s.used / s.total) * 100)) : 0
+                return (
+                  <div className={`lic-card ${disp <= 0 ? 'is-full' : ''}`} key={s.skuId}>
+                    <div className="lic-name">{skuName(s.skuPartNumber)}</div>
+                    <div className="lic-nums"><strong>{disp}</strong> disponible(s) <span className="muted">· {s.used}/{s.total} usados</span></div>
+                    <div className="lic-bar"><span className={disp <= 0 ? 'full' : ''} style={{ width: `${pct}%` }} /></div>
+                    <button type="button" className={`btn-sm ${disp <= 0 ? 'btn-lime' : ''}`} onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')}>{disp <= 0 ? 'Comprar asientos' : 'Agregar asientos'}</button>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="muted pf-hint">El pago se finaliza en el Centro de administración de Microsoft 365 (Microsoft no permite comprar por API). Al terminar, vuelve y asigna la licencia desde la ficha de la persona — el cupo nuevo aparece aquí al reabrir el panel.</p>
+          </>)}
+        </div>}
+      </div>
 
       {/* Registro de cambios (últimas 24h) */}
       <div className={`section ${logOpen ? 'open' : ''}`} style={{ marginTop: '1rem' }}>
