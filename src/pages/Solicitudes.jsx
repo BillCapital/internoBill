@@ -132,7 +132,8 @@ export default function Solicitudes() {
     setLoading(false)
   }, [])
   const loadCat = useCallback(async () => {
-    const { data } = await supabase.from('inventory_items').select('id,name,category,stock,departments,is_active,image_url').eq('is_active', true).order('category').order('name')
+    // orderable=false → productos que existen pero no se piden (loza, equipamiento, bidones vacíos)
+    const { data } = await supabase.from('inventory_items').select('id,name,category,stock,departments,is_active,image_url').eq('is_active', true).eq('orderable', true).order('category').order('name')
     setCatalog(data ?? [])
   }, [])
   useEffect(() => { load() }, [load])

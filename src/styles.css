@@ -1753,6 +1753,20 @@ body.light .att-empty{color:var(--muted);text-align:center}
 .req-tech-tag{display:inline-block;font-size:.7rem;background:rgba(245,158,11,.15);color:#b45309;
   border:1px solid rgba(245,158,11,.4);border-radius:.4rem;padding:0 .35rem;margin-left:.35rem}
 
+/* ==== Insumos que NO se piden (loza, equipamiento, bidones vacíos…) ====
+   Existen en el inventario y se les lleva stock, pero no aparecen en Solicitudes. */
+.noped-tag{display:inline-block;font-size:.7rem;background:color-mix(in srgb,var(--lav) 16%,transparent);
+  color:var(--lav);border:1px solid color-mix(in srgb,var(--lav) 45%,transparent);
+  border-radius:.4rem;padding:0 .35rem;margin-left:.35rem;white-space:nowrap}
+.noped-tag .licon{width:.9rem;height:.9rem;display:inline-block;vertical-align:-.15em}
+.kpi.kpi-noped{border-color:color-mix(in srgb,var(--lav) 40%,var(--line))}
+.kpi.kpi-noped .ico{color:var(--lav)}
+.section.sec-noped{border-color:color-mix(in srgb,var(--lav) 32%,var(--line))}
+.section.sec-noped .sec-head .ico{color:var(--lav)}
+.noped-row{display:flex;align-items:center;gap:.5rem;margin-top:.6rem;padding:.5rem .7rem;border-radius:.5rem;
+  background:color-mix(in srgb,var(--lav) 10%,transparent);
+  border:1px solid color-mix(in srgb,var(--lav) 35%,transparent)}
+
 /* Panel de firmas — vista total de autorizaciones (admin/gestión) */
 .signers-panel{border:1px solid var(--line);border-radius:.6rem;background:var(--soft);margin:.3rem 0 .6rem;overflow:hidden}
 .sp-head{display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;border-bottom:1px solid var(--line)}
