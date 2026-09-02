@@ -7,14 +7,17 @@ import SortControl from '../components/SortControl'
 import { orderDeptTree } from '../lib/depts'
 import { Icon } from '../lib/icons'
 
-const PERMS = [
-  { key: 'manage_orders', label: 'Gestionar solicitudes', desc: 'Aprobar, rechazar y entregar pedidos' },
-  { key: 'manage_rooms', label: 'Gestionar salas', desc: 'Aprobar reservas y editar salas' },
-  { key: 'manage_supplies', label: 'Administración de insumos', desc: 'Stock, catálogo y acceso de insumos' },
-  { key: 'manage_inventory', label: 'Inventario de equipos', desc: 'Equipos y esquemas' },
-  { key: 'manage_users', label: 'Usuarios, roles y departamentos', desc: 'Asignar roles, departamentos y permisos' },
-  { key: 'manage_support', label: 'Atender soporte', desc: 'Gestionar tickets de soporte' },
-  { key: 'full_admin', label: 'Acceso total', desc: 'Administrador — incluye todos los permisos' },
+// Cada apartado tiene dos niveles: ver (entrar y consultar) y gestionar (actuar).
+// Gestionar incluye ver. «Acceso total» incluye todo.
+const MODULES = [
+  { mod: 'orders', label: 'Solicitudes', view: 'Ver todas las solicitudes de la empresa', edit: 'Aprobar, rechazar y entregar pedidos' },
+  { mod: 'rooms', label: 'Salas', view: 'Ver todas las reservas', edit: 'Aprobar reservas y editar salas' },
+  { mod: 'supplies', label: 'Insumos', view: 'Consultar el inventario de insumos', edit: 'Editar stock, catálogo y departamentos' },
+  { mod: 'inventory', label: 'Inventario de equipos', view: 'Consultar equipos y esquemas', edit: 'Crear, asignar y dar de baja equipos' },
+  { mod: 'users', label: 'Usuarios', view: 'Consultar el directorio de personas', edit: 'Editar personas, roles y departamentos' },
+  { mod: 'lists', label: 'Listas de correo', view: 'Consultar las listas y sus miembros', edit: 'Crear listas y agregar o quitar miembros' },
+  { mod: 'expenses', label: 'Gastos', view: 'Consultar gastos, licencias y facturas', edit: 'Editar precios, documentos y facturas' },
+  { mod: 'support', label: 'Soporte', view: 'Ver todos los tickets', edit: 'Atender y cerrar tickets' },
 ]
 const emptyRole = { key: '', label: '', permissions: {}, sort: 0, is_system: false }
 const NONE = '__sin_depto__'
@@ -69,10 +72,23 @@ export default function Roles() {
     if (p[k]) delete p[k]; else p[k] = true
     return { ...e, permissions: p }
   })
+  // Nivel de un módulo dentro de un rol: 'none' | 'view' | 'manage'
+  const levelOf = (p, mod) => (p?.full_admin || p?.[`manage_${mod}`] ? 'manage' : p?.[`view_${mod}`] ? 'view' : 'none')
+  const setLevel = (mod, lvl) => setEdit((e) => {
+    const p = { ...(e.permissions || {}) }
+    delete p[`view_${mod}`]; delete p[`manage_${mod}`]
+    if (lvl === 'view') p[`view_${mod}`] = true
+    if (lvl === 'manage') p[`manage_${mod}`] = true
+    return { ...e, permissions: p }
+  })
   const permSummary = (p) => {
     if (p.full_admin) return 'Acceso total'
-    const on = PERMS.filter((x) => x.key !== 'full_admin' && p[x.key]).map((x) => x.label)
-    return on.length ? on.join(' · ') : 'Sin permisos especiales'
+    const gest = MODULES.filter((m) => p[`manage_${m.mod}`]).map((m) => m.label)
+    const ver = MODULES.filter((m) => !p[`manage_${m.mod}`] && p[`view_${m.mod}`]).map((m) => m.label)
+    const parts = []
+    if (gest.length) parts.push(`Gestiona: ${gest.join(', ')}`)
+    if (ver.length) parts.push(`Solo ve: ${ver.join(', ')}`)
+    return parts.length ? parts.join(' · ') : 'Sin permisos especiales'
   }
 
   // ====== DEPARTAMENTOS ======
@@ -363,21 +379,37 @@ export default function Roles() {
             <input value={edit.label} onChange={(e) => setEdit({ ...edit, label: e.target.value })} placeholder="Ej: Soporte TI" disabled={edit.key === 'admin'} />
             {edit.key && <p className="muted" style={{ margin: '.3rem 0 0' }}>Identificador: <code>{edit.key}</code>{edit.is_system ? ' · rol del sistema (no se puede eliminar)' : ''}</p>}
 
-            <h4 style={{ margin: '1rem 0 .3rem' }}>Permisos</h4>
-            <div className="perm-list">
-              {PERMS.map((pm) => {
-                const checked = pm.key === 'full_admin' ? (edit.permissions?.full_admin === true) : (edit.permissions?.full_admin === true || edit.permissions?.[pm.key] === true)
-                const locked = edit.key === 'admin' && pm.key === 'full_admin'
-                const disabled = (edit.permissions?.full_admin === true && pm.key !== 'full_admin') || locked
+            <h4 style={{ margin: '1rem 0 .2rem' }}>Permisos por apartado</h4>
+            <p className="muted perm-help">Para cada apartado elige qué puede hacer este rol. <strong>Ver</strong> entra y consulta, sin botones de editar ni aprobar. <strong>Gestionar</strong> incluye ver.</p>
+
+            <label className={`perm-row perm-full ${edit.key === 'admin' ? 'off' : ''}`}>
+              <input type="checkbox" checked={edit.permissions?.full_admin === true} disabled={edit.key === 'admin'} onChange={() => togglePerm('full_admin')} />
+              <span><strong>Acceso total</strong><br /><span className="muted">Administrador — abre todos los apartados y todas las acciones.</span></span>
+            </label>
+
+            <div className={`perm-mods ${edit.permissions?.full_admin ? 'is-off' : ''}`}>
+              {MODULES.map((m) => {
+                const lvl = levelOf(edit.permissions, m.mod)
+                const off = edit.permissions?.full_admin === true
                 return (
-                  <label key={pm.key} className={`perm-row ${disabled ? 'off' : ''}`}>
-                    <input type="checkbox" checked={checked} disabled={disabled} onChange={() => togglePerm(pm.key)} />
-                    <span><strong>{pm.label}</strong><br /><span className="muted">{pm.desc}</span></span>
-                  </label>
+                  <div className="perm-mod" key={m.mod}>
+                    <div className="perm-mod-t">
+                      <strong>{m.label}</strong>
+                      <span className="muted">{lvl === 'manage' ? m.edit : lvl === 'view' ? m.view : 'No aparece en el menú.'}</span>
+                    </div>
+                    <div className="perm-seg" role="group" aria-label={m.label}>
+                      {[['none', 'Sin acceso'], ['view', 'Ver'], ['manage', 'Gestionar']].map(([v, t]) => (
+                        <button key={v} type="button" disabled={off}
+                          className={`perm-seg-b ${lvl === v ? 'on' : ''} ${v === 'manage' ? 'is-manage' : ''}`}
+                          onClick={() => setLevel(m.mod, v)}>{t}</button>
+                      ))}
+                    </div>
+                  </div>
                 )
               })}
             </div>
-            {edit.permissions?.full_admin && <p className="muted" style={{ marginTop: '.4rem' }}>«Acceso total» incluye todos los permisos automáticamente.</p>}
+            {edit.permissions?.full_admin && <p className="muted" style={{ marginTop: '.4rem' }}>Con «Acceso total» los apartados de arriba quedan todos en Gestionar.</p>}
+            <p className="muted perm-help">Los roles y permisos solo los edita el Administrador. Todos los usuarios, sin permiso alguno, ven Inicio, Salas, Solicitudes, Manuales, Soporte y su Perfil.</p>
 
             <div className="modal-actions"><button className="btn" onClick={() => setEdit(null)}>Cancelar</button><button className="btn btn-primary" onClick={save}>Guardar rol</button></div>
           </div>

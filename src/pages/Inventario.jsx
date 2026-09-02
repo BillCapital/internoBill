@@ -26,6 +26,7 @@ const emptyEquip = (section_id) => ({ name: '', brand: '', model: '', serial_num
 export default function Inventario() {
   const nav = useNavigate()
   const { canManageInventory, isAdmin, profile } = useAuth()
+  const ro = !canManageInventory   // solo lectura: consulta equipos pero no los edita
   const [country, setCountry] = useState('Chile')      // país (sector) seleccionado
   const countryInit = useRef(false)
   useEffect(() => { if (profile && !countryInit.current) { countryInit.current = true; if (profile.country) setCountry(profile.country) } }, [profile])
@@ -118,7 +119,7 @@ export default function Inventario() {
   }, [usersByEmail, usersById])
   // Solo el rol admin puede recorrer los 3 países; el resto queda fijado a su propio país
   const myCountry = profile?.country || 'Chile'
-  const fixedCountry = !isAdmin
+  const fixedCountry = !(isAdmin || canManageInventory)
   const effCountry = fixedCountry ? myCountry : country
   // Equipos del país seleccionado (base de todo lo que se muestra abajo)
   const fItems = useMemo(() => items.filter((e) => countryOf(e) === effCountry), [items, effCountry, countryOf])
@@ -402,6 +403,8 @@ export default function Inventario() {
         </div>
       </div></div>
 
+      {ro && <div className="ro-note"><Icon n="lock" /> Acceso de solo lectura: puedes consultar los equipos, pero no editarlos.</div>}
+
       {/* ==== Sector por país ==== */}
       <div className="country-tabs">
         {COUNTRIES.map(([c, flag]) => {
@@ -543,7 +546,7 @@ export default function Inventario() {
             <h3>Tipos de equipo</h3>
             <p className="muted" style={{ marginTop: 0 }}>Un “tipo” (Computadores, Impresoras, Celulares…) define qué datos se piden al registrar un equipo. Todos incluyen marca, modelo, serie, ubicación y estado; aquí puedes agregar datos extra propios de cada tipo.</p>
             <div style={{ margin: '.4rem 0 .6rem' }}>
-              <button className="btn btn-lime btn-sm" onClick={() => openSchema(null)}>＋ Nuevo tipo de equipo</button>
+              {!ro && <button className="btn btn-lime btn-sm" onClick={() => openSchema(null)}>＋ Nuevo tipo de equipo</button>}
             </div>
             <div className="table-wrap"><table className="tbl-compact tipos-table">
               <thead><tr><th>Tipo</th><th>Se asigna a</th><th>Datos extra</th><th></th></tr></thead>
@@ -556,7 +559,7 @@ export default function Inventario() {
                     <td className="actions">
                       <button className="btn-sm" onClick={() => openSchema(s)}>Editar</button>{' '}
                       <button className="btn-sm" onClick={() => dupSchema(s)}>Duplicar</button>{' '}
-                      <button className="btn-sm btn-danger" onClick={() => delSchema(s)}>Eliminar</button>
+                      {!ro && <button className="btn-sm btn-danger" onClick={() => delSchema(s)}>Eliminar</button>}
                     </td>
                   </tr>
                 ))}
@@ -642,7 +645,7 @@ export default function Inventario() {
                       <td className="actions">
                         <button className="btn-sm btn-lime" onClick={() => setDisponible(e, true)}>Marcar disponible</button>{' '}
                         <button className="btn-sm" onClick={() => nav(`/equipo/${e.id}`)}>Ver / Editar</button>{' '}
-                        <button className="btn-sm btn-danger" onClick={() => delEquip(e)}>Eliminar</button>
+                        {!ro && <button className="btn-sm btn-danger" onClick={() => delEquip(e)}>Eliminar</button>}
                       </td>
                     </tr>
                   ))}
@@ -782,7 +785,7 @@ export default function Inventario() {
       {view === 'perif' && (
         <div>
           <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.7rem' }}>
-            <button className="btn btn-lime btn-sm" onClick={() => setPeriphForm({ name: '', model: '', buy_link: '', total_qty: 0 })}>＋ Agregar periférico</button>
+            {!ro && <button className="btn btn-lime btn-sm" onClick={() => setPeriphForm({ name: '', model: '', buy_link: '', total_qty: 0 })}>＋ Agregar periférico</button>}
             <span className="muted" style={{ fontSize: '.82rem' }}>Crea un periférico con su cantidad y asígnalo por unidades a cada usuario.</span>
           </div>
           {periphs.length === 0 && <p className="muted">Aún no hay periféricos. Crea el primero con "Agregar periférico".</p>}
@@ -804,7 +807,7 @@ export default function Inventario() {
                   <div className="row" style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem', alignItems: 'center' }}>
                     {p.buy_link ? <a className="btn-sm" href={p.buy_link} target="_blank" rel="noreferrer"><Icon n="link" /> Link de compra</a> : null}
                     <button className="btn-sm" onClick={() => setPeriphForm({ ...p })}>Editar</button>
-                    <button className="btn-sm btn-danger" onClick={() => delPeriph(p)}>Eliminar</button>
+                    {!ro && <button className="btn-sm btn-danger" onClick={() => delPeriph(p)}>Eliminar</button>}
                   </div>
                   {/* Asignar a un usuario */}
                   <div className="row" style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '.6rem' }}>
@@ -917,7 +920,7 @@ export default function Inventario() {
                           {isPhones && (() => { const a = e.attributes?.activa || 'Activa'; const inact = a.toLowerCase().includes('inactiv'); return <td><span className={`badge ${inact ? 's-rejected' : 's-approved'}`}>{a}</span></td> })()}
                           <td className="actions">
                             <button className="btn-sm" onClick={() => nav(`/equipo/${e.id}`)}>Ver / Editar</button>{' '}
-                            <button className="btn-sm btn-danger" onClick={() => delEquip(e)}>Eliminar</button>
+                            {!ro && <button className="btn-sm btn-danger" onClick={() => delEquip(e)}>Eliminar</button>}
                           </td>
                         </tr>
                       ))}

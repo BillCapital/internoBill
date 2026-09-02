@@ -15,13 +15,14 @@ const emptyItem = { name: '', category: '', category_id: '', stock: 0, descripti
 const NOPED = 'No se piden'
 
 export default function Insumos() {
-  const { isAdmin, profile } = useAuth()
+  const { isAdmin, profile, canManageSupplies } = useAuth()
+  const ro = !canManageSupplies   // solo lectura: puede ver el apartado pero no editarlo
   const [items, setItems] = useState([])
   const [country, setCountry] = useState('Chile')      // país (sector) seleccionado
   const countryInit = useRef(false)
   useEffect(() => { if (profile && !countryInit.current) { countryInit.current = true; if (profile.country) setCountry(profile.country) } }, [profile])
   const myCountry = profile?.country || 'Chile'
-  const fixedCountry = !isAdmin
+  const fixedCountry = !(isAdmin || canManageSupplies)
   const effCountry = fixedCountry ? myCountry : country
   const [DEPTS, setDEPTS] = useState(DEFAULT_DEPTS)
   useEffect(() => { loadRootDeptNames().then(setDEPTS) }, [])
@@ -128,9 +129,11 @@ export default function Insumos() {
   return (
     <div>
       <div className="page-head"><div className="row">
-        <div><h2>Inventario de insumos</h2><p className="muted">Stock disponible. Edita cantidades, agrega o da de baja insumos.</p></div>
-        <button className="btn btn-lime" onClick={() => setEdit({ ...emptyItem, country: effCountry })}>＋ Nuevo insumo</button>
+        <div><h2>Inventario de insumos</h2><p className="muted">{ro ? 'Stock disponible de la empresa.' : 'Stock disponible. Edita cantidades, agrega o da de baja insumos.'}</p></div>
+        {!ro && <button className="btn btn-lime" onClick={() => setEdit({ ...emptyItem, country: effCountry })}>＋ Nuevo insumo</button>}
       </div></div>
+
+      {ro && <div className="ro-note"><Icon n="lock" /> Tienes acceso de solo lectura a este apartado: puedes consultar el stock, pero no editarlo.</div>}
 
       {/* ==== Sector por país ==== */}
       <div className="country-tabs">
@@ -184,7 +187,7 @@ export default function Insumos() {
             </button>
             {isOpen && (
               <div className="sec-body">
-                <div className="ins-tools">
+                {!ro && <div className="ins-tools">
                   {noped
                     ? <span className="ins-hint"><Icon n="lock" /> Se les lleva el stock, pero no aparecen en Solicitudes.</span>
                     : <button className="btn-sm" onClick={() => openDeptEdit(arr, `toda la carpeta "${g}" (${arr.length})`)}><Icon n="building" /> Departamentos a toda la carpeta</button>}
@@ -202,19 +205,19 @@ export default function Insumos() {
                         <button className="btn-sm ins-selclear" onClick={() => setSel((s) => { const n = new Set(s); arr.forEach((i) => n.delete(i.id)); return n })}>Limpiar</button>
                       </div>
                     )}
-                </div>
+                </div>}
                 <div className="table-wrap"><table className="ins-table inv-table">
-                <colgroup><col className="c-chk" /><col className="c-name" /><col className="c-dept" /><col className="c-stock" /><col className="c-act" /></colgroup>
+                <colgroup>{!ro && <col className="c-chk" />}<col className="c-name" /><col className="c-dept" /><col className="c-stock" /><col className="c-act" /></colgroup>
                 <thead><tr>
-                  <th><input type="checkbox" checked={allSel} onChange={() => setSel((s) => { const n = new Set(s); if (allSel) arr.forEach((i) => n.delete(i.id)); else arr.forEach((i) => n.add(i.id)); return n })} /></th>
-                  <th>Insumo</th><th>{noped ? 'Categoría' : 'Departamentos'}</th><th>Stock</th><th aria-label="Acciones"></th></tr></thead>
+                  {!ro && <th><input type="checkbox" checked={allSel} onChange={() => setSel((s) => { const n = new Set(s); if (allSel) arr.forEach((i) => n.delete(i.id)); else arr.forEach((i) => n.add(i.id)); return n })} /></th>}
+                  <th>Insumo</th><th>{noped ? 'Categoría' : 'Departamentos'}</th><th>Stock</th>{!ro && <th aria-label="Acciones"></th>}</tr></thead>
                 <tbody>
                   {arr.map((i) => {
                     const dirty = String(stockVals[i.id] ?? '') !== String(i.stock)
                     const cur = Number(stockVals[i.id]) || 0
                     return (
                     <tr key={i.id} className={sel.has(i.id) ? 'row-sel' : ''}>
-                      <td><input type="checkbox" checked={sel.has(i.id)} onChange={() => toggleSel(i.id)} /></td>
+                      {!ro && <td><input type="checkbox" checked={sel.has(i.id)} onChange={() => toggleSel(i.id)} /></td>}
                       <td><div className="ins-cell">
                         {i.image_url
                           ? <img className="ins-thumb" src={i.image_url} alt="" loading="lazy" decoding="async" onClick={() => viewImage(i.image_url)} />
@@ -236,13 +239,15 @@ export default function Insumos() {
                       </div></td>
                       <td><div className="stock-cell">
                         <span className={`stock-dot ${cur === 0 ? 'zero' : cur <= 5 ? 'low' : 'ok'}`} />
-                        <input type="number" min="0" className="stock-in" value={stockVals[i.id] ?? ''} onChange={(e) => setStockVals((v) => ({ ...v, [i.id]: e.target.value }))} />
-                        {dirty && <button className="btn-sm btn-lime" onClick={() => saveStock(i.id)}>Guardar</button>}
+                        {ro
+                          ? <span className="stock-ro">{i.stock}</span>
+                          : <><input type="number" min="0" className="stock-in" value={stockVals[i.id] ?? ''} onChange={(e) => setStockVals((v) => ({ ...v, [i.id]: e.target.value }))} />
+                            {dirty && <button className="btn-sm btn-lime" onClick={() => saveStock(i.id)}>Guardar</button>}</>}
                       </div></td>
-                      <td className="actions">
+                      {!ro && <td className="actions">
                         <button className="icon-btn" title="Editar" onClick={() => setEdit({ ...emptyItem, ...i, category_id: i.category_id || '', departments: i.departments || [] })}><Icon n="edit" /></button>
                         <button className="icon-btn danger" title="Eliminar" onClick={() => delItem(i)}><Icon n="trash" /></button>
-                      </td>
+                      </td>}
                     </tr>
                     )
                   })}

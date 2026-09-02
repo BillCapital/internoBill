@@ -37,7 +37,8 @@ const TOP_ICONS = {
 const ago = (iso) => { const s = (Date.now() - new Date(iso)) / 1000; if (s < 60) return 'recién'; if (s < 3600) return `hace ${Math.floor(s / 60)} min`; if (s < 86400) return `hace ${Math.floor(s / 3600)} h`; return `hace ${Math.floor(s / 86400)} d` }
 
 export default function Layout() {
-  const { user, profile, role, roleLabel, isAdmin, canManageOrders, canManageRooms, canManageSupplies, canManageInventory, canManageUsers, signOut } = useAuth()
+  const { user, profile, role, roleLabel, isAdmin, canManageOrders, canManageRooms, canManageSupplies, canManageInventory, canManageUsers,
+    canViewSupplies, canViewInventory, canViewUsers, canViewLists, canViewExpenses, signOut } = useAuth()
   const nav = useNavigate()
   // Barra lateral abierta por defecto en escritorio; colapsada en móvil.
   const [collapsed, setCollapsed] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 760 : false))
@@ -108,13 +109,14 @@ export default function Layout() {
     { to: '/manuales', icon: 'book', label: 'Manuales' },
     { to: '/soporte', icon: 'chat', label: 'Soporte' },
   ]
+  // Basta con poder VER el apartado para que salga en el menú
   const adminMenu = [
-    ...(canManageSupplies ? [{ to: '/insumos', icon: 'inbox', label: 'Insumos' }] : []),
-    ...(canManageInventory ? [{ to: '/inventario', icon: 'grid', label: 'Inventario' }] : []),
-    ...(canManageUsers ? [{ to: '/usuarios', icon: 'users', label: 'Usuarios' }] : []),
-    ...(canManageUsers ? [{ to: '/listas', icon: 'mail', label: 'Listas' }] : []),
-    ...(canManageUsers ? [{ to: '/roles', icon: 'lock', label: 'Accesos' }] : []),
-    ...(isAdmin ? [{ to: '/gastos', icon: 'gastos', label: 'Gastos' }] : []),
+    ...(canViewSupplies ? [{ to: '/insumos', icon: 'inbox', label: 'Insumos' }] : []),
+    ...(canViewInventory ? [{ to: '/inventario', icon: 'grid', label: 'Inventario' }] : []),
+    ...(canViewUsers ? [{ to: '/usuarios', icon: 'users', label: 'Usuarios' }] : []),
+    ...(canViewLists ? [{ to: '/listas', icon: 'mail', label: 'Listas' }] : []),
+    ...(isAdmin ? [{ to: '/roles', icon: 'lock', label: 'Accesos' }] : []),
+    ...(canViewExpenses ? [{ to: '/gastos', icon: 'gastos', label: 'Gastos' }] : []),
   ]
   const closeIfMobile = () => { if (window.innerWidth <= 760) setCollapsed(true) }
   const MenuLink = (m) => (

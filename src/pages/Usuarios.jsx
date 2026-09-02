@@ -59,7 +59,8 @@ async function msUsers(op, payload = {}) {
 }
 
 export default function Usuarios() {
-  const { user, refreshProfile, isSuper } = useAuth()
+  const { user, refreshProfile, isSuper, canManageUsers } = useAuth()
+  const ro = !canManageUsers   // solo lectura: consulta el directorio pero no lo edita
   const nav = useNavigate()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -480,11 +481,13 @@ export default function Usuarios() {
             { label: 'Computadores', value: (u) => compCount[u.id] || 0 },
             { label: 'Estado', value: (u) => u.active === false ? 'Deshabilitado' : 'Activo' },
           ], data)} title="Descarga la lista visible (respeta filtros) a Excel/CSV"><Icon n="download" /> Exportar</button>
-          <button className="btn" disabled={syncBusy} onClick={syncM365} title="Trae de Microsoft 365 los usuarios que aún no están en la app">{syncBusy ? 'Sincronizando…' : <><Icon n="refresh" /> Sincronizar M365</>}</button>
+          {!ro && <button className="btn" disabled={syncBusy} onClick={syncM365} title="Trae de Microsoft 365 los usuarios que aún no están en la app">{syncBusy ? 'Sincronizando…' : <><Icon n="refresh" /> Sincronizar M365</>}</button>}
           <button className="btn" onClick={goToLicenses} title="Estado de asientos de licencias y comprar más"><Icon n="shield" /> Licencias</button>
-          <button className="btn btn-lime" onClick={() => setNewUser({ displayName: '', upnLocal: '', domain: 'billcapital.com', upnEdited: false, password: genPwd(), showPwd: true, jobTitle: '', department: '', phone: '', country: 'Chile', role: 'user', appAccess: true, forceChange: true })}>＋ Crear usuario (M365)</button>
+          {!ro && <button className="btn btn-lime" onClick={() => setNewUser({ displayName: '', upnLocal: '', domain: 'billcapital.com', upnEdited: false, password: genPwd(), showPwd: true, jobTitle: '', department: '', phone: '', country: 'Chile', role: 'user', appAccess: true, forceChange: true })}>＋ Crear usuario (M365)</button>}
         </div>
       </div></div>
+
+      {ro && <div className="ro-note"><Icon n="lock" /> Acceso de solo lectura: puedes consultar el directorio, pero no editar personas ni roles.</div>}
 
       {loading && <SkeletonKpis n={10} />}
       {!loading && <div className="kpi-cats">
@@ -632,7 +635,7 @@ export default function Usuarios() {
                   <td><span className="badge">{roleLabel[u.role] || (isSuper ? u.role : 'Administrador')}</span></td>
                   <td>{compCount[u.id] ? <span className="badge comp-badge"><span className="emo"><Icon n="monitor" /></span><span className="comp-n">{compCount[u.id]}</span></span> : <span className="muted comp-badge"><span className="emo"><Icon n="monitor" /></span><span className="comp-n">0</span></span>}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{u.last_sign_in_at ? fmt(u.last_sign_in_at) : <span className="muted">Nunca</span>}</td>
-                  <td className="actions">{(roleLabel[u.role] || isSuper) ? <>
+                  <td className="actions">{ro ? <span className="muted">—</span> : (roleLabel[u.role] || isSuper) ? <>
                     <button className="btn-sm" onClick={() => setEdit({ ...u, full_name: u.full_name || '', phone: u.phone || '', avatar_url: u.avatar_url || '', _avatar0: u.avatar_url || '', admin_notes: u.admin_notes || '' })}>Editar</button>{' '}
                     {u.id !== user?.id && (u.active === false
                       ? <button className="btn-sm btn-lime" onClick={() => setUserActive(u, true)}>Reactivar</button>

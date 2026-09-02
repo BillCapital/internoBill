@@ -25,12 +25,9 @@ function Protected({ children, need }) {
   const { user, loading } = auth
   if (loading) return <div className="page-loader">Cargando…</div>
   if (!user) return <Navigate to="/login" replace />
-  const map = {
-    supplies: auth.canManageSupplies, inventory: auth.canManageInventory,
-    users: auth.canManageUsers, orders: auth.canManageOrders, rooms: auth.canManageRooms,
-    admin: auth.isAdmin,
-  }
-  if (need && !map[need]) return <Navigate to="/" replace />
+  // `need` es el módulo: basta con poder VERLO para entrar. Dentro de cada
+  // página, canEdit(módulo) decide si además puede actuar. «roles» es del admin.
+  if (need === 'roles' ? !auth.isAdmin : (need && !auth.canView(need))) return <Navigate to="/" replace />
   return children
 }
 
@@ -51,10 +48,10 @@ export default function App() {
           <Route path="inventario" element={<Protected need="inventory"><Inventario /></Protected>} />
           <Route path="equipo/:id" element={<Protected need="inventory"><EquipoDetalle /></Protected>} />
           <Route path="usuarios" element={<Protected need="users"><Usuarios /></Protected>} />
-          <Route path="listas" element={<Protected need="users"><Listas /></Protected>} />
-          <Route path="roles" element={<Protected need="users"><Roles /></Protected>} />
+          <Route path="listas" element={<Protected need="lists"><Listas /></Protected>} />
+          <Route path="roles" element={<Protected need="roles"><Roles /></Protected>} />
           <Route path="perfil" element={<Perfil />} />
-          <Route path="gastos" element={<Protected need="admin"><Gastos /></Protected>} />
+          <Route path="gastos" element={<Protected need="expenses"><Gastos /></Protected>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

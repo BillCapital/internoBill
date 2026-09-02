@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { confirmDialog, alertDialog } from '../lib/ui'
 import { Icon } from '../lib/icons'
+import { useAuth } from '../context/AuthContext'
 
 // Llama a la función de listas/grupos de Microsoft 365 (ms-groups)
 async function msGroups(op, payload = {}) {
@@ -24,6 +25,8 @@ const KIND = {
 const norm = (s) => (s || '').toLowerCase()
 
 export default function Listas() {
+  const { canManageLists } = useAuth()
+  const ro = !canManageLists   // solo lectura: consulta las listas pero no las modifica
   const [groups, setGroups] = useState(null)
   const [users, setUsers] = useState(null)   // se carga bajo demanda al abrir "Agregar persona"
   const [sel, setSel] = useState(null)
@@ -108,10 +111,12 @@ export default function Listas() {
           <p className="muted">Grupos y listas de Microsoft 365. Agrega o quita personas, crea o elimina listas.</p></div>
         <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
           <button className={`btn ${gloss ? 'on' : ''}`} onClick={() => setGloss((v) => !v)}><Icon n="info" /> Glosario</button>
-          <button className={`btn ${syncing ? 'is-sync' : ''}`} onClick={sync} disabled={syncing}><Icon n="refresh" /> {syncing ? 'Sincronizando…' : 'Sincronizar'}</button>
-          <button className="btn btn-lime" onClick={() => setNw({ name: '', nick: '', desc: '', busy: false })}><Icon n="plus" /> Nueva lista</button>
+          {!ro && <button className={`btn ${syncing ? 'is-sync' : ''}`} onClick={sync} disabled={syncing}><Icon n="refresh" /> {syncing ? 'Sincronizando…' : 'Sincronizar'}</button>}
+          {!ro && <button className="btn btn-lime" onClick={() => setNw({ name: '', nick: '', desc: '', busy: false })}><Icon n="plus" /> Nueva lista</button>}
         </div>
       </div></div>
+
+      {ro && <div className="ro-note"><Icon n="lock" /> Acceso de solo lectura: puedes consultar las listas y sus miembros, pero no modificarlas.</div>}
 
       {err && <div className="conv" style={{ padding: '1rem', marginBottom: '1rem', color: 'var(--danger)' }}><Icon n="ban" /> {err}</div>}
 
@@ -157,12 +162,12 @@ export default function Listas() {
             <div className="dl-detail-head">
               <div><h3 style={{ margin: 0 }}>{sel.displayName}</h3>
                 <span className="muted" style={{ fontSize: '.82rem' }}>{sel.mail || '—'} · {(KIND[sel.kind] || KIND.distribution).label}</span></div>
-              <button className="btn-sm btn-danger" onClick={() => delGroup(sel)}><Icon n="trash" /> Eliminar lista</button>
+              {!ro && <button className="btn-sm btn-danger" onClick={() => delGroup(sel)}><Icon n="trash" /> Eliminar lista</button>}
             </div>
 
             <div className="dl-members-head">
               <span className="th-eyebrow">Miembros {members ? `· ${members.length}` : ''}</span>
-              <button className="btn-sm btn-lime" onClick={() => setAddOpen((v) => { const nv = !v; if (nv) ensureUsers(); return nv })}><Icon n="plus" /> Agregar persona</button>
+              {!ro && <button className="btn-sm btn-lime" onClick={() => setAddOpen((v) => { const nv = !v; if (nv) ensureUsers(); return nv })}><Icon n="plus" /> Agregar persona</button>}
             </div>
 
             {addOpen && (
@@ -187,7 +192,7 @@ export default function Listas() {
                   {members.map((m) => (
                     <div className="dl-member" key={m.id}>
                       <span className="dl-info"><strong>{m.displayName}</strong><span className="dl-mail">{m.mail}</span></span>
-                      <button className="dl-rm" title="Quitar" disabled={busy} onClick={() => removeMember(m)}><Icon n="close" /></button>
+                      {!ro && <button className="dl-rm" title="Quitar" disabled={busy} onClick={() => removeMember(m)}><Icon n="close" /></button>}
                     </div>
                   ))}
                 </div>}

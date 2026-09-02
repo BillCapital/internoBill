@@ -6,6 +6,7 @@ import { rootDeptOf, loadDepts } from '../lib/depts'
 import { confirmDialog, alertDialog } from '../lib/ui'
 import { Icon } from '../lib/icons'
 import { SkeletonKpis } from '../components/Skeleton'
+import { useAuth } from '../context/AuthContext'
 
 const BUCKET = 'facturas'
 const CATS = ['Telefonía', 'Equipos', 'Software', 'Servicios', 'Arriendo', 'Insumos', 'Otros']
@@ -47,6 +48,8 @@ async function msUsers(op, payload = {}) {
 }
 
 export default function Gastos() {
+  const { canManageExpenses } = useAuth()
+  const ro = !canManageExpenses   // solo lectura: consulta gastos pero no los edita
   const [tab, setTab] = useState('resumen')
   // ---- Licencias M365 ----
   const [licSkus, setLicSkus] = useState(null)
@@ -196,6 +199,8 @@ export default function Gastos() {
         <div><h2>Gastos</h2><p className="muted">Cargos recurrentes, compras y ventas de la empresa, con sus facturas.</p></div>
       </div></div>
 
+      {ro && <div className="ro-note"><Icon n="lock" /> Acceso de solo lectura: puedes consultar los gastos, pero no editar precios, facturas ni estados.</div>}
+
       <div className="seg" style={{ marginBottom: '1rem' }}>
         {TABS.map(([k, lbl, ic]) => (
           <button key={k} className={`seg-btn ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}><Icon n={ic} /> {lbl}</button>
@@ -237,7 +242,9 @@ export default function Gastos() {
                     <tr key={r.skuId}>
                       <td><strong>{r.name}</strong></td>
                       <td className="tr">{r.total}</td>
-                      <td className="mny-cell"><span className="lic-price-in"><span className="mny-s">US$</span><input type="number" min="0" step="0.01" value={licPrices[r.skuPartNumber] || ''} placeholder="0,00" onChange={(e) => setLicPrices((m) => ({ ...m, [r.skuPartNumber]: num(e.target.value) }))} onBlur={(e) => setPrice(r.skuPartNumber, e.target.value)} /></span></td>
+                      <td className="mny-cell">{ro
+                        ? <span className="mny"><span className="mny-s">US$</span><span className="mny-n">{(Number(licPrices[r.skuPartNumber]) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>
+                        : <span className="lic-price-in"><span className="mny-s">US$</span><input type="number" min="0" step="0.01" value={licPrices[r.skuPartNumber] || ''} placeholder="0,00" onChange={(e) => setLicPrices((m) => ({ ...m, [r.skuPartNumber]: num(e.target.value) }))} onBlur={(e) => setPrice(r.skuPartNumber, e.target.value)} /></span>}</td>
                       <td className="mny-cell"><strong>{usd(r.monthly)}</strong></td>
                     </tr>
                   ))}
@@ -285,7 +292,7 @@ export default function Gastos() {
         {tab === 'facturas' && (
           <>
             <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.8rem' }}>
-              <button className="btn btn-lime" onClick={startForm}><Icon n="plus" /> Nueva factura</button>
+              {!ro && <button className="btn btn-lime" onClick={startForm}><Icon n="plus" /> Nueva factura</button>}
               <select value={flt.estado} onChange={(e) => setFlt((f) => ({ ...f, estado: e.target.value }))}><option value="">Todos los estados</option><option value="pendiente">Pendientes de pago</option><option value="pagada">Pagadas</option></select>
               <select value={flt.cat} onChange={(e) => setFlt((f) => ({ ...f, cat: e.target.value }))}><option value="">Todas las categorías</option>{CATS.map((c) => <option key={c}>{c}</option>)}</select>
               <select value={flt.dep} onChange={(e) => setFlt((f) => ({ ...f, dep: e.target.value }))}><option value="">Todos los departamentos</option>{depts.map((d) => <option key={d}>{d}</option>)}</select>
@@ -300,7 +307,9 @@ export default function Gastos() {
                       {docsFiltrados.map((d) => (
                         <tr key={d.id}>
                           <td className="nowrap">{fmtDate(d.fecha)}</td>
-                          <td><button type="button" className={`badge estado-badge ${d.estado === 'pagada' ? 's-approved' : 's-pending'}`} onClick={() => toggleEstado(d)} title="Clic para cambiar el estado de pago">{d.estado === 'pagada' ? 'Pagada' : 'Pendiente'}</button></td>
+                          <td>{ro
+                            ? <span className={`badge ${d.estado === 'pagada' ? 's-approved' : 's-pending'}`}>{d.estado === 'pagada' ? 'Pagada' : 'Pendiente'}</span>
+                            : <button type="button" className={`badge estado-badge ${d.estado === 'pagada' ? 's-approved' : 's-pending'}`} onClick={() => toggleEstado(d)} title="Clic para cambiar el estado de pago">{d.estado === 'pagada' ? 'Pagada' : 'Pendiente'}</button>}</td>
                           <td>{d.concepto}</td>
                           <td>{d.proveedor || <span className="muted">—</span>}</td>
                           <td>{d.categoria}</td>
@@ -308,7 +317,7 @@ export default function Gastos() {
                           <td className="mny-cell"><Money value={Number(d.monto)} strong /></td>
                           <td className="actions nowrap">
                             {d.file_path ? <button className="btn-sm" onClick={() => openViewer(d)}><Icon n="eye" /> Ver</button> : null}
-                            <button className="icon-btn danger" title="Eliminar" onClick={() => del(d)}><Icon n="trash" /></button>
+                            {!ro && <button className="icon-btn danger" title="Eliminar" onClick={() => del(d)}><Icon n="trash" /></button>}
                           </td>
                         </tr>
                       ))}

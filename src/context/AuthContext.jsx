@@ -59,7 +59,10 @@ export function AuthProvider({ children }) {
 
   const role = profile?.role ?? 'user'
   const full = perms.full_admin === true
-  const can = (k) => full || perms[k] === true
+  // Dos niveles por apartado: "ver" (entrar y consultar) y "gestionar" (actuar).
+  // Gestionar incluye ver. full_admin incluye todo.
+  const canEdit = (mod) => full || perms[`manage_${mod}`] === true
+  const canView = (mod) => canEdit(mod) || perms[`view_${mod}`] === true
   const value = {
     session,
     user: session?.user ?? null,
@@ -70,15 +73,28 @@ export function AuthProvider({ children }) {
     perms,
     isAdmin: full,
     isSuper: perms.super_admin === true,
-    canManageOrders: can('manage_orders'),
-    canManageRooms: can('manage_rooms'),
-    canManageSupplies: can('manage_supplies'),
-    canManageInventory: can('manage_inventory'),
-    canManageUsers: can('manage_users'),
-    canManageSupport: can('manage_support'),
+    canEdit,
+    canView,
+    canManageOrders: canEdit('orders'),
+    canManageRooms: canEdit('rooms'),
+    canManageSupplies: canEdit('supplies'),
+    canManageInventory: canEdit('inventory'),
+    canManageUsers: canEdit('users'),
+    canManageSupport: canEdit('support'),
+    canManageLists: canEdit('lists'),
+    canManageExpenses: canEdit('expenses'),
+    canManageRoles: full,
+    canViewOrders: canView('orders'),
+    canViewRooms: canView('rooms'),
+    canViewSupplies: canView('supplies'),
+    canViewInventory: canView('inventory'),
+    canViewUsers: canView('users'),
+    canViewSupport: canView('support'),
+    canViewLists: canView('lists'),
+    canViewExpenses: canView('expenses'),
     managedDepts,
     isAreaManager: managedDepts.length > 0,
-    hasInventory: full || perms.manage_inventory === true || profile?.inventory_access === true,
+    hasInventory: canView('inventory') || profile?.inventory_access === true,
     refreshProfile: () => loadProfile(session?.user?.id),
     // Actualiza campos del perfil en memoria (sin recargar roles/deptos): guardado instantáneo
     patchProfile: (fields) => setProfile((p) => (p ? { ...p, ...fields } : p)),
