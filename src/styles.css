@@ -716,6 +716,15 @@ body.light input:not([type=checkbox]):not([type=radio]),body.light select,body.l
 .lic-price-in{display:inline-flex;align-items:center;gap:.15rem;justify-content:flex-end}
 .lic-price-in input{width:80px;text-align:right;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:.25rem .4rem;color:var(--text);font-family:inherit;font-size:.85rem;font-variant-numeric:tabular-nums}
 .lic-price-in input:focus{outline:none;border-color:var(--lime-text)}
+/* Checkbox en línea dentro del formulario de equipos */
+.chk-inline{display:flex;align-items:center;gap:.45rem;cursor:pointer;font-size:.88rem;padding:.45rem .1rem}
+.chk-inline input{width:auto;margin:0}
+/* QR compacto dentro del modal de equipo */
+.eq-qr-mini{display:flex;align-items:center;gap:.8rem;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:.7rem .8rem}
+.eq-qr-mini img{background:#fff;border-radius:8px;padding:4px;flex:none}
+.eq-qr-mini-txt{display:flex;flex-direction:column;gap:.4rem;align-items:flex-start}
+.eq-qr-mini-txt p{margin:0;font-size:.8rem}
+.eq-qr-hint{margin:0;font-size:.82rem}
 /* Tarjeta de aviso (categoría/departamento sin asignar) */
 .kpi.kpi-warn{border-color:var(--danger)}
 .kpi.kpi-warn .lbl{color:var(--danger)}

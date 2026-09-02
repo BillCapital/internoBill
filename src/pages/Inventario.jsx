@@ -979,10 +979,23 @@ export default function Inventario() {
                       {[...LOCS, ...(edit.location && !LOCS.includes(edit.location) ? [edit.location] : [])].map((o) => <option key={o}>{o}</option>)}
                     </select></div>
                   <div><label>Estado</label><select value={edit.condition} onChange={(e) => setEdit({ ...edit, condition: e.target.value })}>{CONDS.map((c) => <option key={c}>{c}</option>)}</select></div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '.5rem', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={edit.attributes?.disponible === true} onChange={(ev) => setEdit({ ...edit, attributes: { ...(edit.attributes || {}), disponible: ev.target.checked } })} />
-                      <span>Disponible en stock <span className="muted">(liberado y listo para entregar — aparece en la pestaña Stock)</span></span>
+                  {/* Departamento: se toma del usuario asignado si tiene uno */}
+                  {(() => {
+                    const aU = edit.assigned_to_email ? users.find((u) => normc(u.email) === normc(edit.assigned_to_email)) : null
+                    const derivedDep = aU && aU.department ? aU.department : null
+                    return (
+                      <div><label>Departamento {derivedDep ? <span className="muted">(según usuario)</span> : ''}</label>
+                        <select value={derivedDep || edit.attributes?.departamento || ''} disabled={!!derivedDep}
+                          title={derivedDep ? 'Se toma del departamento del usuario asignado' : undefined}
+                          onChange={(e) => setAttr('departamento', e.target.value)}>
+                          <option value="">—</option>{DEPTS.map((d) => <option key={d} value={d}>{deptIndentLabel(d)}</option>)}
+                        </select></div>
+                    )
+                  })()}
+                  <div><label>Disponible en stock</label>
+                    <label className="chk-inline" title="Liberado y listo para entregar — aparece en la pestaña Stock">
+                      <input type="checkbox" checked={edit.attributes?.disponible === true} onChange={(ev) => setAttr('disponible', ev.target.checked)} />
+                      <span>Listo para entregar</span>
                     </label>
                   </div>
                   {(() => {
@@ -999,6 +1012,21 @@ export default function Inventario() {
                   })()}
                   <div style={{ gridColumn: '1 / -1' }}><label>Foto del dispositivo</label>
                     <ImagePicker value={edit.image_url} onChange={(url) => setEdit((ed) => ({ ...ed, image_url: url }))} />
+                  </div>
+                  {/* QR único por equipo (apunta a la ficha móvil /m/equipo/:id) */}
+                  <div style={{ gridColumn: '1 / -1' }}><label>QR del equipo</label>
+                    {edit.id ? (() => {
+                      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data=${encodeURIComponent(`${window.location.origin}/m/equipo/${edit.id}`)}`
+                      return (
+                        <div className="eq-qr-mini">
+                          <img src={qrUrl} alt="QR del equipo" width={104} height={104} loading="lazy" />
+                          <div className="eq-qr-mini-txt">
+                            <p className="muted">Único de este equipo. Al escanearlo abre su ficha.</p>
+                            <a className="btn-sm" href={qrUrl} download={`qr-${edit.serial_number || edit.id}.png`} target="_blank" rel="noreferrer"><Icon n="download" /> Descargar</a>
+                          </div>
+                        </div>
+                      )
+                    })() : <p className="muted eq-qr-hint">Se genera al guardar — uno distinto para cada equipo.</p>}
                   </div>
                 </>)}
 
