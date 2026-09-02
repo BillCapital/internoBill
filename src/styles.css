@@ -696,11 +696,22 @@ body.light input:not([type=checkbox]):not([type=radio]),body.light select,body.l
 
 /* ==== Solicitudes: de qué área viene y si es compra tecnológica ==== */
 .rq-title{display:flex;align-items:baseline;gap:.4rem;flex-wrap:wrap;line-height:1.2}
+.rq-title>strong{margin-right:.35rem}
+/* Van levantadas respecto a la línea base: se leen como anotación del título */
 .rq-area,.rq-tec{display:inline-block;font-size:.58rem;font-weight:700;
   text-transform:uppercase;letter-spacing:.05em;line-height:1.5;border-radius:5px;
-  padding:.05rem .32rem;white-space:nowrap;position:relative;top:-1px}
+  padding:.05rem .32rem;white-space:nowrap;position:relative;top:-4px}
 .rq-area{background:color-mix(in srgb,var(--info) 14%,transparent);color:var(--info)}
 .rq-tec{background:color-mix(in srgb,var(--lav) 15%,transparent);color:var(--lav)}
+/* ==== Restablecer contraseña M365 ==== */
+.pwr-modal{max-width:560px}
+.pwr-sub{margin:.2rem 0 .9rem;font-size:.85rem;line-height:1.45}
+.pwr-row{display:flex;gap:.35rem;align-items:center;margin-top:.25rem;flex-wrap:wrap}
+.pwr-input{flex:1;min-width:180px;font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:.95rem;letter-spacing:.04em}
+.pwr-hint{font-size:.78rem;line-height:1.45;margin:.55rem 0 0}
+.pwr-ok{color:var(--lime-text)}
+
 .rq-filters{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin:0 0 .8rem}
 .rq-filters-n{font-size:.78rem;margin-left:auto;font-variant-numeric:tabular-nums}
 

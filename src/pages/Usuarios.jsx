@@ -91,6 +91,7 @@ export default function Usuarios() {
   const [edit, setEdit] = useState(null)
   const [newUser, setNewUser] = useState(null)        // modal crear usuario en Microsoft 365
   const [msBusy, setMsBusy] = useState(false)
+  const [pwdReset, setPwdReset] = useState(null)   // { email, password, show, copied }
   const [syncBusy, setSyncBusy] = useState(false)
   const [groupByDomain, setGroupByDomain] = useState(true)
   const [revealUsers, setRevealUsers] = useState(false)   // la lista arranca cerrada; se muestra al elegir un apartado
@@ -339,14 +340,19 @@ export default function Usuarios() {
     } catch (e) { alertDialog('No se pudo sincronizar: ' + e.message) } finally { setSyncBusy(false) }
   }
 
-  // Restablecer la contraseña de un usuario en Microsoft 365
-  const resetMsPassword = async (u) => {
-    const pwd = window.prompt(`Nueva contraseña temporal para ${u.email}:\n(mínimo 8 caracteres; el usuario deberá cambiarla al ingresar)`)
-    if (pwd === null) return
+  // Restablecer la contraseña en Microsoft 365. Se abre un cuadro propio con una
+  // clave fuerte ya generada: el prompt del navegador no ofrecía generador y
+  // empujaba a inventar contraseñas débiles.
+  const resetMsPassword = (u) => setPwdReset({ email: u.email, password: genPwd(), show: true, copied: false })
+  const doResetPassword = async () => {
+    const pwd = pwdReset?.password || ''
     if (pwd.length < 8) return alertDialog('La contraseña debe tener al menos 8 caracteres.')
     setMsBusy(true)
-    try { await msUsers('resetPassword', { id: u.email, password: pwd, forceChange: true }); alertDialog('Contraseña restablecida en Microsoft 365.') }
-    catch (e) { alertDialog('No se pudo restablecer: ' + e.message) } finally { setMsBusy(false) }
+    try {
+      await msUsers('resetPassword', { id: pwdReset.email, password: pwd, forceChange: true })
+      setPwdReset(null)
+      alertDialog('Contraseña restablecida en Microsoft 365. Entrégasela a la persona por un canal seguro: deberá cambiarla al ingresar.')
+    } catch (e) { alertDialog('No se pudo restablecer: ' + e.message) } finally { setMsBusy(false) }
   }
 
   // ===== Licencias M365 =====
@@ -887,6 +893,33 @@ export default function Usuarios() {
       )}
 
       {/* Modal crear usuario en Microsoft 365 */}
+      {/* Restablecer contraseña M365: clave fuerte generada aquí mismo */}
+      {pwdReset && (
+        <div className="backdrop open">
+          <div className="modal pwr-modal">
+            <h3><Icon n="key" /> Restablecer contraseña</h3>
+            <p className="muted pwr-sub">Se establecerá esta contraseña temporal para <strong>{pwdReset.email}</strong> en Microsoft 365. La persona deberá cambiarla la primera vez que entre.</p>
+            <label>Contraseña temporal</label>
+            <div className="pwr-row">
+              <input type={pwdReset.show ? 'text' : 'password'} className="pwr-input" value={pwdReset.password}
+                onChange={(e) => setPwdReset({ ...pwdReset, password: e.target.value, copied: false })} />
+              <button type="button" className="btn-sm" title={pwdReset.show ? 'Ocultar' : 'Ver'}
+                onClick={() => setPwdReset({ ...pwdReset, show: !pwdReset.show })}><Icon n={pwdReset.show ? 'eyeOff' : 'eye'} /></button>
+              <button type="button" className="btn-sm" title="Copiar"
+                onClick={() => { try { navigator.clipboard?.writeText(pwdReset.password); setPwdReset({ ...pwdReset, copied: true }) } catch { /* noop */ } }}><Icon n="copy" /></button>
+              <button type="button" className="btn-sm btn-lime" title="Generar otra contraseña segura"
+                onClick={() => setPwdReset({ ...pwdReset, password: genPwd(), show: true, copied: false })}><Icon n="refresh" /> Generar otra</button>
+            </div>
+            <p className="muted pwr-hint">16 caracteres con mayúsculas, minúsculas, números y símbolos, sin letras ni números que se confundan. {pwdReset.copied ? <strong className="pwr-ok">Copiada al portapapeles.</strong> : 'Cópiala antes de continuar: no se vuelve a mostrar.'}</p>
+            <p className="muted pwr-hint">Entrégasela por un canal seguro (en persona o por un medio distinto al correo de esa misma cuenta). No la guardes en las notas del perfil.</p>
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setPwdReset(null)} disabled={msBusy}>Cancelar</button>
+              <button className="btn btn-primary" onClick={doResetPassword} disabled={msBusy || (pwdReset.password || '').length < 8}>{msBusy ? 'Aplicando…' : 'Restablecer en M365'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {newUser && (
         <div className="backdrop open">
           <div className="modal">
