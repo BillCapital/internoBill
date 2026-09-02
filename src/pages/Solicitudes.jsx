@@ -27,6 +27,7 @@ export default function Solicitudes() {
   const [loading, setLoading] = useState(true)
   const [catalog, setCatalog] = useState([])
   const [status, setStatus] = useState(null)
+  const [deptFilter, setDeptFilter] = useState('')   // filtrar por área que pide
   const [open, setOpen] = useState(null)
   const [creating, setCreating] = useState(false)
   const [cart, setCart] = useState({})
@@ -395,7 +396,11 @@ export default function Solicitudes() {
   // La gestora de pedidos NO ve las solicitudes tecnológicas (salvo que sea firmante o dueña); admin sí.
   const canSee = (t) => t.kind !== 'tec' || isAdmin || t.user_id === profile?.id || myIsSigner(t)
   const visibleRows = rows.filter(canSee)
-  const data = visibleRows.filter((t) => !status || t.status === status)
+  const data = visibleRows
+    .filter((t) => !status || t.status === status)
+    .filter((t) => !deptFilter || (t.department || 'Sin área') === deptFilter)
+  // Áreas presentes en las solicitudes visibles, para el selector de filtro
+  const deptsInRows = [...new Set(visibleRows.map((t) => t.department || 'Sin área'))].sort((a, b) => a.localeCompare(b, 'es'))
   return (
     <div>
       <div className="page-head"><div className="row">
@@ -634,13 +639,30 @@ export default function Solicitudes() {
         ))}
       </div>}
 
+      {!creating && !loading && canManageOrders && deptsInRows.length > 1 && (
+        <div className="rq-filters">
+          <label className="sort-ctl">Área:
+            <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
+              <option value="">Todas las áreas</option>
+              {deptsInRows.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </label>
+          {deptFilter && <button className="btn-sm" onClick={() => setDeptFilter('')}>Quitar filtro</button>}
+          <span className="muted rq-filters-n">{data.length} de {visibleRows.length}</span>
+        </div>
+      )}
+
       {!creating && loading && <SkeletonRows n={3} />}
       {!creating && !loading && data.length === 0 && <div className="conv"><div className="empty">No hay solicitudes.</div></div>}
       {!creating && data.map((t) => (
         <div className={`conv ${open === t.id ? 'open' : ''}`} key={t.id}>
           <button className="cv-head" onClick={() => setOpen(open === t.id ? null : t.id)}>
             <span className="ico"><Icon n="box" /></span>
-            <span className="t"><strong>Solicitud #{String(t.id).slice(0, 8)}</strong><br />
+            <span className="t">
+              <span className="rq-title"><strong>Solicitud #{String(t.id).slice(0, 8)}</strong>
+                {t.department ? <span className="rq-area" title={`Área que pide: ${t.department}`}>{t.department}</span> : null}
+                {t.kind === 'tec' ? <span className="rq-tec" title="Compra tecnológica: requiere firmas">Tecnológica</span> : null}
+              </span>
               <span className="prev">{canManageOrders && (t.profiles?.full_name || t.profiles?.email) ? (t.profiles.full_name || t.profiles.email) + ' · ' : ''}{t.note}</span></span>
             <span className={`badge ${cls(t.status)}`}>{label(t.status)}</span><span className="chev">▾</span>
           </button>

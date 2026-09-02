@@ -694,6 +694,16 @@ body.light input:not([type=checkbox]):not([type=radio]),body.light select,body.l
 .ro-note .licon{width:1rem;height:1rem;flex:none;color:var(--info)}
 .stock-ro{font-variant-numeric:tabular-nums;font-weight:600;font-size:.9rem;min-width:2ch;display:inline-block}
 
+/* ==== Solicitudes: de qué área viene y si es compra tecnológica ==== */
+.rq-title{display:flex;align-items:baseline;gap:.4rem;flex-wrap:wrap;line-height:1.2}
+.rq-area,.rq-tec{display:inline-block;font-size:.58rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.05em;line-height:1.5;border-radius:5px;
+  padding:.05rem .32rem;white-space:nowrap;position:relative;top:-1px}
+.rq-area{background:color-mix(in srgb,var(--info) 14%,transparent);color:var(--info)}
+.rq-tec{background:color-mix(in srgb,var(--lav) 15%,transparent);color:var(--lav)}
+.rq-filters{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin:0 0 .8rem}
+.rq-filters-n{font-size:.78rem;margin-left:auto;font-variant-numeric:tabular-nums}
+
 /* ==== Salas: calendario más grande + horario más compacto ==== */
 .month{grid-template-columns:repeat(7,46px);gap:6px}
 .dow{font-size:.72rem}
