@@ -9,16 +9,20 @@ import { Icon } from '../lib/icons'
 
 // Cada apartado tiene dos niveles: ver (entrar y consultar) y gestionar (actuar).
 // Gestionar incluye ver. «Acceso total» incluye todo.
+// Solicitudes, Salas y Soporte los usa todo el mundo: sin permiso igual puede
+// pedir, reservar y abrir tickets — el permiso decide si ve y resuelve los de los demás.
+// El resto de apartados no existen para quien no tenga permiso.
 const MODULES = [
-  { mod: 'orders', label: 'Solicitudes', view: 'Ver todas las solicitudes de la empresa', edit: 'Aprobar, rechazar y entregar pedidos' },
-  { mod: 'rooms', label: 'Salas', view: 'Ver todas las reservas', edit: 'Aprobar reservas y editar salas' },
-  { mod: 'supplies', label: 'Insumos', view: 'Consultar el inventario de insumos', edit: 'Editar stock, catálogo y departamentos' },
-  { mod: 'inventory', label: 'Inventario de equipos', view: 'Consultar equipos y esquemas', edit: 'Crear, asignar y dar de baja equipos' },
-  { mod: 'users', label: 'Usuarios', view: 'Consultar el directorio de personas', edit: 'Editar personas, roles y departamentos' },
-  { mod: 'lists', label: 'Listas de correo', view: 'Consultar las listas y sus miembros', edit: 'Crear listas y agregar o quitar miembros' },
-  { mod: 'expenses', label: 'Gastos', view: 'Consultar gastos, licencias y facturas', edit: 'Editar precios, documentos y facturas' },
-  { mod: 'support', label: 'Soporte', view: 'Ver todos los tickets', edit: 'Atender y cerrar tickets' },
+  { mod: 'orders', label: 'Solicitudes', none: 'Solo ve y crea las suyas.', view: 'Ve las solicitudes de toda la empresa, sin poder decidirlas.', edit: 'Aprueba, rechaza y entrega pedidos.' },
+  { mod: 'rooms', label: 'Salas', levels: ['none', 'manage'], none: 'Solo reserva y cancela lo suyo. El calendario lo ve todo el mundo.', edit: 'Aprueba reservas, las cancela y edita las salas.' },
+  { mod: 'support', label: 'Soporte', none: 'Solo abre y sigue sus propios tickets.', view: 'Ve los tickets de todos, sin poder responderlos.', edit: 'Atiende, responde y cierra los tickets de todos.' },
+  { mod: 'supplies', label: 'Insumos', none: 'No aparece en el menú.', view: 'Consulta el stock, sin editarlo.', edit: 'Edita stock, catálogo y departamentos.' },
+  { mod: 'inventory', label: 'Inventario de equipos', none: 'No aparece en el menú.', view: 'Consulta equipos y esquemas, sin editarlos.', edit: 'Crea, asigna y da de baja equipos.' },
+  { mod: 'users', label: 'Usuarios', none: 'No aparece en el menú.', view: 'Consulta el directorio, sin editarlo.', edit: 'Edita personas, roles y departamentos.' },
+  { mod: 'lists', label: 'Listas de correo', none: 'No aparece en el menú.', view: 'Consulta las listas y sus miembros.', edit: 'Crea listas y agrega o quita miembros.' },
+  { mod: 'expenses', label: 'Gastos', none: 'No aparece en el menú.', view: 'Consulta gastos, licencias y facturas.', edit: 'Edita precios, documentos y facturas.' },
 ]
+const LEVELS = { none: 'Sin acceso', view: 'Ver', manage: 'Gestionar' }
 const emptyRole = { key: '', label: '', permissions: {}, sort: 0, is_system: false }
 const NONE = '__sin_depto__'
 
@@ -395,13 +399,13 @@ export default function Roles() {
                   <div className="perm-mod" key={m.mod}>
                     <div className="perm-mod-t">
                       <strong>{m.label}</strong>
-                      <span className="muted">{lvl === 'manage' ? m.edit : lvl === 'view' ? m.view : 'No aparece en el menú.'}</span>
+                      <span className="muted">{lvl === 'manage' ? m.edit : lvl === 'view' ? m.view : m.none}</span>
                     </div>
                     <div className="perm-seg" role="group" aria-label={m.label}>
-                      {[['none', 'Sin acceso'], ['view', 'Ver'], ['manage', 'Gestionar']].map(([v, t]) => (
+                      {(m.levels || ['none', 'view', 'manage']).map((v) => (
                         <button key={v} type="button" disabled={off}
                           className={`perm-seg-b ${lvl === v ? 'on' : ''} ${v === 'manage' ? 'is-manage' : ''}`}
-                          onClick={() => setLevel(m.mod, v)}>{t}</button>
+                          onClick={() => setLevel(m.mod, v)}>{LEVELS[v]}</button>
                       ))}
                     </div>
                   </div>
@@ -409,7 +413,7 @@ export default function Roles() {
               })}
             </div>
             {edit.permissions?.full_admin && <p className="muted" style={{ marginTop: '.4rem' }}>Con «Acceso total» los apartados de arriba quedan todos en Gestionar.</p>}
-            <p className="muted perm-help">Los roles y permisos solo los edita el Administrador. Todos los usuarios, sin permiso alguno, ven Inicio, Salas, Solicitudes, Manuales, Soporte y su Perfil.</p>
+            <p className="muted perm-help">Los roles y permisos solo los edita el Administrador. Sin ningún permiso, cualquier persona igual entra a Inicio, Manuales y su Perfil, reserva salas, pide insumos y abre tickets de soporte — lo que cambia es si además ve y resuelve lo de los demás.</p>
 
             <div className="modal-actions"><button className="btn" onClick={() => setEdit(null)}>Cancelar</button><button className="btn btn-primary" onClick={save}>Guardar rol</button></div>
           </div>
