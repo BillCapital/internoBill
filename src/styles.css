@@ -188,8 +188,8 @@ button{font-family:inherit;cursor:pointer}
 .room-legend .rl-item{display:inline-flex;align-items:center;gap:.35rem}
 .room-legend .dot{width:.65rem;height:.65rem;border-radius:3px;display:inline-block}
 .room-legend .free .dot{background:var(--lime)}
-.room-legend .resv .dot{background:var(--info)}
-.room-legend .pend .dot{background:var(--warn)}
+.room-legend .resv .dot{background:var(--lav)}
+.room-legend .pend .dot{background:var(--info)}
 .room-legend .lunch .dot{background:var(--muted)}
 .cal thead th{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;background:var(--soft)}
 .cal td:first-child{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.72rem;color:var(--muted);white-space:nowrap;font-weight:600}
@@ -199,12 +199,12 @@ button{font-family:inherit;cursor:pointer}
   border:1px solid color-mix(in srgb,var(--lime) 30%,var(--line))}
 .cal td .slot:hover{background:var(--lime);color:var(--accent-ink);border-color:var(--lime-text)}
 .cal td .slot.busy{display:block;text-align:left;min-height:34px;border-radius:9px;padding:.35rem .55rem;line-height:1.25;font-weight:600;
-  background:color-mix(in srgb,var(--info) 12%,var(--panel));color:var(--text);
-  border:1px solid color-mix(in srgb,var(--info) 26%,var(--line));border-left:3px solid var(--info)}
-.cal td .slot.busy:hover{background:color-mix(in srgb,var(--info) 18%,var(--panel));transform:none}
+  background:color-mix(in srgb,var(--lav) 12%,var(--panel));color:var(--text);
+  border:1px solid color-mix(in srgb,var(--lav) 26%,var(--line));border-left:3px solid var(--lav)}
+.cal td .slot.busy:hover{background:color-mix(in srgb,var(--lav) 18%,var(--panel));transform:none}
 .cal td .slot.pending{display:block;text-align:left;min-height:34px;border-radius:9px;padding:.35rem .55rem;line-height:1.25;font-weight:600;
-  background:color-mix(in srgb,var(--warn) 14%,var(--panel));color:var(--text);
-  border:1px solid color-mix(in srgb,var(--warn) 30%,var(--line));border-left:3px solid var(--warn)}
+  background:color-mix(in srgb,var(--info) 14%,var(--panel));color:var(--text);
+  border:1px solid color-mix(in srgb,var(--info) 30%,var(--line));border-left:3px solid var(--info)}
 .cal td .slot.slot-off{background:transparent;border:1px dashed var(--line);color:var(--muted);min-height:34px;border-radius:9px}
 .cal tr.lunch td{background:repeating-linear-gradient(45deg,var(--soft),var(--soft) 8px,transparent 8px,transparent 16px);color:var(--muted);font-style:normal;text-align:center;font-size:.78rem;font-weight:600}
 
@@ -354,11 +354,11 @@ button{font-family:inherit;cursor:pointer}
 .day .dot{position:absolute;bottom:7px;width:6px;height:6px;border-radius:50%;background:var(--lime)}
 .day.wknd{opacity:.32;cursor:not-allowed}
 .day-detail{margin-top:1.2rem}
-.slot.pending{background:#4a3b17;color:#f4cd78}
+.slot.pending{background:color-mix(in srgb,var(--info) 22%,var(--panel));color:var(--info)}
 .mini-row{margin-top:.3rem;display:flex;gap:.3rem;justify-content:center}
 .mini{border:none;border-radius:6px;width:28px;height:22px;font-size:.8rem;cursor:pointer}
 .mini.ok{background:var(--lime);color:var(--accent-ink)}.mini.no{background:#4a1f1f;color:#ff9b9b}
-body.light .slot.pending{background:#fff2d6;color:#a5741a}
+body.light .slot.pending{background:color-mix(in srgb,var(--info) 16%,#ffffff);color:var(--info)}
 /* Sidebar colapsable */
 .hamb{width:40px;height:40px;border-radius:11px;background:transparent;border:1px solid var(--line);color:var(--text);font-size:1.2rem;margin-right:.2rem;flex:none}
 .hamb:hover{background:var(--soft)}
