@@ -1275,8 +1275,11 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 .tbl-compact td strong{font-weight:600}
 .tbl-compact .badge{font-size:.66rem;padding:.08rem .4rem;white-space:nowrap}
 /* acciones en una sola linea, alineadas a la derecha */
-.tbl-compact td.actions{white-space:nowrap;display:flex;flex-wrap:nowrap;gap:.3rem;align-items:center;justify-content:flex-end}
-.tbl-compact td.actions .btn-sm{margin:0;padding:.22rem .5rem;font-size:.72rem}
+/* La celda de acciones se mantiene como celda de tabla: si es flex, su borde inferior
+   deja de alinearse con el resto de la fila y las líneas se ven escalonadas. */
+.tbl-compact td.actions{white-space:nowrap;text-align:right;vertical-align:middle}
+.tbl-compact td.actions .btn-sm{margin:0;padding:.22rem .5rem;font-size:.72rem;display:inline-flex;align-items:center;vertical-align:middle}
+.tbl-compact td.actions .btn-sm+.btn-sm{margin-left:.3rem}
 /* Tabla de inventario (carpetas) — más aire, separación y hover por fila */
 .inv-table{font-size:.82rem}
 .inv-table th{padding:.5rem .7rem;color:var(--muted)}
@@ -1463,7 +1466,7 @@ body.light .menu-item:hover{background:#e6e9f0;color:var(--text)}
 .rp2-up{border-style:dashed;color:var(--lime-text)}
 .rp2-up:hover{background:color-mix(in srgb,var(--lime) 10%,var(--soft))}
 .rp2-up.busy{opacity:.6;pointer-events:none}
-.rp2-badge{flex:none;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:.12rem .5rem;border-radius:999px;background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.rp2-badge{flex:none;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:.12rem .5rem;border-radius:999px;background:color-mix(in srgb,var(--info) 18%,transparent);color:var(--info)}
 .rp2-badge.approved{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
 .rp2-badge.rejected{background:color-mix(in srgb,var(--danger) 18%,transparent);color:var(--danger)}
 .rp2-del{flex:none;background:none;border:0;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:.1rem;border-radius:6px}
