@@ -92,6 +92,8 @@ export function AuthProvider({ children }) {
     canViewSupport: canView('support'),
     canViewLists: canView('lists'),
     canViewExpenses: canView('expenses'),
+    canViewLogs: canView('logs'),
+    canManageLogs: canEdit('logs'),
     managedDepts,
     isAreaManager: managedDepts.length > 0,
     hasInventory: canView('inventory') || profile?.inventory_access === true,

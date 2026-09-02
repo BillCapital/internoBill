@@ -9,24 +9,28 @@ const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: '2-digit', mon
 
 // Registro de actividad por área (últimos 31 días). Se muestra dentro de cada apartado de supervisión.
 export default function ActivityLog({ kinds, title = 'Registro de actividad' }) {
-  const { isSuper } = useAuth()
+  const { isSuper, canViewLogs } = useAuth()
   const [rows, setRows] = useState([])
   const [open, setOpen] = useState(false)
 
   // Clave estable para no re-consultar en cada render del padre (kinds llega como literal nuevo cada vez)
   const kindsKey = (kinds && kinds.length) ? kinds.join(',') : ''
   const load = useCallback(async () => {
+    if (!canViewLogs) { setRows([]); return }
     let q = supabase.from('activity_log').select('id,at,actor_name,kind,action,detail').order('at', { ascending: false }).limit(300)
     if (kindsKey) q = q.in('kind', kindsKey.split(','))
     const { data } = await q
     setRows(data ?? [])
-  }, [kindsKey])
+  }, [kindsKey, canViewLogs])
   useEffect(() => { load() }, [load])
 
   const del = async (r) => {
     if (!(await confirmDialog('¿Eliminar esta entrada del registro?', { title: 'Eliminar entrada', danger: true, okText: 'Eliminar' }))) return
     try { await api('activity_delete', { p_id: r.id }); await load() } catch (e) { alertDialog(e.message) }
   }
+
+  // Los registros son su propio permiso: quien no lo tenga no ve ni el desplegable.
+  if (!canViewLogs) return null
 
   return (
     <div className={`section log-foot ${open ? 'open' : ''}`}>

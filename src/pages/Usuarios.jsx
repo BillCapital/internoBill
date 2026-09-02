@@ -59,7 +59,7 @@ async function msUsers(op, payload = {}) {
 }
 
 export default function Usuarios() {
-  const { user, refreshProfile, isSuper, canManageUsers } = useAuth()
+  const { user, refreshProfile, isSuper, canManageUsers, canViewLogs } = useAuth()
   const ro = !canManageUsers   // solo lectura: consulta el directorio pero no lo edita
   const nav = useNavigate()
   const [rows, setRows] = useState([])
@@ -709,7 +709,7 @@ export default function Usuarios() {
       </div>
 
       {/* Registro de cambios (últimas 24h) */}
-      <div className={`section ${logOpen ? 'open' : ''}`} style={{ marginTop: '1rem' }}>
+      {canViewLogs && <div className={`section ${logOpen ? 'open' : ''}`} style={{ marginTop: '1rem' }}>
         <button className="sec-head compact" onClick={() => setLogOpen((v) => !v)}>
           <span className="ico"><Icon n="folder" /></span><span className="t"><strong>Registro de cambios</strong><br /><span className="muted">Últimos 31 días · {log.length} cambio(s)</span></span>
           <span className="count">{log.length}</span><span className="chev">▾</span>
@@ -728,7 +728,7 @@ export default function Usuarios() {
             ))}
           </tbody>
         </table></div></div>}
-      </div>
+      </div>}
 
       {/* Modal editar perfil */}
       {edit && (
