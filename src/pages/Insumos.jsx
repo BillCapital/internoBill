@@ -161,11 +161,11 @@ export default function Insumos() {
         </label>
       </div>
 
-      <div className="kpi-grid compact">
+      <div className="kpi-grid compact ins-kpis">
         <button className="kpi kpi-all"><span className="ico"><Icon n="box" /></span>
           <div><div className="num">{pedibles.length}</div><div className="lbl">Insumos ({totalStock} en stock)</div></div></button>
         {orderedGroups.map(([g, arr]) => (
-          <button key={g} className={`kpi ${open[g] ? 'active' : ''} ${g === 'Sin asignar' ? 'kpi-warn' : ''} ${g === NOPED ? 'kpi-noped' : ''}`} onClick={() => openAndScroll(g)}>
+          <button key={g} title={`${g} — ${arr.length} insumo(s)`} className={`kpi ${open[g] ? 'active' : ''} ${g === 'Sin asignar' ? 'kpi-warn' : ''} ${g === NOPED ? 'kpi-noped' : ''}`} onClick={() => openAndScroll(g)}>
             <div className="ico"><Icon n={g === NOPED ? 'lock' : g === 'Sin asignar' ? 'alert' : (groupMode === 'dept' ? 'building' : 'folder')} /></div><div className="num">{arr.length}</div><div className="lbl">{g}</div></button>
         ))}
       </div>
@@ -184,20 +184,24 @@ export default function Insumos() {
             </button>
             {isOpen && (
               <div className="sec-body">
-                <div className="ins-tools" style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '.6rem' }}>
-                  {noped ? (
-                    <>
-                      <span className="muted" style={{ fontSize: '.8rem' }}>Solo se lleva el stock: no aparecen en Solicitudes.</span>
-                      <button className="btn-sm btn-lime" disabled={selArr.length === 0} onClick={() => setOrderable(selArr, true)}><Icon n="cart" /> Volver a pedibles ({selArr.length})</button>
-                    </>
-                  ) : (
-                    <>
-                      <button className="btn-sm" onClick={() => openDeptEdit(arr, `toda la carpeta "${g}" (${arr.length})`)}><Icon n="building" /> Departamentos a toda la carpeta</button>
-                      <button className="btn-sm btn-lime" disabled={selArr.length === 0} onClick={() => openDeptEdit(selArr, `${selArr.length} insumo(s) seleccionado(s)`)}>Asignar a seleccionados ({selArr.length})</button>
-                      <button className="btn-sm" disabled={selArr.length === 0} onClick={() => setOrderable(selArr, false)} title="Pasa los seleccionados al apartado «No se piden»"><Icon n="lock" /> Marcar como «no se pide» ({selArr.length})</button>
-                    </>
-                  )}
-                  {selArr.length > 0 && <button className="btn-sm" onClick={() => setSel((s) => { const n = new Set(s); arr.forEach((i) => n.delete(i.id)); return n })}>Limpiar selección</button>}
+                <div className="ins-tools">
+                  {noped
+                    ? <span className="ins-hint"><Icon n="lock" /> Se les lleva el stock, pero no aparecen en Solicitudes.</span>
+                    : <button className="btn-sm" onClick={() => openDeptEdit(arr, `toda la carpeta "${g}" (${arr.length})`)}><Icon n="building" /> Departamentos a toda la carpeta</button>}
+                  {selArr.length === 0
+                    ? <span className="ins-hint muted">Marca las casillas para {noped ? 'devolverlos a la lista de pedidos' : 'asignar departamentos o sacarlos de los pedidos'}.</span>
+                    : (
+                      <div className="ins-selbar">
+                        <span className="ins-selcount">{selArr.length} seleccionado{selArr.length === 1 ? '' : 's'}</span>
+                        {noped
+                          ? <button className="btn-sm btn-lime" onClick={() => setOrderable(selArr, true)}><Icon n="cart" /> Volver a pedibles</button>
+                          : <>
+                            <button className="btn-sm btn-lime" onClick={() => openDeptEdit(selArr, `${selArr.length} insumo(s) seleccionado(s)`)}><Icon n="building" /> Asignar departamentos</button>
+                            <button className="btn-sm" onClick={() => setOrderable(selArr, false)} title="Pasa los seleccionados al apartado «No se piden»"><Icon n="lock" /> Marcar «no se pide»</button>
+                          </>}
+                        <button className="btn-sm ins-selclear" onClick={() => setSel((s) => { const n = new Set(s); arr.forEach((i) => n.delete(i.id)); return n })}>Limpiar</button>
+                      </div>
+                    )}
                 </div>
                 <div className="table-wrap"><table className="ins-table inv-table">
                 <colgroup><col className="c-chk" /><col className="c-name" /><col className="c-dept" /><col className="c-stock" /><col className="c-act" /></colgroup>
