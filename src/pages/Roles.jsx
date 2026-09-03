@@ -6,6 +6,7 @@ import AccesosClaves from './AccesosClaves'
 import SortControl from '../components/SortControl'
 import { orderDeptTree } from '../lib/depts'
 import { Icon } from '../lib/icons'
+import { useAuth } from '../context/AuthContext'
 
 // Cada apartado tiene dos niveles: ver (entrar y consultar) y gestionar (actuar).
 // Gestionar incluye ver. «Acceso total» incluye todo.
@@ -28,6 +29,22 @@ const emptyRole = { key: '', label: '', permissions: {}, sort: 0, is_system: fal
 const NONE = '__sin_depto__'
 
 export default function Roles() {
+  const { isAdmin } = useAuth()
+  const [msDiag, setMsDiag] = useState(null)   // resultado del diagnóstico de Microsoft Graph
+  const [msDiagBusy, setMsDiagBusy] = useState(false)
+  // Comprueba, sin cambiar nada, si la app puede restablecer contraseñas en M365
+  const runMsDiag = async () => {
+    setMsDiagBusy(true); setMsDiag(null)
+    try {
+      const { data, error } = await supabase.functions.invoke('ms-diag', { body: {} })
+      if (error) {
+        let msg = error.message || 'Error'
+        try { const j = await error.context?.json?.(); if (j?.error) msg = j.error } catch { /* ignore */ }
+        throw new Error(msg)
+      }
+      setMsDiag(data)
+    } catch (e) { setMsDiag({ error: e.message }) } finally { setMsDiagBusy(false) }
+  }
   const [tab, setTab] = useState('creds') // 'creds' | 'roles' | 'depts'
 
   // ---- Roles ----
@@ -282,6 +299,28 @@ export default function Roles() {
       {tab === 'creds' && <AccesosClaves />}
 
       {/* ===================== ROLES ===================== */}
+      {tab === 'roles' && isAdmin && (
+        <div className="ms-diag">
+          <button className="btn-sm" disabled={msDiagBusy} onClick={runMsDiag}>
+            <Icon n="shield" /> {msDiagBusy ? 'Consultando a Microsoft…' : 'Comprobar permisos en Microsoft 365'}
+          </button>
+          <span className="muted ms-diag-h">Solo lectura: pregunta a Microsoft qué permisos tiene la app. No cambia nada.</span>
+          {msDiag && (
+            <div className={`ms-diag-out ${msDiag.error ? 'bad' : msDiag.puedeRestablecerContrasenas ? 'good' : 'warn'}`}>
+              {msDiag.error
+                ? <><strong>No se pudo consultar.</strong> {msDiag.error}{msDiag.hint ? <><br /><span className="muted">{msDiag.hint}</span></> : null}{msDiag.detail ? <><br /><span className="muted">{msDiag.detail}</span></> : null}</>
+                : <>
+                  <strong>{msDiag.puedeRestablecerContrasenas ? 'La app puede restablecer contraseñas.' : 'La app todavía NO puede restablecer contraseñas.'}</strong>
+                  {(msDiag.falta || []).length > 0 && <ul className="ms-diag-list">{msDiag.falta.map((f, i) => <li key={i}>Falta: {f}</li>)}</ul>}
+                  <div className="muted ms-diag-d">Permisos de API: {(msDiag.permisosDeApi || []).join(', ') || '—'}</div>
+                  <div className="muted ms-diag-d">Roles de directorio: {(msDiag.rolesDeDirectorio || []).join(', ') || 'ninguno'}</div>
+                  {(msDiag.notas || []).map((n, i) => <div key={i} className="muted ms-diag-d">{n}</div>)}
+                </>}
+            </div>
+          )}
+        </div>
+      )}
+
       {tab === 'roles' && (
         <div className="section open"><div className="sec-body"><div className="table-wrap"><table>
           <thead><tr><th>Rol</th><th>Permisos</th><th style={{ textAlign: 'center' }}>Usuarios</th><th></th></tr></thead>
