@@ -2087,9 +2087,23 @@ td.actions .licon,.actions .licon{width:1rem;height:1rem;display:inline-block;ve
 .role-badge.gerente_general,.role-badge.gerente-general{background:linear-gradient(90deg,#d9b23a,#f0d060);color:#2a2205}
 .role-badge.gerente_ti,.role-badge.gerente-ti{background:#9fd0ff;color:#0b2740}
 .role-badge.gerente_cobranza,.role-badge.gerente-cobranza{background:#f4cd78;color:#3a2c08}
-.role-badge.rrhh{background:#c7b6f5;color:#231b45}
+.role-badge.presidente_directorio{background:linear-gradient(90deg,#c9a227,#e8cf62);color:#2a2205}
+.role-badge.gerente_riesgo{background:#f2b8b5;color:#5a1a17}
+.role-badge.gerente_legal{background:#bfd8c4;color:#1c3b26}
+.role-badge.gerente_admin_finanzas{background:#a9d6c9;color:#0e3a30}
+.role-badge.gerente_financiacion{background:#b9c9ee;color:#1b2b57}
+.role-badge.gerente_producto{background:#e2bff0;color:#3d1748}
+.role-badge.gerente_comercial{background:#f4cd78;color:#3a2c08}
 body.light .role-badge.gerente_ti{background:#2b6cb0;color:#fff}
-body.light .role-badge.rrhh{background:#6b4fd0;color:#fff}
+body.light .role-badge.presidente_directorio{background:#8a6d10;color:#fff}
+body.light .role-badge.gerente_riesgo{background:#a8322c;color:#fff}
+body.light .role-badge.gerente_legal{background:#2f6b45;color:#fff}
+body.light .role-badge.gerente_admin_finanzas{background:#1f6b5b;color:#fff}
+body.light .role-badge.gerente_financiacion{background:#33509e;color:#fff}
+body.light .role-badge.gerente_producto{background:#7a3390;color:#fff}
+body.light .role-badge.gerente_comercial{background:#8a6212;color:#fff}
+body.light .role-badge.gerente_general{background:#8a6d10;color:#fff}
+body.light .role-badge.gerente_cobranza{background:#8a6212;color:#fff}
 /* Avatar de iniciales · degradado sutil de marca (mismo en ambos temas) */
 .avatar{background:linear-gradient(135deg,#a6e04f,#b3a6ef);color:#14210a}
 .avatar.sm{background:linear-gradient(135deg,#a6e04f,#b3a6ef)}
