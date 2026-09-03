@@ -15,6 +15,19 @@ try {
   if (err) sessionStorage.setItem('authError', err)
 } catch (e) { /* noop */ }
 
+// Tras cada despliegue, los navegadores con la app anterior en memoria piden
+// archivos que ya no existen y las páginas "no cargan". Vite avisa con este
+// evento: recargamos una sola vez para tomar la versión nueva.
+window.addEventListener('vite:preloadError', (event) => {
+  try {
+    if (sessionStorage.getItem('bc-reloaded') === '1') return   // evita un bucle si el problema es otro
+    sessionStorage.setItem('bc-reloaded', '1')
+    event.preventDefault()
+    window.location.reload()
+  } catch { /* noop */ }
+})
+setTimeout(() => { try { sessionStorage.removeItem('bc-reloaded') } catch { /* noop */ } }, 5000)
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>

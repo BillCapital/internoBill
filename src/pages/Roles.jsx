@@ -23,6 +23,7 @@ const MODULES = [
   { mod: 'lists', label: 'Listas de correo', none: 'No aparece en el menú.', view: 'Consulta las listas y sus miembros.', edit: 'Crea listas y agrega o quita miembros.' },
   { mod: 'expenses', label: 'Gastos', none: 'No aparece en el menú.', view: 'Consulta gastos, licencias y facturas.', edit: 'Edita precios, documentos y facturas.' },
   { mod: 'manuals', label: 'Manuales', levels: ['none', 'manage'], none: 'Puede leerlos, como todo el mundo.', edit: 'Sube, edita y elimina manuales y guías.' },
+  { mod: 'passwords', label: 'Contraseñas M365', levels: ['none', 'manage'], none: 'No puede restablecer contraseñas.', edit: 'Restablece contraseñas de Microsoft 365 desde la ficha del usuario.' },
   { mod: 'logs', label: 'Registros de actividad', levels: ['none', 'view'], none: 'No ve ningún registro de movimientos.', view: 'Consulta quién hizo qué en cada apartado. Borrar entradas es solo del Administrador.' },
 ]
 const LEVELS = { none: 'Sin acceso', view: 'Ver', manage: 'Gestionar' }

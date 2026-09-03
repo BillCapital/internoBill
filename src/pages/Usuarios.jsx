@@ -59,7 +59,8 @@ async function msUsers(op, payload = {}) {
 }
 
 export default function Usuarios() {
-  const { user, refreshProfile, isSuper, canManageUsers, canViewLogs } = useAuth()
+  const { user, refreshProfile, isSuper, canManageUsers, canViewLogs, canEdit } = useAuth()
+  const canResetPwd = canEdit('passwords')   // solo Administrador y Gerente TI
   const ro = !canManageUsers   // solo lectura: consulta el directorio pero no lo edita
   const nav = useNavigate()
   const [rows, setRows] = useState([])
@@ -874,7 +875,7 @@ export default function Usuarios() {
               <textarea value={edit.admin_notes || ''} onChange={(e) => setEdit({ ...edit, admin_notes: e.target.value })} placeholder="Correo alterno, credenciales, notas internas…" style={{ minHeight: 70, marginTop: 0 }} />
             </div>
             <div className="modal-actions pf-actions" style={{ justifyContent: 'space-between' }}>
-              {isM365(edit.email)
+              {isM365(edit.email) && canResetPwd
                 ? <button className="btn" disabled={msBusy} onClick={() => resetMsPassword(edit)} title="Establece una contraseña temporal en Microsoft 365"><Icon n="key" /> Restablecer contraseña (M365)</button>
                 : <span />}
               <span style={{ display: 'flex', gap: '.5rem' }}>
