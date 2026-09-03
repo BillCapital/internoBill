@@ -352,7 +352,19 @@ export default function Usuarios() {
       await msUsers('resetPassword', { id: pwdReset.email, password: pwd, forceChange: true })
       setPwdReset(null)
       alertDialog('Contraseña restablecida en Microsoft 365. Entrégasela a la persona por un canal seguro: deberá cambiarla al ingresar.')
-    } catch (e) { alertDialog('No se pudo restablecer: ' + e.message) } finally { setMsBusy(false) }
+    } catch (e) {
+      // Graph responde "Insufficient privileges" cuando a la app le falta el permiso
+      // de contraseñas o el rol de directorio. El texto crudo no dice qué hacer.
+      const raw = String(e.message || '')
+      const falta = /insufficient privileg|Authorization_RequestDenied|Access(Denied| is denied)/i.test(raw)
+      alertDialog(falta
+        ? 'Microsoft 365 rechazó el cambio: a la aplicación le faltan permisos para restablecer contraseñas.\n\n' +
+          'El administrador del tenant debe, en Microsoft Entra:\n' +
+          '1) Agregar a la app el permiso de aplicación «User-PasswordProfile.ReadWrite.All» y dar el consentimiento de administrador.\n' +
+          '2) Asignarle a la aplicación el rol «Administrador de contraseñas» (o «Administrador de usuarios» si además debe restablecer cuentas con rol administrativo).\n\n' +
+          'Tarda unos 10–15 minutos en tomar efecto. Mientras tanto, la contraseña se cambia desde el Centro de administración de Microsoft 365.'
+        : 'No se pudo restablecer: ' + raw)
+    } finally { setMsBusy(false) }
   }
 
   // ===== Licencias M365 =====
