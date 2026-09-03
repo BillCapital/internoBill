@@ -343,15 +343,17 @@ export default function Usuarios() {
   // Restablecer la contraseña en Microsoft 365. Se abre un cuadro propio con una
   // clave fuerte ya generada: el prompt del navegador no ofrecía generador y
   // empujaba a inventar contraseñas débiles.
-  const resetMsPassword = (u) => setPwdReset({ email: u.email, password: genPwd(), show: true, copied: false })
+  const resetMsPassword = (u) => setPwdReset({ email: u.email, password: genPwd(), show: true, copied: false, force: false })
   const doResetPassword = async () => {
     const pwd = pwdReset?.password || ''
     if (pwd.length < 8) return alertDialog('La contraseña debe tener al menos 8 caracteres.')
     setMsBusy(true)
     try {
-      await msUsers('resetPassword', { id: pwdReset.email, password: pwd, forceChange: true })
+      await msUsers('resetPassword', { id: pwdReset.email, password: pwd, forceChange: pwdReset.force === true })
       setPwdReset(null)
-      alertDialog('Contraseña restablecida en Microsoft 365. Entrégasela a la persona por un canal seguro: deberá cambiarla al ingresar.')
+      alertDialog(pwdReset.force
+        ? 'Contraseña restablecida en Microsoft 365. Entrégasela por un canal seguro: la persona deberá cambiarla al iniciar sesión.'
+        : 'Contraseña restablecida en Microsoft 365. Entrégasela por un canal seguro. Queda como su contraseña definitiva: no se le pedirá cambiarla.')
     } catch (e) {
       // Graph responde "Insufficient privileges" cuando a la app le falta el permiso
       // de contraseñas o el rol de directorio. El texto crudo no dice qué hacer.
@@ -910,8 +912,8 @@ export default function Usuarios() {
         <div className="backdrop open">
           <div className="modal pwr-modal">
             <h3><Icon n="key" /> Restablecer contraseña</h3>
-            <p className="muted pwr-sub">Se establecerá esta contraseña temporal para <strong>{pwdReset.email}</strong> en Microsoft 365. La persona deberá cambiarla la primera vez que entre.</p>
-            <label>Contraseña temporal</label>
+            <p className="muted pwr-sub">Se establecerá esta contraseña para <strong>{pwdReset.email}</strong> en Microsoft 365.</p>
+            <label>Contraseña</label>
             <div className="pwr-row">
               <input type={pwdReset.show ? 'text' : 'password'} className="pwr-input" value={pwdReset.password}
                 onChange={(e) => setPwdReset({ ...pwdReset, password: e.target.value, copied: false })} />
@@ -923,6 +925,10 @@ export default function Usuarios() {
                 onClick={() => setPwdReset({ ...pwdReset, password: genPwd(), show: true, copied: false })}><Icon n="refresh" /> Generar otra</button>
             </div>
             <p className="muted pwr-hint">16 caracteres con mayúsculas, minúsculas, números y símbolos, sin letras ni números que se confundan. {pwdReset.copied ? <strong className="pwr-ok">Copiada al portapapeles.</strong> : 'Cópiala antes de continuar: no se vuelve a mostrar.'}</p>
+            <label className="perm-row pwr-force">
+              <input type="checkbox" checked={pwdReset.force === true} onChange={(e) => setPwdReset({ ...pwdReset, force: e.target.checked })} />
+              <span><strong>Pedirle que la cambie al iniciar sesión</strong><br /><span className="muted">Si lo dejas sin marcar, esta queda como su contraseña definitiva.</span></span>
+            </label>
             <p className="muted pwr-hint">Entrégasela por un canal seguro (en persona o por un medio distinto al correo de esa misma cuenta). No la guardes en las notas del perfil.</p>
             <div className="modal-actions">
               <button className="btn" onClick={() => setPwdReset(null)} disabled={msBusy}>Cancelar</button>
