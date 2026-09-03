@@ -5,6 +5,13 @@ import { alertDialog } from '../lib/ui'
 
 const AuthContext = createContext(null)
 
+// Etiquetas de respaldo por si falla la lectura de la tabla de roles
+const FALLBACK_ROLE_LABELS = { user: 'Usuario', pedidos: 'Gestora de pedidos', admin: 'Administrador', mic: 'Mic', sistema: 'Cuentas de servicio',
+  presidente_directorio: 'Presidente Directorio', gerente_general: 'Gerente General', gerente_riesgo: 'Gerente de Riesgo',
+  gerente_cobranza: 'Gerente de Cobranzas', gerente_legal: 'Gerente Legal', gerente_admin_finanzas: 'Gerente de Administración y Finanzas',
+  gerente_financiacion: 'Gerente de Financiación y Mercado de Capitales', gerente_ti: 'Gerente TI',
+  gerente_producto: 'Gerente de Productos', gerente_comercial: 'Gerente Comercial y Marketing' }
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -39,7 +46,7 @@ export function AuthProvider({ children }) {
     // Salvaguarda: el admin nunca pierde acceso total aunque falle la lectura
     const p = r?.permissions ?? (roleKey === 'admin' ? { full_admin: true } : {})
     setPerms(p)
-    setRoleLabel(r?.label ?? ({ user: 'Usuario', pedidos: 'Gestora de pedidos', admin: 'Administrador' }[roleKey] || roleKey))
+    setRoleLabel(r?.label ?? (FALLBACK_ROLE_LABELS[roleKey] || roleKey))
     // Departamentos que gerencia (2ª/3ª llave de las compras de su área)
     const { data: md } = await supabase.from('departments').select('name').eq('manager_id', uid)
     setManagedDepts((md || []).map((d) => d.name))

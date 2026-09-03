@@ -25,6 +25,9 @@ function PassCell({ value }) {
 const emptyCred = (section_id) => ({ name: '', condition: 'Bueno', antivirus: '', assigned_to_name: '', assigned_to_email: '', section_id, attributes: {}, image_url: '' })
 
 export default function AccesosClaves() {
+  // Candado propio: aunque el componente se monte desde otra página, solo el admin edita claves
+  const { isAdmin } = useAuth()
+  const roClaves = !isAdmin
   const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState([])
@@ -180,7 +183,7 @@ export default function AccesosClaves() {
             {isOpen && (
               <div className="sec-body">
                 <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem' }}>
-                  <button className="btn-sm btn-lime" onClick={() => setEdit({ ...emptyCred(s.id) })}>＋ Agregar {s.name.toLowerCase()}</button>
+                  {!roClaves && <button className="btn-sm btn-lime" onClick={() => setEdit({ ...emptyCred(s.id) })}>＋ Agregar {s.name.toLowerCase()}</button>}
                   <input placeholder="Buscar en esta carpeta…" value={fq[s.id] || ''} onChange={(e) => setFq((o) => ({ ...o, [s.id]: e.target.value }))} style={{ flex: 1, minWidth: 200 }} />
                   <SortControl
                     fields={[{ value: 'recent', label: 'Más recientes' }, { value: 'name', label: 'Nombre' }]}
@@ -213,8 +216,8 @@ export default function AccesosClaves() {
                           <td><PassCell value={pass} /></td>
                           <td className="actions">
                             <button className="btn-sm" onClick={() => copyCred(e)}>{copiedId === e.id ? <><Icon n="check" /> Copiado</> : <><Icon n="copy" /> Copiar</>}</button>{' '}
-                            <button className="btn-sm" onClick={() => setEdit({ ...emptyCred(s.id), ...e, attributes: e.attributes || {} })}>Editar</button>{' '}
-                            <button className="btn-sm btn-danger" onClick={() => delCred(e)}>Eliminar</button>
+                            {!roClaves && <><button className="btn-sm" onClick={() => setEdit({ ...emptyCred(s.id), ...e, attributes: e.attributes || {} })}>Editar</button>{' '}</>}
+                            {!roClaves && <button className="btn-sm btn-danger" onClick={() => delCred(e)}>Eliminar</button>}
                           </td>
                         </tr>
                       )
@@ -285,7 +288,7 @@ export default function AccesosClaves() {
                   </>)}
                 </>)}
               </div>
-              <div className="modal-actions"><button className="btn" onClick={() => setEdit(null)}>Cancelar</button><button className="btn btn-primary" onClick={saveCred}>Guardar</button></div>
+              <div className="modal-actions"><button className="btn" onClick={() => setEdit(null)}>Cancelar</button>{!roClaves && <button className="btn btn-primary" onClick={saveCred}>Guardar</button>}</div>
             </div>
           </div>
         )

@@ -370,7 +370,8 @@ export default function Rooms() {
                 <button className="btn btn-lime" onClick={async () => { if (await confirmDialog('¿Aceptar la reserva?', { title: 'Aceptar reserva', okText: 'Aceptar' })) act('approve_reservation', openObj.id) }}>Aceptar</button>
                 <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Rechazar la reserva?', { title: 'Rechazar reserva', danger: true, okText: 'Rechazar' })) act('reject_reservation', openObj.id) }}>Rechazar</button>
               </>}
-              <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Cancelar la reserva?', { title: 'Cancelar reserva', danger: true, okText: 'Cancelar reserva' })) act('cancel_reservation', openObj.id) }}>Cancelar reserva</button>
+              {(canManageRooms || openObj.user_id === profile?.id) &&
+                <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Cancelar la reserva?', { title: 'Cancelar reserva', danger: true, okText: 'Cancelar reserva' })) act('cancel_reservation', openObj.id) }}>Cancelar reserva</button>}
               {isSuper && <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Eliminar la reserva por completo? No se puede deshacer.', { title: 'Eliminar reserva', danger: true, okText: 'Eliminar' })) act('reservation_delete', openObj.id) }}><Icon n="trash" /> Eliminar</button>}
               <button className="btn" onClick={() => setOpenRes(null)}>Cerrar</button>
             </div>

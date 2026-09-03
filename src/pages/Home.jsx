@@ -24,8 +24,8 @@ export default function Home() {
     if (!profile?.id) return
     const tasks = []
     // ¿soy aprobador de tecnología?
-    tasks.push(supabase.from('profiles').select('is_tech_approver').eq('id', profile.id).single()
-      .then(({ data }) => setIsTech(!!data?.is_tech_approver)).catch(() => {}))
+    tasks.push(supabase.from('profiles').select('is_tech_approver,is_hr,is_it_manager').eq('id', profile.id).single()
+      .then(({ data }) => setIsTech(!!(data?.is_tech_approver || data?.is_hr || data?.is_it_manager))).catch(() => {}))
     // Solicitudes (RLS: gestora/admin ven todas; aprobador tec. ve las tecnológicas)
     if (canManage || true) {
       tasks.push(supabase.from('requests').select('status, created_at').then(({ data }) => {

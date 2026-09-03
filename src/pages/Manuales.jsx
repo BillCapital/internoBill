@@ -19,8 +19,9 @@ const iconFor = (m, name = '') => {
 const safeName = (n) => (n || 'archivo').replace(/[^\w.\-]+/g, '_')
 
 export default function Manuales() {
-  const { profile, isAdmin, canManageUsers } = useAuth()
-  const canManage = isAdmin || canManageUsers
+  const { profile, canEdit } = useAuth()
+  // Módulo propio: leer pueden todos; subir y borrar, quien tenga «Gestionar Manuales»
+  const canManage = canEdit('manuals')
   const [rows, setRows] = useState([])
   const [cat, setCat] = useState('')          // filtro por categoría
   const [q, setQ] = useState('')

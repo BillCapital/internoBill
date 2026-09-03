@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import Chat from '../components/Chat'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, promptDialog, alertDialog, viewImage } from '../lib/ui'
-import { loadDepts, rootDeptOf, NON_REQUESTING_DEPTS } from '../lib/depts'
+import { loadDepts, rootDeptOf, NON_REQUESTING_DEPTS, DEFAULT_DEPTS } from '../lib/depts'
 import { fetchLinkPreview, fmtMoney } from '../lib/linkPreview'
 import { Icon } from '../lib/icons'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
@@ -19,10 +19,9 @@ const ST = [
 ]
 const cls = (k) => 's-' + ({ pending: 'pending', manager_review: 'pending', approved: 'approved', rejected: 'rejected', delivered: 'delivered' }[k])
 const label = (k) => (ST.find((s) => s.key === k) || {}).label || k
-const DEFAULT_DEPTS = ['Cobranza', 'Comercial', 'Operaciones', 'Producto', 'Gerencia']
 
 export default function Solicitudes() {
-  const { profile, canManageOrders, isAdmin } = useAuth()
+  const { profile, canManageOrders, canViewOrders, isAdmin } = useAuth()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [catalog, setCatalog] = useState([])
@@ -169,7 +168,7 @@ export default function Solicitudes() {
     const F = flagged || []
     const roleOf = (p) => (p.role || '').toLowerCase()
     setTechApprovers(F.filter((p) => p.is_tech_approver))
-    setHrApprovers(F.filter((p) => p.is_hr || roleOf(p) === 'rrhh'))
+    setHrApprovers(F.filter((p) => p.is_hr))   // firmante de Finanzas: solo la casilla del perfil (el rol rrhh ya no existe)
     setItMgrs(F.filter((p) => p.is_it_manager || roleOf(p) === 'gerente_ti'))
     setApprovals(ap || [])
     setDeptMgrs(dm || [])
@@ -394,7 +393,7 @@ export default function Solicitudes() {
   }
 
   // La gestora de pedidos NO ve las solicitudes tecnológicas (salvo que sea firmante o dueña); admin sí.
-  const canSee = (t) => t.kind !== 'tec' || isAdmin || t.user_id === profile?.id || myIsSigner(t)
+  const canSee = (t) => t.kind !== 'tec' || isAdmin || canViewOrders || t.user_id === profile?.id || myIsSigner(t)
   const visibleRows = rows.filter(canSee)
   const data = visibleRows
     .filter((t) => !status || t.status === status)
@@ -705,7 +704,7 @@ export default function Solicitudes() {
               )}
               {/* Productos de una solicitud tecnológica: cada uno con link + cotización y firma por firmante */}
               {t.kind === 'tec' && (() => {
-                const canAdd = t.user_id === profile?.id || isAdmin
+                const canAdd = t.user_id === profile?.id || isAdmin || canManageOrders
                 const active = t.status !== 'rejected' && t.status !== 'delivered' && t.status !== 'approved'
                 const products = t.request_products || []
                 const req = requiredSigners(t)
@@ -719,8 +718,8 @@ export default function Solicitudes() {
                     )}
                   </div>
 
-                  {(myIsSigner(t) || isAdmin || t.budget_min != null || t.budget_max != null) && (() => {
-                    const canEditBudget = myIsSigner(t) || isAdmin
+                  {(myIsSigner(t) || isAdmin || canManageOrders || t.budget_min != null || t.budget_max != null) && (() => {
+                    const canEditBudget = myIsSigner(t) || isAdmin || canManageOrders
                     const bf = budgetForm[t.id]
                     const hasRange = t.budget_min != null || t.budget_max != null
                     return (

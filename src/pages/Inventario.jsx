@@ -141,6 +141,7 @@ export default function Inventario() {
   const toggleMany = (ids, on) => setSel((s) => { const n = new Set(s); ids.forEach((id) => on ? n.add(id) : n.delete(id)); return n })
   const clearSel = () => setSel(new Set())
   const bulkApply = async (patch) => {
+    if (ro) return
     const ids = [...sel]
     if (!ids.length) return
     try { await api('equipment_bulk_update', { p_ids: ids, p_patch: patch }); clearSel(); load() }
@@ -643,7 +644,7 @@ export default function Inventario() {
                       <td><span className="muted">{secById[e.section_id]?.name}</span></td>
                       <td><span className="badge">{e.condition}</span></td>
                       <td className="actions">
-                        <button className="btn-sm btn-lime" onClick={() => setDisponible(e, true)}>Marcar disponible</button>{' '}
+                        {!ro && <>{''}<button className="btn-sm btn-lime" onClick={() => setDisponible(e, true)}>Marcar disponible</button>{' '}</>}
                         <button className="btn-sm" onClick={() => nav(`/equipo/${e.id}`)}>Ver / Editar</button>{' '}
                         {!ro && <button className="btn-sm btn-danger" onClick={() => delEquip(e)}>Eliminar</button>}
                       </td>
@@ -699,7 +700,7 @@ export default function Inventario() {
                               <td>{e.serial_number || <span className="muted">—</span>}</td>
                               <td>{e.assigned_to_name || <span className="muted">—</span>}</td>
                               <td>{e.attributes?.cuenta_windows || <span className="muted">—</span>}</td>
-                              <td className="actions"><button className="btn-sm" onClick={() => nav(`/equipo/${e.id}`)}>Detalle</button>{' '}<button className="btn-sm" onClick={() => setEdit({ ...emptyEquip(e.section_id), ...e, attributes: e.attributes || {} })}>Editar</button></td>
+                              <td className="actions"><button className="btn-sm" onClick={() => nav(`/equipo/${e.id}`)}>Detalle</button>{!ro && <>{' '}<button className="btn-sm" onClick={() => setEdit({ ...emptyEquip(e.section_id), ...e, attributes: e.attributes || {} })}>Editar</button></>}</td>
                             </tr>
                           ))}</tbody>
                         </table></div>
@@ -718,7 +719,7 @@ export default function Inventario() {
                           <td><strong>{e.name}</strong> {e.brand} {e.model}</td>
                           <td>{e.assigned_to_name || <span className="muted">Sin asignar</span>}{e.assigned_to_email ? <><br /><span className="muted">{e.assigned_to_email}</span></> : null}</td>
                           <td><span className="muted">{secById[e.section_id]?.name}</span></td>
-                          <td className="actions"><button className="btn-sm" onClick={() => setEdit({ ...emptyEquip(e.section_id), ...e, attributes: e.attributes || {} })}>Completar</button></td>
+                          <td className="actions">{ro ? <span className="muted">—</span> : <button className="btn-sm" onClick={() => setEdit({ ...emptyEquip(e.section_id), ...e, attributes: e.attributes || {} })}>Completar</button>}</td>
                         </tr>
                       ))}</tbody>
                     </>)}
@@ -753,7 +754,7 @@ export default function Inventario() {
                         <td><strong>{e.name}</strong> {e.brand} {e.model}</td>
                         <td>{e.serial_number || <span className="muted">—</span>}</td>
                         <td><span className="badge">{e.condition}</span></td>
-                        <td className="actions"><button className="btn-sm" onClick={() => nav(`/equipo/${e.id}`)}>Ver / Asignar</button>{' '}<button className="btn-sm" onClick={() => setDisponible(e, false)}>Quitar de stock</button></td>
+                        <td className="actions"><button className="btn-sm" onClick={() => nav(`/equipo/${e.id}`)}>{ro ? 'Ver' : 'Ver / Asignar'}</button>{!ro && <>{' '}<button className="btn-sm" onClick={() => setDisponible(e, false)}>Quitar de stock</button></>}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -806,7 +807,7 @@ export default function Inventario() {
                 {isOpen && <div className="sec-body">
                   <div className="row" style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem', alignItems: 'center' }}>
                     {p.buy_link ? <a className="btn-sm" href={p.buy_link} target="_blank" rel="noreferrer"><Icon n="link" /> Link de compra</a> : null}
-                    <button className="btn-sm" onClick={() => setPeriphForm({ ...p })}>Editar</button>
+                    {!ro && <button className="btn-sm" onClick={() => setPeriphForm({ ...p })}>Editar</button>}
                     {!ro && <button className="btn-sm btn-danger" onClick={() => delPeriph(p)}>Eliminar</button>}
                   </div>
                   {/* Asignar a un usuario */}
@@ -816,7 +817,7 @@ export default function Inventario() {
                       {countryUsers.map((u) => <option key={u.id} value={u.id}>{u.full_name || u.email}</option>)}
                     </select>
                     <input type="number" min="1" max={disp} style={{ width: 70 }} value={sel.qty} onChange={(e) => setPSel((s) => ({ ...s, [p.id]: { ...sel, qty: e.target.value } }))} />
-                    <button className="btn-sm btn-lime" disabled={disp <= 0 || !sel.user || Number(sel.qty) < 1 || Number(sel.qty) > disp} onClick={() => { assignPeriph(p.id, sel.user, sel.qty); setPSel((s) => ({ ...s, [p.id]: { user: '', qty: 1 } })) }}>Asignar</button>
+                    <button className="btn-sm btn-lime" disabled={ro || disp <= 0 || !sel.user || Number(sel.qty) < 1 || Number(sel.qty) > disp} onClick={() => { assignPeriph(p.id, sel.user, sel.qty); setPSel((s) => ({ ...s, [p.id]: { user: '', qty: 1 } })) }}>Asignar</button>
                   </div>
                   <div className="table-wrap"><table className="tbl-compact">
                     <thead><tr><th>Usuario</th><th>Cantidad</th><th></th></tr></thead>
@@ -826,7 +827,7 @@ export default function Inventario() {
                         <tr key={m.user_id}>
                           <td><strong>{m.user_name || m.user_email}</strong></td>
                           <td><span className="badge">{m.qty}</span></td>
-                          <td className="actions"><button className="btn-sm btn-danger" onClick={() => assignPeriph(p.id, m.user_id, 0)}>Quitar</button></td>
+                          <td className="actions">{ro ? <span className="muted">—</span> : <button className="btn-sm btn-danger" onClick={() => assignPeriph(p.id, m.user_id, 0)}>Quitar</button>}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -873,7 +874,7 @@ export default function Inventario() {
               return (
               <div className="sec-body">
                 <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem' }}>
-                  <button className="btn-sm btn-lime" onClick={() => setEdit({ ...emptyEquip(s.id), attributes: { pais: effCountry, ...(s.name === 'Computadores' ? { tipo: 'Notebook', pin: '123321', so: 'Windows 11 Home', propiedad: 'Empresarial', dhcp: 'Sí', pass_windows: 'No aplica' } : {}) } })}>＋ Agregar {s.name.toLowerCase()}</button>
+                  {!ro && <button className="btn-sm btn-lime" onClick={() => setEdit({ ...emptyEquip(s.id), attributes: { pais: effCountry, ...(s.name === 'Computadores' ? { tipo: 'Notebook', pin: '123321', so: 'Windows 11 Home', propiedad: 'Empresarial', dhcp: 'Sí', pass_windows: 'No aplica' } : {}) } })}>＋ Agregar {s.name.toLowerCase()}</button>}
                   <input placeholder="Buscar en esta carpeta…" value={folderQ[s.id] || ''} onChange={(e) => setFolderQ((q) => ({ ...q, [s.id]: e.target.value }))} style={{ flex: 1, minWidth: 200 }} />
                   <SortControl
                     fields={[{ value: 'recent', label: 'Más recientes' }, { value: 'name', label: 'Nombre' }, { value: 'assigned', label: s.assign_to === 'department' ? 'Departamento' : 'Asignado a' }]}
@@ -1093,7 +1094,7 @@ export default function Inventario() {
                   </>)}
                 </>)}
               </div>
-              <div className="modal-actions"><button className="btn" onClick={() => setEdit(null)}>Cancelar</button><button className="btn btn-primary" onClick={saveEquip}>Guardar</button></div>
+              <div className="modal-actions"><button className="btn" onClick={() => setEdit(null)}>Cancelar</button>{!ro && <button className="btn btn-primary" onClick={saveEquip}>Guardar</button>}</div>
             </div>
           </div>
         )

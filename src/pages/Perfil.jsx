@@ -189,7 +189,7 @@ export default function Perfil() {
           <div className="pf-field"><label>Contacto de emergencia · teléfono</label>
             <input value={form.emergency_phone} onChange={(e) => setF('emergency_phone', e.target.value)} placeholder="+56 9 ..." />
           </div>
-          <div className="pf-field"><label>Departamento</label><div className="val">{profile?.department || '—'} {role !== 'admin' && <span className="lock"><Icon n="lock" /> fijo</span>}</div></div>
+          <div className="pf-field"><label>Departamento</label><div className="val">{profile?.department || '—'} {!isAdmin && <span className="lock"><Icon n="lock" /> fijo</span>}</div></div>
           <div className="pf-field"><label>Rol</label><div className="val">{roleLabel}</div></div>
         </div>
         <div className="row" style={{ marginTop: '.9rem', justifyContent: 'flex-end' }}>

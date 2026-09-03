@@ -15,7 +15,7 @@ const cls = (k) => 's-' + ({ open: 'open', in_progress: 'prog', resolved: 'solve
 const label = (k) => (ST.find((s) => s.key === k) || {}).label || k
 
 export default function Soporte() {
-  const { isAdmin, isSuper, canManageSupport } = useAuth()
+  const { isSuper, canManageSupport, canViewSupport } = useAuth()
   const [rows, setRows] = useState([])
   const [status, setStatus] = useState(null)
   const [open, setOpen] = useState(null)
@@ -67,13 +67,13 @@ export default function Soporte() {
   return (
     <div>
       <div className="page-head"><div className="row">
-        <div><h2>{isAdmin ? 'Soporte · todas las conversaciones' : 'Soporte'}</h2>
+        <div><h2>{canViewSupport ? 'Soporte · todas las conversaciones' : 'Soporte'}</h2>
           <p className="muted">Cada ticket es un chat con Soporte TI. Presiona un panel para filtrar.</p></div>
         <button className="btn btn-lime" onClick={() => setNt({ subject: '', desc: '', imgs: [], busy: false })}>＋ Nuevo ticket</button>
       </div></div>
       <div className="kpi-grid compact">
         <button className={`kpi ${!status ? 'active' : ''}`} onClick={() => setStatus(null)}>
-          <div className="ico"><Icon n="chat" /></div><div className="num">{rows.length}</div><div className="lbl">{isAdmin ? 'Tickets en total' : 'Tus tickets'}</div>
+          <div className="ico"><Icon n="chat" /></div><div className="num">{rows.length}</div><div className="lbl">{canViewSupport ? 'Tickets en total' : 'Tus tickets'}</div>
         </button>
         {ST.map((s) => (
           <button key={s.key} className={`kpi ${status === s.key ? 'active' : ''}`} onClick={() => setStatus(status === s.key ? null : s.key)}>
@@ -86,13 +86,13 @@ export default function Soporte() {
         <div className={`conv ${open === t.id ? 'open' : ''}`} key={t.id}>
           <button className="cv-head" onClick={() => setOpen(open === t.id ? null : t.id)}>
             <span className="ico"><Icon n="chat" /></span>
-            <span className="t"><strong>{t.subject}</strong><br /><span className="prev">{isAdmin ? (t.profiles?.full_name || t.profiles?.email) : ''}</span></span>
+            <span className="t"><strong>{t.subject}</strong><br /><span className="prev">{canViewSupport ? (t.profiles?.full_name || t.profiles?.email) : ''}</span></span>
             <span className={`badge ${cls(t.status)}`}>{label(t.status)}</span><span className="chev">▾</span>
           </button>
           {open === t.id && (
             <div className="cv-body">
               <Chat type="ticket" id={t.id} locked={t.status === 'closed'} />
-              {isAdmin && (
+              {canManageSupport && (
                 <div className="adm-actions"><span className="muted">Estado:</span>
                   <select value={t.status} onChange={(e) => changeStatus(t.id, e.target.value)}>
                     {ST.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
@@ -147,7 +147,7 @@ export default function Soporte() {
         </div>
       )}
 
-      {(isAdmin || canManageSupport) && <ActivityLog kinds={['Soporte']} title="Registro de soporte" />}
+      {canManageSupport && <ActivityLog kinds={['Soporte']} title="Registro de soporte" />}
     </div>
   )
 }

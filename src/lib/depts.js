@@ -1,7 +1,12 @@
 import { supabase } from './supabase'
 
 // Lista de respaldo por si la tabla aún no responde (mismo orden semilla)
-export const DEFAULT_DEPTS = ['Cobranza', 'Comercial', 'Operaciones', 'Producto', 'Gerencia']
+export const DEFAULT_DEPTS = [
+  'Presidente Directorio', 'Gerencia General', 'Gerencia de Riesgo', 'Gerencia de Cobranzas',
+  'Gerencia Legal', 'Gerencia de Administración y Finanzas',
+  'Gerencia de Financiación y Mercado de Capitales', 'Gerencia de TI',
+  'Gerencia de Productos', 'Gerencia Comercial y Marketing',
+]
 
 // Departamentos que NO pueden solicitar insumos (no aparecen al pedir).
 export const NON_REQUESTING_DEPTS = ['Mic']
@@ -18,7 +23,7 @@ function setDepthCache(tree) {
 }
 
 // Devuelve el departamento raíz (de nivel superior) al que pertenece un depto/subdepto.
-// Ej: Riesgo -> Gerencia, Tesoreria/Legal -> Operaciones. Los de nivel superior se devuelven igual.
+// Hoy las 10 gerencias son de nivel superior; se mantiene por si vuelven a existir subdepartamentos.
 export function rootDeptOf(name) {
   let cur = name || '', guard = 0
   while (cur && parentByName[cur] && guard++ < 10) cur = parentByName[cur]
