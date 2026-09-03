@@ -550,6 +550,8 @@ body.light .b-nuevo{background:#e7f7d9;color:#3f7d16}body.light .b-bueno{backgro
 body.light .b-regular{background:#fff2d6;color:#a5741a}body.light .b-rep{background:#ffe2e2;color:#b52020}body.light .b-baja{background:#ececf2;color:#6b7290}
 body.light .s-open,body.light .s-pending{background:#e9f0ff;color:#2a4da0}body.light .s-prog{background:#fff2d6;color:#a5741a}
 body.light .s-solved,body.light .s-approved,body.light .s-delivered{background:#e7f7d9;color:#3f7d16}body.light .s-closed{background:#ececf2;color:#6b7290}body.light .s-rejected{background:#ffe2e2;color:#b52020}
+body.light .s-review{background:#fff2d6;color:#a5741a}
+body.light .mini.no{background:#ffe2e2;color:#b52020}
 body.light .tag{background:#f0eefb;color:#4b3ea3}
 body.light .note{background:#fbfbe8;border-color:#ececc0;color:#6b6a2c}
 
@@ -2175,3 +2177,47 @@ body.light .role-badge.rrhh{background:#6b4fd0;color:#fff}
 /* tamaños consistentes de la fila */
 .dl-item{min-height:3.1rem}
 .dl-kind{white-space:nowrap}
+
+/* ============================================================
+   Secciones de detalle: un solo lenguaje visual en la ficha de
+   equipo, el detalle de solicitud y el modal de usuario.
+   El problema no era el color sino el ritmo: los títulos tenían
+   el mismo peso que los datos y todo quedaba suelto.
+   ============================================================ */
+
+/* Subtítulo de sección: rótulo pequeño, separado del bloque anterior
+   y pegado a su propio contenido (jerarquía por proximidad). */
+.det-sub,
+.det-sub.det-toggle{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:.66rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--muted);
+  margin:1.5rem 0 .6rem;padding:1rem 0 0;
+  border-top:1px solid var(--line);
+}
+.det-sub:first-of-type,.det-sub.det-toggle:first-of-type{margin-top:.3rem;padding-top:0;border-top:0}
+.det-sub.det-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+  background:none;border-left:0;border-right:0;border-bottom:0;cursor:pointer;transition:color .13s}
+.det-sub.det-toggle:hover{color:var(--text)}
+.det-sub.det-toggle .chev{font-size:.7rem;letter-spacing:0;color:var(--muted)}
+
+/* Pares etiqueta/valor: la etiqueta pesa menos y se pega a su campo;
+   el aire va entre filas, no entre etiqueta y dato. */
+.pf-fields{gap:.9rem 1rem}
+.pf-fields label,.pf-fields>div>label{
+  font-size:.65rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 .3rem}
+.pf-fields input,.pf-fields select,.pf-fields textarea{font-size:.86rem}
+
+/* Ficha de equipo: la columna de datos respira igual que el QR de al lado */
+.eq-detail{gap:1.6rem}
+.eq-info>.det-sub:first-of-type{margin-top:0}
+
+/* Detalle de solicitud: cada bloque separado por una línea tenue,
+   con el mismo margen a ambos lados que la cabecera. */
+.cv-section-t{margin:1.4rem 1.1rem .55rem;padding-top:.9rem;border-top:1px solid var(--line);
+  font-family:'JetBrains Mono',ui-monospace,monospace;letter-spacing:.11em;font-size:.66rem}
+.cv-section-t:first-child{margin-top:1rem;padding-top:0;border-top:0}
+.cv-body>*:last-child{margin-bottom:0}
+.cv-body{padding-bottom:.2rem}
+.cv-note{padding:.6rem 1.1rem;font-size:.83rem;line-height:1.5}
