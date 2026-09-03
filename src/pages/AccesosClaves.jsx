@@ -6,6 +6,7 @@ import { loadDeptNames, DEFAULT_DEPTS, deptIndentLabel } from '../lib/depts'
 import SortControl from '../components/SortControl'
 import FilterControl from '../components/FilterControl'
 import { Icon, sectionIconName } from '../lib/icons'
+import { useAuth } from '../context/AuthContext'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
 // Secciones que son claves/credenciales
