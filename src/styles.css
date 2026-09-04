@@ -2289,3 +2289,4 @@ body.light .role-badge.gerente_cobranza{background:#8a6212;color:#fff}
   .wiz-step+.wiz-step::before{display:none}
   .wiz-step .wiz-t{white-space:nowrap}
 }
+.wiz-buy{display:flex;align-items:center;gap:.4rem;margin-top:.4rem;flex-wrap:wrap}

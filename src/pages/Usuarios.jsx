@@ -1049,7 +1049,8 @@ export default function Usuarios() {
                           <label key={x.skuId} className={`perm-row wiz-lic ${!disp ? 'off' : ''}`}>
                             <input type="radio" name="wiz-lic" disabled={!disp} checked={n.licSku === x.skuId} onChange={() => setNewUser({ ...n, licSku: x.skuId })} />
                             <span><strong>{skuName(x.skuPartNumber)}</strong><br />
-                              <span className="muted">{disp ? `${x.available} de ${x.total} disponibles` : 'Sin cupo: primero compra asientos en el centro de administración de M365 (Facturación → Sus productos) y vuelve a intentarlo.'}</span></span>
+                              <span className="muted">{disp ? `${x.available} de ${x.total} disponibles` : 'Sin cupo. Microsoft no permite comprar por API: el pago se aprueba en su portal.'}</span>
+                              {!disp && <span className="wiz-buy"><button type="button" className="btn-sm btn-lime" onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')}><Icon n="cart" /> Comprar en M365</button><span className="muted"> y al volver</span> <button type="button" className="btn-sm" onClick={() => { setWizSkus(null) }}><Icon n="refresh" /> Actualizar cupos</button></span>}</span>
                           </label>
                         )
                       })}
