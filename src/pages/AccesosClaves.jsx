@@ -42,7 +42,8 @@ export default function AccesosClaves() {
   const [fq, setFq] = useState({})       // búsqueda por carpeta
   const [fsort, setFsort] = useState({}) // criterio de orden por carpeta
   const [fdir, setFdir] = useState({})   // dirección por carpeta
-  const [ffilter, setFfilter] = useState({}) // filtros por carpeta { falta }
+  const [ffilter, setFfilter] = useState({}) // filtros por carpeta { falta, dom, dept }
+  const [fgroup, setFgroup] = useState({})   // agrupar por carpeta: '' | 'dom' | 'dept'
   const [copiedId, setCopiedId] = useState(null)
 
   // Copia los datos con el formato que corresponde al tipo de clave:
@@ -86,6 +87,11 @@ export default function AccesosClaves() {
   }, [edit?.id, edit?.section_id, sections])
 
   const secById = useMemo(() => Object.fromEntries(sections.map((s) => [s.id, s])), [sections])
+  // Departamento de cada persona por correo, y dominio de una clave
+  const deptByEmail = useMemo(() => Object.fromEntries(users.map((u) => [String(u.email || '').toLowerCase(), u.department || ''])), [users])
+  const credEmail = (e) => String(e.assigned_to_email || (/@/.test(e.attributes?.usuario || '') ? e.attributes.usuario : '') || '').toLowerCase()
+  const credDom = (e) => credEmail(e).split('@')[1] || ''
+  const credDept = (e) => deptByEmail[credEmail(e)] || ''
   const bySection = useMemo(() => { const g = {}; items.forEach((e) => { (g[e.section_id] = g[e.section_id] || []).push(e) }); return g }, [items])
 
   const credGaps = useMemo(() => {
@@ -170,6 +176,13 @@ export default function AccesosClaves() {
         let filtered = all.filter((e) => !q || `${e.name || ''} ${e.assigned_to_name || ''} ${e.assigned_to_email || ''} ${e.attributes?.usuario || ''}`.toLowerCase().includes(q))
         if (falta === 'pass') filtered = filtered.filter((e) => !(e.attributes?.contrasena || '').trim())
         else if (falta === 'asig') filtered = filtered.filter((e) => !(e.assigned_to_name || e.assigned_to_email))
+        const fDom = ffilter[s.id]?.dom || '', fDept = ffilter[s.id]?.dept || ''
+        if (fDom) filtered = filtered.filter((e) => credDom(e) === fDom)
+        if (fDept) filtered = filtered.filter((e) => (fDept === '__sin__' ? !credDept(e) : credDept(e) === fDept))
+        // Opciones de los filtros, sacadas de lo que hay en la carpeta
+        const domOpts = [...new Set(all.map(credDom).filter(Boolean))].sort()
+        const deptOpts = [...new Set(all.map(credDept).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'))
+        const grp = fgroup[s.id] || ''
         const field = fsort[s.id] || 'recent'
         const dir = fdir[s.id] || (field === 'recent' ? 'desc' : 'asc')
         const cmp = (a, b) => field === 'recent'
@@ -198,13 +211,33 @@ export default function AccesosClaves() {
                     field={fsort[s.id] || 'recent'} dir={fdir[s.id] || ((fsort[s.id] || 'recent') === 'recent' ? 'desc' : 'asc')}
                     onField={(v) => setFsort((o) => ({ ...o, [s.id]: v }))}
                     onToggleDir={() => setFdir((d) => { const cur = d[s.id] || ((fsort[s.id] || 'recent') === 'recent' ? 'desc' : 'asc'); return { ...d, [s.id]: cur === 'asc' ? 'desc' : 'asc' } })} />
-                  <FilterControl active={!!ffilter[s.id]?.falta}>
+                  {(domOpts.length > 1 || deptOpts.length > 0) && (
+                    <label className="sort-ctl">Agrupar:
+                      <select value={grp} onChange={(e) => setFgroup((o) => ({ ...o, [s.id]: e.target.value }))}>
+                        <option value="">Sin agrupar</option>
+                        {domOpts.length > 1 && <option value="dom">Por dominio</option>}
+                        {deptOpts.length > 0 && <option value="dept">Por departamento</option>}
+                      </select>
+                    </label>
+                  )}
+                  <FilterControl active={!!(ffilter[s.id]?.falta || ffilter[s.id]?.dom || ffilter[s.id]?.dept)}>
                     <label>Mostrar
-                      <select value={ffilter[s.id]?.falta || ''} onChange={(e) => setFfilter((o) => ({ ...o, [s.id]: { falta: e.target.value } }))}>
+                      <select value={ffilter[s.id]?.falta || ''} onChange={(e) => setFfilter((o) => ({ ...o, [s.id]: { ...o[s.id], falta: e.target.value } }))}>
                         <option value="">Todos</option>
                         <option value="pass">Sin contraseña</option>
                         <option value="asig">Sin asignar</option>
                       </select></label>
+                    {domOpts.length > 1 && <label>Dominio
+                      <select value={ffilter[s.id]?.dom || ''} onChange={(e) => setFfilter((o) => ({ ...o, [s.id]: { ...o[s.id], dom: e.target.value } }))}>
+                        <option value="">Todos</option>
+                        {domOpts.map((d) => <option key={d} value={d}>@{d}</option>)}
+                      </select></label>}
+                    {deptOpts.length > 0 && <label>Departamento
+                      <select value={ffilter[s.id]?.dept || ''} onChange={(e) => setFfilter((o) => ({ ...o, [s.id]: { ...o[s.id], dept: e.target.value } }))}>
+                        <option value="">Todos</option>
+                        {deptOpts.map((d) => <option key={d} value={d}>{d}</option>)}
+                        <option value="__sin__">Sin departamento</option>
+                      </select></label>}
                     <button className="btn-sm" type="button" onClick={() => setFfilter((o) => ({ ...o, [s.id]: {} }))}>Limpiar filtros</button>
                   </FilterControl>
                 </div>
@@ -214,7 +247,15 @@ export default function AccesosClaves() {
                   </tr></thead>
                   <tbody>
                     {rows.length === 0 && <tr><td colSpan={cols} className="muted" style={{ padding: '.7rem' }}>Sin registros.</td></tr>}
-                    {rows.map((e) => {
+                    {(grp ? (() => {
+                      const key = grp === 'dom' ? credDom : credDept
+                      const label = (k) => (k ? (grp === 'dom' ? '@' + k : k) : (grp === 'dom' ? 'Sin correo' : 'Sin departamento'))
+                      const gmap = {}
+                      rows.forEach((e) => { const k = key(e); (gmap[k] = gmap[k] || []).push(e) })
+                      return Object.keys(gmap).sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, 'es')))
+                        .flatMap((k) => [{ __grp: label(k), __n: gmap[k].length, id: 'g-' + k }, ...gmap[k]])
+                    })() : rows).map((e) => {
+                      if (e.__grp) return <tr key={e.id} className="grp-row cred-grp"><td colSpan={cols}><span className="grp-lbl">{e.__grp}</span><span className="grp-count">{e.__n}</span></td></tr>
                       const pass = e.attributes?.contrasena || ''
                       return (
                         <tr key={e.id}>

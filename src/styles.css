@@ -2290,3 +2290,10 @@ body.light .role-badge.gerente_cobranza{background:#8a6212;color:#fff}
   .wiz-step .wiz-t{white-space:nowrap}
 }
 .wiz-buy{display:flex;align-items:center;gap:.4rem;margin-top:.4rem;flex-wrap:wrap}
+
+/* Claves: subencabezados al agrupar por dominio o departamento */
+.cred-cards tr.cred-grp td{padding:.65rem .5rem .3rem;border-top:0;
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.64rem;font-weight:700;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.cred-cards tr.cred-grp .grp-count{margin-left:.5rem;font-size:.66rem;padding:.05rem .45rem;
+  border-radius:999px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
