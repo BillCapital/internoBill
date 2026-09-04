@@ -2263,7 +2263,10 @@ body.light .role-badge.gerente_cobranza{background:#8a6212;color:#fff}
 .wiz-lics{display:flex;flex-direction:column;gap:.45rem;margin-top:.8rem}
 .wiz-lic{align-items:flex-start}
 .wiz-lic input[type=radio]{width:16px;height:16px;flex:none;accent-color:var(--lime-text);margin-top:3px}
-.wiz-lic.off{opacity:.55}
+.wiz-lic.off{background:transparent;border-style:dashed}
+.wiz-lic.off input[type=radio]{opacity:.4}
+.wiz-lic.off>span>strong{color:var(--muted)}
+.wiz-lic.off:hover{border-color:var(--line)}
 .wiz-review{display:flex;flex-direction:column;gap:.45rem;margin-top:.4rem}
 .wiz-review>div{display:flex;align-items:center;gap:.7rem;border:1px solid var(--line);
   border-radius:10px;background:var(--soft);padding:.55rem .7rem;font-size:.88rem}

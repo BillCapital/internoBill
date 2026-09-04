@@ -326,7 +326,7 @@ export default function Usuarios() {
   useEffect(() => {
     if (!newUser || newUser.done || wizSkus) return
     msUsers('listSkus').then((r) => setWizSkus(r?.skus || [])).catch(() => setWizSkus([]))
-  }, [newUser])  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [newUser, wizSkus])  // wizSkus en las dependencias: «Actualizar cupos» lo pone en null para forzar la recarga
   // Validación por paso del asistente
   const wizStepError = (n) => {
     if (n.step === 1) {
@@ -1043,14 +1043,22 @@ export default function Usuarios() {
                   {wizSkus === null && <p className="muted">Cargando licencias del tenant…</p>}
                   {wizSkus !== null && (
                     <div className="wiz-lics">
-                      {wizSkus.filter((x) => (x.total || 0) > 0).map((x) => {
+                      {wizSkus.filter((x) => (x.total || 0) > 0)
+                        .slice().sort((a, b) => {
+                          const r = (x) => (x.available > 0 ? ((x.total || 0) >= 100000 ? 1 : 0) : 2)
+                          return r(a) - r(b) || String(a.skuPartNumber).localeCompare(String(b.skuPartNumber))
+                        })
+                        .map((x) => {
                         const disp = x.available > 0
                         return (
                           <label key={x.skuId} className={`perm-row wiz-lic ${!disp ? 'off' : ''}`}>
                             <input type="radio" name="wiz-lic" disabled={!disp} checked={n.licSku === x.skuId} onChange={() => setNewUser({ ...n, licSku: x.skuId })} />
                             <span><strong>{skuName(x.skuPartNumber)}</strong><br />
-                              <span className="muted">{disp ? `${x.available} de ${x.total} disponibles` : 'Sin cupo. Microsoft no permite comprar por API: el pago se aprueba en su portal.'}</span>
-                              {!disp && <span className="wiz-buy"><button type="button" className="btn-sm btn-lime" onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')}><Icon n="cart" /> Comprar en M365</button><span className="muted"> y al volver</span> <button type="button" className="btn-sm" onClick={() => { setWizSkus(null) }}><Icon n="refresh" /> Actualizar cupos</button></span>}</span>
+                              <span className="muted">{disp ? `${x.available} de ${x.total} disponibles` : 'Sin cupo — el pago se aprueba en el portal de Microsoft.'}</span>
+                              {!disp && <span className="wiz-buy">
+                                <button type="button" className="btn-sm btn-lime" title="Abre la página de este producto en M365, con el botón «Comprar más licencias»" onClick={() => window.open(`https://admin.microsoft.com/Adminportal/Home#/licensedetailpage/${x.skuId}`, '_blank', 'noopener')}><Icon n="cart" /> Comprar en M365</button>
+                                <button type="button" className="btn-sm" title="Vuelve a consultar los cupos después de comprar" onClick={() => { setWizSkus(null) }}><Icon n="refresh" /> Actualizar cupos</button>
+                              </span>}</span>
                           </label>
                         )
                       })}
