@@ -313,6 +313,7 @@ export default function Roles() {
                 ? <><strong>No se pudo consultar.</strong> {msDiag.error}{msDiag.hint ? <><br /><span className="muted">{msDiag.hint}</span></> : null}{msDiag.detail ? <><br /><span className="muted">{msDiag.detail}</span></> : null}</>
                 : <>
                   <strong>{msDiag.puedeRestablecerContrasenas ? 'La app puede restablecer contraseñas.' : 'La app todavía NO puede restablecer contraseñas.'}</strong>
+                  {msDiag.notaAdmins ? <div className="muted ms-diag-d">{msDiag.notaAdmins}</div> : null}
                   {(msDiag.falta || []).length > 0 && <ul className="ms-diag-list">{msDiag.falta.map((f, i) => <li key={i}>Falta: {f}</li>)}</ul>}
                   <div className="muted ms-diag-d">Permisos de API: {(msDiag.permisosDeApi || []).join(', ') || '—'}</div>
                   <div className="muted ms-diag-d">Roles de directorio: {(msDiag.rolesDeDirectorio || []).join(', ') || 'ninguno'}</div>
