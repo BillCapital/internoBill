@@ -147,10 +147,10 @@ export default function Solicitudes() {
     if (roots.length) setTopDepts(roots)
   })() }, [])
 
-  // Firmantes de una compra tecnológica: Administración y Finanzas + Gerente TI + gerente del área que pide.
+  // Firmantes de una compra tecnológica: RRHH (Juan Manríquez, por su función de RRHH) + Gerente TI + gerente del área que pide.
   // El conjunto se des-duplica por persona: si alguien cumple dos papeles, firma una sola vez.
   const [techApprovers, setTechApprovers] = useState([])   // aprobadores técnicos (flujo catálogo)
-  const [hrApprovers, setHrApprovers] = useState([])       // Administración y Finanzas (flujo tecnológico)
+  const [hrApprovers, setHrApprovers] = useState([])       // función RRHH (flujo tecnológico)
   const [itMgrs, setItMgrs] = useState([])                 // Gerente de TI (flujo tecnológico)
   const [approvals, setApprovals] = useState([])           // [{request_id, approver_id, decision}]
   const [prodApprovals, setProdApprovals] = useState([])   // [{product_id, approver_id, decision, reason}] firma por producto
@@ -179,7 +179,7 @@ export default function Solicitudes() {
   // Gerente de área de un departamento (el guardado en la solicitud ya es el depto raíz)
   const deptManagerOf = (dept) => (deptMgrs.find((d) => d.name === dept)?.manager) || null
   // Conjunto de firmantes requeridos para una solicitud, des-duplicado por persona.
-  // Tecnológica: Administración y Finanzas + Gerente TI + encargado del área. Catálogo: aprobadores técnicos + encargado.
+  // Tecnológica: RRHH + Gerente TI + encargado del área. Catálogo: aprobadores técnicos + encargado.
   const requiredSigners = (t) => {
     const base = t.kind === 'tec' ? [...hrApprovers, ...itMgrs] : [...techApprovers]
     const list = []
@@ -194,10 +194,10 @@ export default function Solicitudes() {
   const iSigned = (reqId) => signedFor(reqId).includes(profile?.id)
   // Decisión de un firmante concreto sobre una solicitud: 'approve' | 'reject' | null (pendiente)
   const decisionFor = (reqId, approverId) => (approvals.find((a) => a.request_id === reqId && a.approver_id === approverId) || {}).decision || null
-  // Rol(es) que cumple una persona como firmante (Finanzas / Gerente TI / Encargado de área)
+  // Rol(es) que cumple una persona como firmante (RRHH / Gerente TI / Encargado de área)
   const signerRoleLabel = (t, p) => {
     const roles = []
-    if (hrApprovers.some((x) => x.id === p.id)) roles.push('Finanzas')
+    if (hrApprovers.some((x) => x.id === p.id)) roles.push('RRHH')
     if (itMgrs.some((x) => x.id === p.id)) roles.push('Gerente TI')
     if (t.kind !== 'tec' && techApprovers.some((x) => x.id === p.id)) roles.push('Aprobador técnico')
     const dm = deptManagerOf(t.department)
@@ -226,7 +226,7 @@ export default function Solicitudes() {
   const cartCount = cartList.reduce((a, x) => a + x.qty, 0)
   const setQty = (id, q, max) => setCart((c) => ({ ...c, [id]: Math.max(0, Math.min(q, max)) }))
   const submit = async () => {
-    // Solicitud tecnológica: conversable, la aprueban Finanzas + Gerente TI + encargado del área
+    // Solicitud tecnológica: conversable, la aprueban RRHH + Gerente TI + encargado del área
     if (wMode === 'tec') {
       if (note.trim().length < 5) return alertDialog('Describe qué necesitas (al menos unas palabras).')
       setTecBusy(true)
@@ -428,7 +428,7 @@ export default function Solicitudes() {
               <Icon n="box" /> <span><strong>Del catálogo</strong><em>insumos generales</em></span>
             </button>
             <button className={`req-mode-b ${wMode === 'tec' ? 'on' : ''}`} onClick={() => { setWMode('tec'); setTecView('choose') }}>
-              <Icon n="cart" /> <span><strong>Producto tecnológico</strong><em>equipos y periféricos · aprueban Finanzas, Gerente TI y tu jefe de área</em></span>
+              <Icon n="cart" /> <span><strong>Producto tecnológico</strong><em>equipos y periféricos · aprueban RRHH, Gerente TI y tu jefe de área</em></span>
             </button>
           </div>
 
@@ -462,7 +462,7 @@ export default function Solicitudes() {
                 </button>
                 <button className="tec-opt" onClick={() => setTecView('solicitar')}>
                   <span className="to-ico"><Icon n="cart" /></span>
-                  <span><strong>Realizar una solicitud</strong><em>Describe lo que necesitas; lo autorizan Finanzas, el Gerente de TI y tu jefe de área.</em></span>
+                  <span><strong>Realizar una solicitud</strong><em>Describe lo que necesitas; lo autorizan RRHH, el Gerente de TI y tu jefe de área.</em></span>
                 </button>
               </div>
             )}
@@ -534,7 +534,7 @@ export default function Solicitudes() {
                 <textarea style={{ width: '100%', minHeight: 110 }} value={note} onChange={(e) => setNote(e.target.value)}
                   placeholder="Ej: Mi computador se pone muy lento con Chrome y varias pestañas de Google (Gmail, Sheets, Drive) abiertas; tiene poca RAM. Necesito ampliar la memoria o reemplazarlo." />
                 <div className="tec-info">
-                  <Icon n="key" /> <span>Al enviarla podrás <strong>adjuntar links y cotizaciones en PDF</strong> y conversar dentro de la solicitud. La autorizan <strong>Administración y Finanzas, el Gerente de TI y el encargado de tu área</strong>; la gestora de pedidos no interviene.</span>
+                  <Icon n="key" /> <span>Al enviarla podrás <strong>adjuntar links y cotizaciones en PDF</strong> y conversar dentro de la solicitud. La autorizan <strong>RRHH, el Gerente de TI y el encargado de tu área</strong>; la gestora de pedidos no interviene.</span>
                 </div>
               </>
             )}
@@ -840,7 +840,7 @@ export default function Solicitudes() {
               {t.kind !== 'tec' && t.needs_manager && requiredSigners(t).length > 0 && (t.status === 'pending' || t.status === 'manager_review')
                 && !((canManageOrders || myIsSigner(t) || isAdmin || t.user_id === profile?.id) && t.status === 'manager_review') && (
                 <div className="twokey-note"><Icon n="key" /> {t.kind === 'tec'
-                  ? <>Requiere la autorización de <strong>{requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}</strong> (Finanzas, Gerente TI y encargado del área).</>
+                  ? <>Requiere la autorización de <strong>{requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}</strong> (RRHH, Gerente TI y encargado del área).</>
                   : <>Insumo tecnológico: requiere la aprobación de <strong>gestión de pedidos</strong> y luego la autorización de <strong>{requiredSigners(t).map((a) => a.full_name || a.email).join(', ')}</strong>.</>}</div>
               )}
 
@@ -856,7 +856,7 @@ export default function Solicitudes() {
                 <div className="signers-panel">
                   <div className="sp-head">
                     <span className="sp-htxt"><span className="sp-title">Autorizaciones</span>
-                      <span className="sp-sub">{t.kind === 'tec' ? 'Finanzas · Gerente TI · encargado del área' : 'Aprobadores técnicos · encargado del área'}</span></span>
+                      <span className="sp-sub">{t.kind === 'tec' ? 'RRHH · Gerente TI · encargado del área' : 'Aprobadores técnicos · encargado del área'}</span></span>
                     <span className="sp-count">{ok}/{req.length}</span>
                   </div>
                   <div className="sp-list">
@@ -921,7 +921,7 @@ export default function Solicitudes() {
                 <div className="cv-note">Ya diste tu autorización. Falta la firma del resto de autorizadores.</div>
               )}
               {t.kind !== 'tec' && canManageOrders && t.status === 'manager_review' && !myIsSigner(t) && (
-                <div className="cv-note">Esperando la autorización de los firmantes (Finanzas, Gerente TI y encargado del área).</div>
+                <div className="cv-note">Esperando la autorización de los firmantes (RRHH, Gerente TI y encargado del área).</div>
               )}
 
               {canManageOrders && t.status === 'approved' && (
