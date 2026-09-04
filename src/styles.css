@@ -2235,3 +2235,57 @@ body.light .role-badge.gerente_cobranza{background:#8a6212;color:#fff}
 .cv-body>*:last-child{margin-bottom:0}
 .cv-body{padding-bottom:.2rem}
 .cv-note{padding:.6rem 1.1rem;font-size:.83rem;line-height:1.5}
+
+/* ============================================================
+   Asistente "Agregar un usuario": pasos a la izquierda como en
+   el centro de administración, contenido a la derecha.
+   ============================================================ */
+.wiz-modal{max-width:820px;width:min(820px,94vw)}
+.wiz{display:grid;grid-template-columns:200px 1fr;gap:1.4rem;margin-top:.6rem;min-height:340px}
+.wiz-steps{list-style:none;margin:0;padding:0;border-right:1px solid var(--line)}
+.wiz-step button{display:flex;align-items:center;gap:.55rem;width:100%;background:none;border:0;
+  color:var(--muted);font:inherit;font-size:.85rem;text-align:left;padding:.45rem 0;cursor:pointer}
+.wiz-step button:disabled{cursor:default}
+.wiz-step.on button{color:var(--text);font-weight:700}
+.wiz-step.ok button{color:var(--text)}
+.wiz-dot{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid var(--line);
+  display:grid;place-items:center;background:var(--panel)}
+.wiz-step.on .wiz-dot{border-color:var(--lime-text);background:var(--lime)}
+.wiz-step.ok .wiz-dot{border-color:var(--lime-text);background:var(--lime);color:var(--accent-ink)}
+.wiz-step.ok .wiz-dot .licon{width:.7rem;height:.7rem}
+/* Línea vertical entre puntos */
+.wiz-step{position:relative;padding-left:2px}
+.wiz-step+.wiz-step::before{content:"";position:absolute;left:11px;top:-8px;height:14px;width:2px;background:var(--line)}
+.wiz-body{min-width:0;padding-right:.2rem}
+.wiz-body h4{margin:.1rem 0 .8rem;font-size:1.05rem}
+.wiz-check{margin-top:.7rem}
+.wiz-hint{font-size:.8rem;margin:.5rem 0 0}
+.wiz-lics{display:flex;flex-direction:column;gap:.45rem;margin-top:.8rem}
+.wiz-lic{align-items:flex-start}
+.wiz-lic input[type=radio]{width:16px;height:16px;flex:none;accent-color:var(--lime-text);margin-top:3px}
+.wiz-lic.off{opacity:.55}
+.wiz-review{display:flex;flex-direction:column;gap:.45rem;margin-top:.4rem}
+.wiz-review>div{display:flex;align-items:center;gap:.7rem;border:1px solid var(--line);
+  border-radius:10px;background:var(--soft);padding:.55rem .7rem;font-size:.88rem}
+.wiz-review>div>span:nth-child(2){flex:1;min-width:0}
+.wiz-k{flex:none;width:92px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.62rem;
+  font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.wiz-foot{display:flex;justify-content:space-between;align-items:center}
+.wiz-foot-r{display:flex;gap:.5rem}
+.wiz-done-head{display:flex;gap:.8rem;align-items:flex-start;margin-bottom:.9rem}
+.wiz-done-head h3{margin:0}
+.wiz-done-head p{margin:.2rem 0 0}
+.wiz-done-ico{flex:none;width:34px;height:34px;border-radius:50%;background:var(--lime);
+  color:var(--accent-ink);display:grid;place-items:center}
+.wiz-done-ico .licon{width:1.1rem;height:1.1rem}
+.wiz-pwd{display:inline-flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.wiz-pwd code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.9rem;letter-spacing:.04em;
+  background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:.2rem .5rem}
+.wiz-warn{font-size:.83rem;color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent);
+  border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);border-radius:8px;padding:.5rem .7rem}
+@media(max-width:640px){
+  .wiz{grid-template-columns:1fr;min-height:0}
+  .wiz-steps{display:flex;gap:.8rem;border-right:0;border-bottom:1px solid var(--line);padding-bottom:.5rem;overflow-x:auto}
+  .wiz-step+.wiz-step::before{display:none}
+  .wiz-step .wiz-t{white-space:nowrap}
+}

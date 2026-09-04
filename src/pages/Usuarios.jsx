@@ -298,25 +298,43 @@ export default function Usuarios() {
     } catch (e) { alertDialog(e.message) }
   }
 
-  // Crear un usuario nuevo en Microsoft 365 (y perfil en la app)
+  // Crear un usuario nuevo en Microsoft 365 (y perfil en la app) — paso final del asistente
   const createMsUser = async () => {
     const n = newUser
-    if (!(n.displayName || '').trim()) return alertDialog('Escribe el nombre para mostrar.')
-    if (!(n.upnLocal || '').trim()) return alertDialog('Escribe el usuario del correo (la parte antes de la @).')
-    if ((n.password || '').length < 8) return alertDialog('La contraseña debe tener al menos 8 caracteres.')
     const upn = `${upnSlug(n.upnLocal)}@${n.domain}`
-    setMsBusy(true)
+    setNewUser({ ...n, busy: true })
     try {
       await msUsers('create', {
         displayName: n.displayName.trim(), userPrincipalName: upn,
-        password: n.password, forceChange: n.forceChange !== false,
+        password: n.password, forceChange: n.forceChange === true,
         jobTitle: n.jobTitle || '', department: n.department || '', mobilePhone: n.phone || '',
         country: n.country || 'Chile', usageLocation: usageOf(n.country), role: n.role || 'user', appAccess: n.appAccess !== false,
       })
-      setNewUser(null)
-      alertDialog(`Usuario ${upn} creado en Microsoft 365. Su perfil quedó preparado en la app${n.appAccess === false ? ' (sin acceso, solo organización)' : ''}.`)
+      // Si eligió licencia, se asigna al tiro; si falla, la cuenta igual queda creada
+      let licErr = ''
+      if (n.licSku) {
+        try { await msUsers('assignLicense', { id: upn, skuId: n.licSku, usageLocation: usageOf(n.country) }) }
+        catch (e) { licErr = e.message }
+      }
+      const lic = (wizSkus || []).find((x) => x.skuId === n.licSku)
+      setNewUser({ ...n, busy: false, done: { upn, password: n.password, showPwd: false, copied: false, licName: lic ? skuName(lic.skuPartNumber) : '', licErr } })
       load()
-    } catch (e) { alertDialog('No se pudo crear: ' + e.message) } finally { setMsBusy(false) }
+    } catch (e) { setNewUser({ ...n, busy: false }); alertDialog('No se pudo crear: ' + e.message) }
+  }
+  // Licencias del tenant para el paso 2 del asistente
+  const [wizSkus, setWizSkus] = useState(null)
+  useEffect(() => {
+    if (!newUser || newUser.done || wizSkus) return
+    msUsers('listSkus').then((r) => setWizSkus(r?.skus || [])).catch(() => setWizSkus([]))
+  }, [newUser])  // eslint-disable-line react-hooks/exhaustive-deps
+  // Validación por paso del asistente
+  const wizStepError = (n) => {
+    if (n.step === 1) {
+      if (!(n.displayName || '').trim()) return 'Falta el nombre para mostrar.'
+      if (!(n.upnLocal || '').trim()) return 'Falta el nombre de usuario del correo.'
+      if (!n.autoPwd && (n.password || '').length < 8) return 'La contraseña debe tener al menos 8 caracteres.'
+    }
+    return ''
   }
 
   // Traer de Microsoft 365 los usuarios que aún no están en la app y crearlos
@@ -504,7 +522,7 @@ export default function Usuarios() {
           ], data)} title="Descarga la lista visible (respeta filtros) a Excel/CSV"><Icon n="download" /> Exportar</button>
           {!ro && <button className="btn" disabled={syncBusy} onClick={syncM365} title="Trae de Microsoft 365 los usuarios que aún no están en la app">{syncBusy ? 'Sincronizando…' : <><Icon n="refresh" /> Sincronizar M365</>}</button>}
           <button className="btn" onClick={goToLicenses} title="Estado de asientos de licencias y comprar más"><Icon n="shield" /> Licencias</button>
-          {!ro && <button className="btn btn-lime" onClick={() => setNewUser({ displayName: '', upnLocal: '', domain: 'billcapital.com', upnEdited: false, password: genPwd(), showPwd: true, jobTitle: '', department: '', phone: '', country: 'Chile', role: 'user', appAccess: true, forceChange: true })}>＋ Crear usuario (M365)</button>}
+          {!ro && <button className="btn btn-lime" onClick={() => setNewUser({ step: 1, firstName: '', lastName: '', displayName: '', nameEdited: false, upnLocal: '', domain: 'billcapital.com', upnEdited: false, autoPwd: true, password: genPwd(), showPwd: false, forceChange: false, jobTitle: '', department: '', phone: '', country: 'Chile', licSku: '', role: 'user', appAccess: true, busy: false, done: null })}>＋ Crear usuario (M365)</button>}
         </div>
       </div></div>
 
@@ -939,65 +957,152 @@ export default function Usuarios() {
         </div>
       )}
 
-      {newUser && (
-        <div className="backdrop open">
-          <div className="modal">
-            <h3>Crear usuario en Microsoft 365</h3>
-            <p className="muted" style={{ marginTop: 0 }}>Se crea la cuenta en Microsoft 365 y se prepara su perfil en la app. El usuario deberá cambiar la contraseña al primer ingreso.</p>
-            <div className="pf-fields">
-              <div style={{ gridColumn: '1 / -1' }}><label>Nombre para mostrar</label>
-                <input value={newUser.displayName} placeholder="Ej: María Pérez"
-                  onChange={(e) => setNewUser((n) => ({ ...n, displayName: e.target.value, upnLocal: n.upnEdited ? n.upnLocal : upnSlug(e.target.value) }))} /></div>
-              <div style={{ gridColumn: '1 / -1' }}><label>Correo</label>
-                <div style={{ display: 'flex', gap: '.35rem', alignItems: 'center' }}>
-                  <input value={newUser.upnLocal} placeholder="maria.perez" style={{ flex: '3 1 auto', minWidth: 140 }}
-                    onChange={(e) => setNewUser({ ...newUser, upnLocal: e.target.value, upnEdited: true })} />
-                  <span className="muted">@</span>
-                  <select value={newUser.domain} style={{ flex: '0 0 auto', width: 170 }} onChange={(e) => setNewUser({ ...newUser, domain: e.target.value })}>
-                    {MS_DOMAINS.map((d) => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                {newUser.upnLocal && <p className="muted" style={{ fontSize: '.72rem', margin: '.25rem 0 0' }}>Se creará: <strong>{upnSlug(newUser.upnLocal)}@{newUser.domain}</strong></p>}
+      {/* Asistente de creación de usuario, por pasos */}
+      {newUser && (() => {
+        const n = newUser
+        const STEPS = [[1, 'Información básica'], [2, 'Licencias'], [3, 'Configuración opcional'], [4, 'Finalizar']]
+        const upn = `${upnSlug(n.upnLocal)}@${n.domain}`
+        const lic = (wizSkus || []).find((x) => x.skuId === n.licSku)
+        const err = wizStepError(n)
+        const go = (step) => setNewUser({ ...n, step })
+        const next = () => { if (err) return alertDialog(err); go(Math.min(4, n.step + 1)) }
+        const close = () => { setNewUser(null); setWizSkus(null) }
+        if (n.done) {
+          const d = n.done
+          return (
+            <div className="backdrop open"><div className="modal wiz-modal">
+              <div className="wiz-done-head"><span className="wiz-done-ico"><Icon n="check" /></span>
+                <div><h3>{n.displayName} quedó en los usuarios activos</h3>
+                  <p className="muted">La cuenta existe en Microsoft 365 y su perfil quedó preparado en la app.</p></div></div>
+              <div className="wiz-review">
+                <div><span className="wiz-k">Correo</span><strong>{d.upn}</strong><span /></div>
+                <div><span className="wiz-k">Contraseña</span>
+                  <span className="wiz-pwd">
+                    <code>{d.showPwd ? d.password : '••••••••••••••••'}</code>
+                    <button type="button" className="btn-sm" onClick={() => setNewUser({ ...n, done: { ...d, showPwd: !d.showPwd } })}>{d.showPwd ? 'Ocultar' : 'Mostrar'}</button>
+                    <button type="button" className="btn-sm" onClick={() => { try { navigator.clipboard?.writeText(d.password); setNewUser({ ...n, done: { ...d, copied: true } }) } catch { /* noop */ } }}><Icon n="copy" /> {d.copied ? 'Copiada' : 'Copiar'}</button>
+                  </span><span /></div>
+                {d.licName ? <div><span className="wiz-k">Licencia</span><strong>{d.licName}</strong><span /></div> : null}
               </div>
-              <div style={{ gridColumn: '1 / -1' }}><label>Contraseña temporal</label>
-                <div style={{ display: 'flex', gap: '.35rem' }}>
-                  <input type={newUser.showPwd ? 'text' : 'password'} value={newUser.password} placeholder="mínimo 8 caracteres" style={{ flex: 1, minWidth: 0 }}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
-                  <button type="button" className="btn-sm" title={newUser.showPwd ? 'Ocultar' : 'Ver'} onClick={() => setNewUser({ ...newUser, showPwd: !newUser.showPwd })}><Icon n={newUser.showPwd ? 'eyeOff' : 'eye'} /></button>
-                  <button type="button" className="btn-sm" title="Copiar" onClick={() => { try { navigator.clipboard?.writeText(newUser.password) } catch { /* noop */ } }}><Icon n="copy" /></button>
-                  <button type="button" className="btn-sm" onClick={() => setNewUser({ ...newUser, password: genPwd(), showPwd: true })}>Generar</button>
-                </div>
+              {d.licErr ? <p className="wiz-warn">La cuenta se creó, pero la licencia no se pudo asignar: {d.licErr}. Asígnala desde su ficha.</p> : null}
+              <p className="muted wiz-hint">Copia la contraseña ahora: no se vuelve a mostrar. Entrégasela por un canal seguro.{n.forceChange ? ' Deberá cambiarla al iniciar sesión.' : ' Queda como su contraseña definitiva.'}</p>
+              <div className="modal-actions"><button className="btn btn-primary" onClick={close}>Cerrar</button></div>
+            </div></div>
+          )
+        }
+        return (
+          <div className="backdrop open"><div className="modal wiz-modal">
+            <h3>Agregar un usuario</h3>
+            <div className="wiz">
+              <ol className="wiz-steps">
+                {STEPS.map(([k, t]) => (
+                  <li key={k} className={`wiz-step ${n.step === k ? 'on' : ''} ${n.step > k ? 'ok' : ''}`}>
+                    <button type="button" disabled={k >= n.step} onClick={() => go(k)}>
+                      <span className="wiz-dot">{n.step > k ? <Icon n="check" /> : null}</span><span className="wiz-t">{t}</span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+              <div className="wiz-body">
+                {n.step === 1 && <>
+                  <h4>Información básica</h4>
+                  <div className="pf-fields">
+                    <div><label>Nombre</label><input value={n.firstName} onChange={(e) => { const v = e.target.value; setNewUser((x) => { const dn = x.nameEdited ? x.displayName : `${v} ${x.lastName}`.trim(); return { ...x, firstName: v, displayName: dn, upnLocal: x.upnEdited ? x.upnLocal : upnSlug(dn) } }) }} /></div>
+                    <div><label>Apellidos</label><input value={n.lastName} onChange={(e) => { const v = e.target.value; setNewUser((x) => { const dn = x.nameEdited ? x.displayName : `${x.firstName} ${v}`.trim(); return { ...x, lastName: v, displayName: dn, upnLocal: x.upnEdited ? x.upnLocal : upnSlug(dn) } }) }} /></div>
+                    <div style={{ gridColumn: '1 / -1' }}><label>Nombre para mostrar *</label>
+                      <input value={n.displayName} onChange={(e) => setNewUser((x) => ({ ...x, displayName: e.target.value, nameEdited: true, upnLocal: x.upnEdited ? x.upnLocal : upnSlug(e.target.value) }))} /></div>
+                    <div><label>Nombre de usuario *</label><input value={n.upnLocal} onChange={(e) => setNewUser({ ...n, upnLocal: e.target.value, upnEdited: true })} /></div>
+                    <div><label>Dominio</label>
+                      <select value={n.domain} onChange={(e) => setNewUser({ ...n, domain: e.target.value })}>
+                        {MS_DOMAINS.map((d) => <option key={d} value={d}>@{d}</option>)}
+                      </select></div>
+                  </div>
+                  {n.upnLocal ? <p className="muted wiz-hint">Se creará: <strong>{upn}</strong></p> : null}
+                  <label className="perm-row wiz-check">
+                    <input type="checkbox" checked={n.autoPwd} onChange={(e) => setNewUser({ ...n, autoPwd: e.target.checked, password: e.target.checked ? genPwd() : n.password, showPwd: !e.target.checked })} />
+                    <span><strong>Crear una contraseña de manera automática</strong><br /><span className="muted">Segura, de 16 caracteres. La verás al finalizar.</span></span>
+                  </label>
+                  {!n.autoPwd && (
+                    <div className="pwr-row">
+                      <input type={n.showPwd ? 'text' : 'password'} className="pwr-input" value={n.password} placeholder="mínimo 8 caracteres" onChange={(e) => setNewUser({ ...n, password: e.target.value })} />
+                      <button type="button" className="btn-sm" onClick={() => setNewUser({ ...n, showPwd: !n.showPwd })}><Icon n={n.showPwd ? 'eyeOff' : 'eye'} /></button>
+                      <button type="button" className="btn-sm btn-lime" onClick={() => setNewUser({ ...n, password: genPwd(), showPwd: true })}><Icon n="refresh" /> Generar</button>
+                    </div>
+                  )}
+                  <label className="perm-row wiz-check">
+                    <input type="checkbox" checked={n.forceChange === true} onChange={(e) => setNewUser({ ...n, forceChange: e.target.checked })} />
+                    <span>Requerir que cambie la contraseña cuando inicie sesión por primera vez</span>
+                  </label>
+                </>}
+                {n.step === 2 && <>
+                  <h4>Asignar licencia de producto</h4>
+                  <div className="pf-fields"><div><label>Ubicación</label>
+                    <select value={n.country} onChange={(e) => setNewUser({ ...n, country: e.target.value })}>
+                      {COUNTRIES.map(([c, f]) => <option key={c} value={c}>{f} {c}</option>)}
+                    </select></div></div>
+                  {wizSkus === null && <p className="muted">Cargando licencias del tenant…</p>}
+                  {wizSkus !== null && (
+                    <div className="wiz-lics">
+                      {wizSkus.filter((x) => (x.total || 0) > 0).map((x) => {
+                        const disp = x.available > 0
+                        return (
+                          <label key={x.skuId} className={`perm-row wiz-lic ${!disp ? 'off' : ''}`}>
+                            <input type="radio" name="wiz-lic" disabled={!disp} checked={n.licSku === x.skuId} onChange={() => setNewUser({ ...n, licSku: x.skuId })} />
+                            <span><strong>{skuName(x.skuPartNumber)}</strong><br />
+                              <span className="muted">{disp ? `${x.available} de ${x.total} disponibles` : 'Sin cupo: primero compra asientos en el centro de administración de M365 (Facturación → Sus productos) y vuelve a intentarlo.'}</span></span>
+                          </label>
+                        )
+                      })}
+                      <label className="perm-row wiz-lic">
+                        <input type="radio" name="wiz-lic" checked={!n.licSku} onChange={() => setNewUser({ ...n, licSku: '' })} />
+                        <span><strong>Crear sin licencia</strong><br /><span className="muted">Se puede asignar después desde su ficha. Sin licencia no tiene correo ni Office.</span></span>
+                      </label>
+                    </div>
+                  )}
+                </>}
+                {n.step === 3 && <>
+                  <h4>Configuración opcional</h4>
+                  <div className="pf-fields">
+                    <div><label>Rol en la app</label>
+                      <select value={n.role} onChange={(e) => setNewUser({ ...n, role: e.target.value, ...(e.target.value === 'sistema' ? { appAccess: false } : {}) })}>
+                        {roles.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+                      </select></div>
+                    <div><label>Departamento</label>
+                      <select value={n.department} onChange={(e) => setNewUser({ ...n, department: e.target.value })}>
+                        <option value="">— Sin asignar</option>{DEPTS.map((d) => <option key={d} value={d}>{deptIndentLabel(d)}</option>)}
+                      </select></div>
+                    <div><label>Cargo</label><input value={n.jobTitle} onChange={(e) => setNewUser({ ...n, jobTitle: e.target.value })} /></div>
+                    <div><label>Teléfono</label><input value={n.phone} onChange={(e) => setNewUser({ ...n, phone: e.target.value })} placeholder="+56 9 ..." /></div>
+                    <div><label>Acceso a la app</label>
+                      <select value={n.appAccess ? 'si' : 'no'} onChange={(e) => setNewUser({ ...n, appAccess: e.target.value === 'si' })}>
+                        <option value="si">Con acceso</option>
+                        <option value="no">Solo organización (sin acceso)</option>
+                      </select></div>
+                  </div>
+                  {n.role === 'sistema' && <p className="muted wiz-hint">Cuenta de entidad / buzón compartido: sin acceso a la app.</p>}
+                </>}
+                {n.step === 4 && <>
+                  <h4>Revisar y finalizar</h4>
+                  <div className="wiz-review">
+                    <div><span className="wiz-k">Usuario</span><span><strong>{n.displayName}</strong> · <span className="muted">{upn}</span></span><button className="btn-sm" onClick={() => go(1)}>Editar</button></div>
+                    <div><span className="wiz-k">Contraseña</span><span>{n.autoPwd ? 'Generada automáticamente' : 'Escrita a mano'}{n.forceChange ? ' · deberá cambiarla al entrar' : ''}</span><button className="btn-sm" onClick={() => go(1)}>Editar</button></div>
+                    <div><span className="wiz-k">Licencia</span><span>{lic ? skuName(lic.skuPartNumber) : 'Sin licencia'} · {n.country}</span><button className="btn-sm" onClick={() => go(2)}>Editar</button></div>
+                    <div><span className="wiz-k">Perfil</span><span>{roleLabel[n.role] || n.role}{n.department ? ` · ${n.department}` : ''}{n.appAccess === false ? ' · sin acceso a la app' : ''}</span><button className="btn-sm" onClick={() => go(3)}>Editar</button></div>
+                  </div>
+                </>}
               </div>
-              <div><label>Cargo</label><input value={newUser.jobTitle} onChange={(e) => setNewUser({ ...newUser, jobTitle: e.target.value })} /></div>
-              <div><label>Teléfono</label><input value={newUser.phone} onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })} placeholder="+56 9 ..." /></div>
-              <div><label>Departamento</label>
-                <select value={newUser.department} onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}>
-                  <option value="">— Sin asignar</option>{DEPTS.map((d) => <option key={d} value={d}>{deptIndentLabel(d)}</option>)}
-                </select></div>
-              <div><label>País</label>
-                <select value={newUser.country} onChange={(e) => setNewUser({ ...newUser, country: e.target.value })}>
-                  {COUNTRIES.map(([n, f]) => <option key={n} value={n}>{f} {n}</option>)}
-                </select></div>
-              <div><label>Rol</label>
-                <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value, ...(e.target.value === 'sistema' ? { appAccess: false } : {}) })}>
-                  {roles.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
-                </select>
-                {newUser.role === 'sistema' && <span className="muted" style={{ fontSize: '.72rem' }}>Cuenta de entidad / buzón compartido (sin acceso a la app).</span>}
-              </div>
-              <div><label>Acceso a la app</label>
-                <select value={newUser.appAccess ? 'si' : 'no'} onChange={(e) => setNewUser({ ...newUser, appAccess: e.target.value === 'si' })}>
-                  <option value="si">Con acceso</option>
-                  <option value="no">Solo organización (sin acceso)</option>
-                </select></div>
             </div>
-            <label className="perm-row" style={{ marginTop: '.6rem' }}>
-              <input type="checkbox" checked={newUser.forceChange !== false} onChange={(e) => setNewUser({ ...newUser, forceChange: e.target.checked })} />
-              <span>Pedir cambio de contraseña en el primer ingreso</span>
-            </label>
-            <div className="modal-actions"><button className="btn" onClick={() => setNewUser(null)}>Cancelar</button><button className="btn btn-primary" disabled={msBusy} onClick={createMsUser}>{msBusy ? 'Creando…' : 'Crear en Microsoft 365'}</button></div>
-          </div>
-        </div>
-      )}
+            <div className="modal-actions wiz-foot">
+              <button className="btn" onClick={close} disabled={n.busy}>Cancelar</button>
+              <span className="wiz-foot-r">
+                {n.step > 1 && <button className="btn" onClick={() => go(n.step - 1)} disabled={n.busy}>Atrás</button>}
+                {n.step < 4 && <button className="btn btn-primary" onClick={next}>Siguiente</button>}
+                {n.step === 4 && <button className="btn btn-primary" disabled={n.busy} onClick={createMsUser}>{n.busy ? 'Creando…' : 'Terminar de agregar'}</button>}
+              </span>
+            </div>
+          </div></div>
+        )
+      })()}
     </div>
   )
 }
