@@ -69,7 +69,14 @@ export default function Inventario() {
   const filterSortRows = (rows, key) => {
     const q = (folderQ[key] || '').trim().toLowerCase()
     const f = folderFilter[key] || {}
-    let arr = rows.filter((e) => !q || `${e.name || ''} ${e.brand || ''} ${e.model || ''} ${e.serial_number || ''} ${e.location || ''} ${e.assigned_to_name || ''} ${e.assigned_to_email || ''}`.toLowerCase().includes(q))
+    // Busca sin acentos y tratando _ como espacio, en el equipo y en su usuario asignado
+    const fold = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/_/g, ' ')
+    const terms = fold(q).split(/\s+/).filter(Boolean)
+    let arr = rows.filter((e) => {
+      if (!terms.length) return true
+      const hay = fold(`${e.name || ''} ${e.brand || ''} ${e.model || ''} ${e.serial_number || ''} ${e.asset_tag || ''} ${e.location || ''} ${e.assigned_to_name || ''} ${e.assigned_to_email || ''} ${e.attributes?.nombre_equipo || ''} ${e.attributes?.cuenta_windows || ''}`)
+      return terms.every((t) => hay.includes(t))
+    })
     if (f.cond) arr = arr.filter((e) => e.condition === f.cond)
     if (f.asig === 'asignado') arr = arr.filter((e) => e.assigned_to_name || e.assigned_to_email)
     else if (f.asig === 'sin') arr = arr.filter((e) => !(e.assigned_to_name || e.assigned_to_email))
