@@ -1054,9 +1054,9 @@ export default function Usuarios() {
                           <label key={x.skuId} className={`perm-row wiz-lic ${!disp ? 'off' : ''}`}>
                             <input type="radio" name="wiz-lic" disabled={!disp} checked={n.licSku === x.skuId} onChange={() => setNewUser({ ...n, licSku: x.skuId })} />
                             <span><strong>{skuName(x.skuPartNumber)}</strong><br />
-                              <span className="muted">{disp ? `${x.available} de ${x.total} disponibles` : 'Sin cupo — el pago se aprueba en el portal de Microsoft.'}</span>
+                              <span className="muted">{disp ? `${x.available} de ${x.total} disponibles` : 'Sin cupo — en Sus productos entra a la suscripción y usa «Comprar licencias». Si no aparece en la lista, aprieta «Restablecer todo» en los filtros o cambia la cuenta de facturación.'}</span>
                               {!disp && <span className="wiz-buy">
-                                <button type="button" className="btn-sm btn-lime" title="Abre la página de este producto en M365, con el botón «Comprar más licencias»" onClick={() => window.open(`https://admin.microsoft.com/Adminportal/Home#/licensedetailpage/${x.skuId}`, '_blank', 'noopener')}><Icon n="cart" /> Comprar en M365</button>
+                                <button type="button" className="btn-sm btn-lime" title="Facturación → Sus productos: entra a la suscripción y usa «Comprar licencias»" onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')}><Icon n="cart" /> Comprar en M365</button>
                                 <button type="button" className="btn-sm" title="Vuelve a consultar los cupos después de comprar" onClick={() => { setWizSkus(null) }}><Icon n="refresh" /> Actualizar cupos</button>
                               </span>}</span>
                           </label>
