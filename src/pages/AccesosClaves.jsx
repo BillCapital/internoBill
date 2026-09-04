@@ -45,10 +45,17 @@ export default function AccesosClaves() {
   const [ffilter, setFfilter] = useState({}) // filtros por carpeta { falta }
   const [copiedId, setCopiedId] = useState(null)
 
-  // Copia los datos de acceso con formato Usuario / Correo / Contraseña
-  const copyCred = async (e) => {
+  // Copia los datos con el formato que corresponde al tipo de clave:
+  // una red WiFi no tiene "usuario" ni "correo" — tiene nombre de red.
+  const copyCred = async (e, secName = '') => {
+    const limpio = (e.name || '').replace(/^(WiFi|Cuenta|Servicio)\s*·\s*/i, '')
     const correo = e.attributes?.usuario || e.assigned_to_email || ''
-    const txt = `Usuario: ${e.name || ''}\nCorreo: ${correo}\nContraseña: ${e.attributes?.contrasena || ''}`
+    const pass = e.attributes?.contrasena || ''
+    let lineas
+    if (/wifi|redes/i.test(secName)) lineas = [`Red: ${limpio}`, `Contraseña: ${pass}`]
+    else if (/correo|cuenta/i.test(secName)) lineas = [`Cuenta: ${limpio}`, correo ? `Correo: ${correo}` : '', `Contraseña: ${pass}`]
+    else lineas = [`Servicio: ${limpio}`, correo ? `Usuario: ${correo}` : '', `Contraseña: ${pass}`]
+    const txt = lineas.filter(Boolean).join('\n')
     try {
       await navigator.clipboard.writeText(txt)
       setCopiedId(e.id); setTimeout(() => setCopiedId((c) => (c === e.id ? null : c)), 1500)
@@ -216,7 +223,7 @@ export default function AccesosClaves() {
                           {showUser && <td>{e.attributes?.usuario || e.assigned_to_email || <span className="muted">—</span>}</td>}
                           <td><PassCell value={pass} /></td>
                           <td className="actions">
-                            <button className="btn-sm" onClick={() => copyCred(e)}>{copiedId === e.id ? <><Icon n="check" /> Copiado</> : <><Icon n="copy" /> Copiar</>}</button>{' '}
+                            <button className="btn-sm" onClick={() => copyCred(e, s.name)}>{copiedId === e.id ? <><Icon n="check" /> Copiado</> : <><Icon n="copy" /> Copiar</>}</button>{' '}
                             {!roClaves && <><button className="btn-sm" onClick={() => setEdit({ ...emptyCred(s.id), ...e, attributes: e.attributes || {} })}>Editar</button>{' '}</>}
                             {!roClaves && <button className="btn-sm btn-danger" onClick={() => delCred(e)}>Eliminar</button>}
                           </td>
