@@ -2,10 +2,9 @@ import { supabase } from './supabase'
 
 // Lista de respaldo por si la tabla aún no responde (mismo orden semilla)
 export const DEFAULT_DEPTS = [
-  'Presidente Directorio', 'Gerencia General', 'Gerencia de Riesgo', 'Gerencia de Cobranzas',
-  'Gerencia Legal', 'Gerencia de Administración y Finanzas',
-  'Gerencia de Financiación y Mercado de Capitales', 'Gerencia de TI',
-  'Gerencia de Productos', 'Gerencia Comercial y Marketing',
+  'Presidente Directorio', 'Gerencia General', 'Riesgo', 'Cobranza', 'Legal',
+  'Administración y Finanzas', 'Financiación y Mercado de Capitales', 'TI',
+  'Productos', 'Comercial y Marketing',
 ]
 
 // Departamentos que NO pueden solicitar insumos (no aparecen al pedir).

@@ -10,7 +10,7 @@ import ProfilePrompt from './ProfilePrompt'
 
 const ROLE_LABEL = { user: 'Usuario', pedidos: 'Gestora de pedidos', admin: 'Administrador', mic: 'Mic', sistema: 'Cuentas de servicio',
   presidente_directorio: 'Presidente Directorio', gerente_general: 'Gerente General', gerente_riesgo: 'Gerente de Riesgo',
-  gerente_cobranza: 'Gerente de Cobranzas', gerente_legal: 'Gerente Legal', gerente_admin_finanzas: 'Gerente de Administración y Finanzas',
+  gerente_cobranza: 'Gerente de Cobranza', gerente_legal: 'Gerente Legal', gerente_admin_finanzas: 'Gerente de Administración y Finanzas',
   gerente_financiacion: 'Gerente de Financiación y Mercado de Capitales', gerente_ti: 'Gerente TI',
   gerente_producto: 'Gerente de Productos', gerente_comercial: 'Gerente Comercial y Marketing' }
 const KIND_ICON = { ok: 'check', bad: 'ban', msg: 'chat', info: 'bell' }
