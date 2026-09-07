@@ -2322,3 +2322,12 @@ body.light .role-badge.gerente_cobranza{background:#8a6212;color:#fff}
 .chat-attach { background: var(--soft); border: 1.5px solid var(--line); border-radius: 10px; cursor: pointer; color: var(--muted, #8b93a7); display: inline-flex; align-items: center; justify-content: center; padding: 0 .55rem; align-self: stretch; }
 .chat-attach:hover { color: var(--text, inherit); }
 .chat-attach svg { width: 17px; height: 17px; }
+
+/* ===== QR de conexión WiFi ===== */
+.qr-modal { max-width: 420px; }
+.qr-box { display: flex; justify-content: center; padding: .4rem 0 .2rem; }
+.qr-box img { width: 300px; max-width: 100%; border-radius: 12px; background: #ffffff; padding: 10px; border: 1px solid var(--line); }
+.qr-data { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; margin: .5rem 0 .2rem; }
+.qr-data > div { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
+.qr-data .muted { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
+.qr-pass { font-family: ui-monospace, monospace; }

@@ -6,6 +6,7 @@ import { loadDeptNames, DEFAULT_DEPTS, deptIndentLabel } from '../lib/depts'
 import SortControl from '../components/SortControl'
 import FilterControl from '../components/FilterControl'
 import { Icon, sectionIconName } from '../lib/icons'
+import QRCode from 'qrcode'
 import { useAuth } from '../context/AuthContext'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
@@ -45,6 +46,41 @@ export default function AccesosClaves() {
   const [ffilter, setFfilter] = useState({}) // filtros por carpeta { falta, dom, dept }
   const [fgroup, setFgroup] = useState({})   // agrupar por carpeta: '' | 'dom' | 'dept'
   const [copiedId, setCopiedId] = useState(null)
+  const [qr, setQr] = useState(null) // {ssid, pass, tipo, url} — QR de conexión WiFi
+  const [uni, setUni] = useState(null)       // estado de la red UniFi (consolas + APs)
+  const [uniBusy, setUniBusy] = useState(false)
+  const loadUnifi = async () => {
+    if (uniBusy) return
+    setUniBusy(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('unifi', { body: { op: 'status' } })
+      if (error) throw error
+      setUni(data)
+    } catch (e) { setUni({ ok: false, error: e.message || 'No se pudo consultar UniFi.' }) }
+    finally { setUniBusy(false) }
+  }
+
+  // QR estándar de WiFi: al escanearlo, el teléfono se conecta solo (formato WIFI:T:WPA;S:...;P:...;;)
+  const wifiSsid = (e) => (e.name || '').replace(/^(WiFi|Red)\s*·\s*/i, '').trim()
+  const escWifi = (s) => String(s || '').replace(/([\\;,:"])/g, '\\$1')
+  const showWifiQr = async (e) => {
+    // El SSID exacto manda: si la ficha tiene el campo SSID, se usa ese; si no, se deriva del nombre
+    const ssid = (e.attributes?.ssid || '').trim() || wifiSsid(e)
+    const pass = e.attributes?.contrasena || ''
+    if (!pass) return alertDialog('Esta red no tiene contraseña guardada; complétala antes de generar el QR.')
+    const payload = `WIFI:T:WPA;S:${escWifi(ssid)};P:${escWifi(pass)};;`
+    try {
+      const url = await QRCode.toDataURL(payload, { width: 720, margin: 2, errorCorrectionLevel: 'M' })
+      setQr({ ssid, pass, tipo: e.attributes?.tipo_red || '', url })
+    } catch (err) { alertDialog('No se pudo generar el QR: ' + err.message) }
+  }
+  const downloadQr = () => {
+    if (!qr) return
+    const a = document.createElement('a')
+    a.href = qr.url
+    a.download = `wifi-${qr.ssid.replace(/[^\w.-]+/g, '_')}.png`
+    document.body.appendChild(a); a.click(); a.remove()
+  }
 
   // Copia los datos con el formato que corresponde al tipo de clave:
   // una red WiFi no tiene "usuario" ni "correo" — tiene nombre de red.
@@ -172,6 +208,54 @@ export default function AccesosClaves() {
         </div>
       )}
 
+      {/* Red UniFi: estado de consolas y APs (vía unifi.ui.com, solo lectura) */}
+      {!loading && !roClaves && (
+        <div className="section open" style={{ marginBottom: '.8rem' }}>
+          <div className="sec-body">
+            <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.6rem', flexWrap: 'wrap' }}>
+              <span className="ico"><Icon n="wifi" /></span>
+              <strong>Red UniFi</strong>
+              <span className="muted" style={{ fontSize: '.8rem' }}>Estado de la consola y los access points</span>
+              <span style={{ flex: 1 }} />
+              <button className="btn-sm" disabled={uniBusy} onClick={loadUnifi}>{uniBusy ? 'Consultando…' : uni ? 'Actualizar' : 'Consultar estado'}</button>
+            </div>
+            {uni && !uni.ok && (
+              <div className="muted" style={{ marginTop: '.5rem', fontSize: '.85rem' }}>
+                {uni.notConfigured
+                  ? 'Aún no está conectado: 1) en el servidor UniFi activa el acceso remoto (inicia sesión con la cuenta Ubiquiti), 2) en unifi.ui.com → API crea una clave, 3) guárdala como secreto UNIFI_API_KEY en Supabase (Edge Functions → Secrets). Sin pegar la clave en ningún chat.'
+                  : uni.error}
+              </div>
+            )}
+            {uni?.ok && (
+              <div style={{ marginTop: '.5rem' }}>
+                <div className="table-wrap"><table className="tbl-compact">
+                  <thead><tr><th>Equipo</th><th>Modelo / versión</th><th>IP</th><th>Estado</th></tr></thead>
+                  <tbody>
+                    {uni.hosts.map((h) => (
+                      <tr key={h.id}>
+                        <td><strong>{h.name}</strong> <span className="muted">· consola</span></td>
+                        <td>{h.type}{h.version ? ` · ${h.version}` : ''}</td>
+                        <td>{h.ip || '—'}</td>
+                        <td><span className={`badge ${h.online ? 's-approved' : 's-rejected'}`}>{h.online ? 'En línea' : (h.state || 'Sin conexión')}</span></td>
+                      </tr>
+                    ))}
+                    {uni.devices.map((d, i) => (
+                      <tr key={d.mac || i}>
+                        <td><strong>{d.name}</strong></td>
+                        <td>{d.model}</td>
+                        <td>{d.ip || '—'}</td>
+                        <td><span className={`badge ${d.online ? 's-approved' : 's-rejected'}`}>{d.online ? 'En línea' : (d.state || 'Sin conexión')}</span></td>
+                      </tr>
+                    ))}
+                    {uni.hosts.length === 0 && uni.devices.length === 0 && <tr><td colSpan={4} className="muted">La API respondió pero sin equipos — revisa que el servidor UniFi tenga el acceso remoto activo.</td></tr>}
+                  </tbody>
+                </table></div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Carpetas por tipo */}
       {sections.map((s) => {
         const all = bySection[s.id] || []
@@ -273,6 +357,7 @@ export default function AccesosClaves() {
                           <td><PassCell value={pass} /></td>
                           <td className="actions">
                             <button className="btn-sm" onClick={() => copyCred(e, s.name)}>{copiedId === e.id ? <><Icon n="check" /> Copiado</> : <><Icon n="copy" /> Copiar</>}</button>{' '}
+                            {isWifi && <><button className="btn-sm" title="QR de conexión: al escanearlo, el teléfono se conecta solo" onClick={() => showWifiQr(e)}><Icon n="camera" /> QR</button>{' '}</>}
                             {!roClaves && <><button className="btn-sm" onClick={() => setEdit({ ...emptyCred(s.id), ...e, attributes: e.attributes || {} })}>Editar</button>{' '}</>}
                             {!roClaves && <button className="btn-sm btn-danger" onClick={() => delCred(e)}>Eliminar</button>}
                           </td>
@@ -286,6 +371,25 @@ export default function AccesosClaves() {
           </div>
         )
       })}
+
+      {/* Modal QR de conexión WiFi */}
+      {qr && (
+        <div className="backdrop open" onClick={() => setQr(null)}>
+          <div className="modal qr-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Conéctate a {qr.ssid}</h3>
+            <p className="muted" style={{ margin: '0 0 .6rem' }}>Escanea con la cámara del teléfono y se conecta solo{qr.tipo ? ` · Red ${qr.tipo.toLowerCase()}` : ''}.</p>
+            <div className="qr-box"><img src={qr.url} alt={`QR WiFi ${qr.ssid}`} /></div>
+            <div className="qr-data">
+              <div><span className="muted">Red (SSID)</span><strong>{qr.ssid}</strong></div>
+              <div><span className="muted">Contraseña</span><strong className="qr-pass">{qr.pass}</strong></div>
+            </div>
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setQr(null)}>Cerrar</button>
+              <button className="btn btn-primary" onClick={downloadQr}><Icon n="download" /> Descargar PNG</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal editar / agregar credencial */}
       {edit && (() => {
@@ -309,6 +413,11 @@ export default function AccesosClaves() {
                   </div>
                 ))}
 
+                {s.name === 'Redes WiFi' && (
+                  <div><label>Nombre de red (SSID) exacto</label>
+                    <input value={edit.attributes?.ssid || ''} onChange={(e) => setAttr('ssid', e.target.value)} placeholder="Tal como aparece al buscar WiFi, ej: BillCapital • SA" />
+                  </div>
+                )}
                 {s.name === 'Redes WiFi' && (
                   <div><label>Tipo de red</label>
                     <select value={edit.attributes?.tipo_red || ''} onChange={(e) => setAttr('tipo_red', e.target.value)}>
