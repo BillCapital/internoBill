@@ -1574,11 +1574,15 @@ body.light .rqa-box{background:#eef1f6;border-color:#e2e5eb}
 body.light .pf2{background:#ffffff;border-color:#e2e5eb}
 body.light .pf2-file{background:#f4f6f9;border-color:#e2e5eb}
 body.light .rp2-card{background:#ffffff;border-color:#e6e8ee;box-shadow:0 1px 3px rgba(20,33,61,.06)}
+/* Modo claro: conservar el borde de estado (la regla de arriba lo pisaba por especificidad) */
+body.light .rp2-card.pending{border-left-color:var(--warn)}
+body.light .rp2-card.approved{border-left-color:var(--ok)}
+body.light .rp2-card.rejected{border-left-color:var(--danger)}
 body.light .rp2-thumb.ph{background:#eef1f6}
 body.light .rp2-chip{background:#f4f6f9;border-color:#e2e5eb}
 body.light .rp2-sig{background:#f4f6f9;border-color:#e2e5eb}
-body.light .rp2-sig.ok{background:color-mix(in srgb,var(--ok) 14%,#f4f6f9)}
-body.light .rp2-sig.bad{background:color-mix(in srgb,var(--danger) 14%,#f4f6f9)}
+body.light .rp2-sig.ok{background:color-mix(in srgb,var(--ok) 14%,#f4f6f9);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,#e2e5eb)}
+body.light .rp2-sig.bad{background:color-mix(in srgb,var(--danger) 14%,#f4f6f9);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,#e2e5eb)}
 body.light .att-empty{color:var(--muted);text-align:center}
 /* Resaltado de fila consistente en las tablas de listas (accesos, correos, insumos, etc.) */
 .table-wrap table.tbl-compact tbody tr:not(.grp-row):not(.row-sel):hover td{background:color-mix(in srgb,var(--lime) 5%,transparent)}
