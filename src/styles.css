@@ -2300,3 +2300,11 @@ body.light .role-badge.gerente_cobranza{background:#8a6212;color:#fff}
   letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 .cred-cards tr.cred-grp .grp-count{margin-left:.5rem;font-size:.66rem;padding:.05rem .45rem;
   border-radius:999px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+
+/* ===== Cambiar correo (ficha de usuario, solo admin) ===== */
+.pf-mail { display: inline-flex; align-items: center; gap: .35rem; }
+.btn-icon { background: none; border: none; padding: 2px; cursor: pointer; color: var(--muted, #8b93a7); display: inline-flex; align-items: center; border-radius: 6px; }
+.btn-icon:hover { color: var(--text, inherit); background: color-mix(in srgb, currentColor 12%, transparent); }
+.btn-icon svg { width: 14px; height: 14px; }
+.pf-mail-edit { display: flex; align-items: center; gap: .4rem; margin: .15rem 0 .3rem; flex-wrap: wrap; }
+.pf-mail-edit input { min-width: 260px; font-size: .85rem; }

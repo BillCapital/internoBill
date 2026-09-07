@@ -46,7 +46,7 @@ const RPC_ACTIONS: Record<string, string> = {
   dept_upsert: 'dept_upsert', dept_delete: 'dept_delete', dept_set_users: 'dept_set_users', dept_set_supply_categories: 'dept_set_supply_categories', dept_set_manager: 'dept_set_manager', set_user_active: 'set_user_active',
   announcement_create: 'announcement_create', announcement_delete: 'announcement_delete',
   mark_notification_read: 'mark_notification_read', mark_all_notifications_read: 'mark_all_notifications_read',
-  audit_delete: 'audit_delete', activity_delete: 'activity_delete',
+  audit_delete: 'audit_delete', activity_delete: 'activity_delete', admin_change_email: 'admin_change_email',
   request_delete: 'request_delete', reservation_delete: 'reservation_delete', ticket_delete: 'ticket_delete',
 }
 

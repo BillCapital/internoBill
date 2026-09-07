@@ -61,7 +61,7 @@ async function msUsers(op, payload = {}) {
 }
 
 export default function Usuarios() {
-  const { user, refreshProfile, isSuper, canManageUsers, canViewLogs, canEdit } = useAuth()
+  const { user, refreshProfile, isSuper, isAdmin, canManageUsers, canViewLogs, canEdit } = useAuth()
   const canResetPwd = canEdit('passwords')   // solo Administrador y Gerente TI
   const ro = !canManageUsers   // solo lectura: consulta el directorio pero no lo edita
   const nav = useNavigate()
@@ -129,6 +129,8 @@ export default function Usuarios() {
   const fileRef = useRef(null)
   const [cropImg, setCropImg] = useState(null)
   const [saveBusy, setSaveBusy] = useState(false) // evita doble guardado
+  const [mailEdit, setMailEdit] = useState(null)  // correo en edición (solo admin)
+  const [mailBusy, setMailBusy] = useState(false)
   const [scale, setScale] = useState(1)
   const [minScale, setMinScale] = useState(1)
   const [off, setOff] = useState({ x: 0, y: 0 })
@@ -199,7 +201,25 @@ export default function Usuarios() {
   // Al abrir la edición, precargar la cantidad actual; se refresca tras crear
   useEffect(() => { if (edit) setCompTarget(String(compsOf(edit).length)) }, [edit?.id, compEquip])
   // Al cambiar de persona editada, limpiar selecciones del modal (evita asignar al usuario equivocado)
-  useEffect(() => { setAssignPick(''); setPPick({ per: '', qty: 1 }); setCropImg(null) }, [edit?.id])
+  useEffect(() => { setAssignPick(''); setPPick({ per: '', qty: 1 }); setCropImg(null); setMailEdit(null) }, [edit?.id])
+
+  // Cambiar el correo de la cuenta (solo admin): actualiza acceso, perfil, equipos y claves de una vez.
+  const changeEmail = async () => {
+    if (mailBusy) return
+    const nuevo = (mailEdit || '').trim().toLowerCase()
+    if (nuevo === (edit.email || '').toLowerCase()) { setMailEdit(null); return }
+    if (!/^[^@\s]+@([a-z0-9-]+\.)*billcapital\.com$/.test(nuevo)) return alertDialog('Debe ser un correo @billcapital.com (o un subdominio, como @mic.billcapital.com).')
+    const ok = await confirmDialog(
+      `Se cambiará el correo de ${edit.full_name || edit.email}:\n\n${edit.email}  →  ${nuevo}\n\nEsto actualiza su acceso a la app, su perfil, sus equipos y sus claves. Recuerda que el correo en Microsoft 365 debe cambiarse aparte (centro de administración) y quedar igual a este.`,
+      { title: 'Cambiar correo', okText: 'Cambiar' })
+    if (!ok) return
+    setMailBusy(true)
+    try {
+      await api('admin_change_email', { p_user: edit.id, p_email: nuevo })
+      setEdit((e) => (e ? { ...e, email: nuevo } : e))
+      setMailEdit(null); load()
+    } catch (e) { alertDialog(e.message) } finally { setMailBusy(false) }
+  }
 
   // Cuántos tiene y cuántos se crearían con el total pedido (nunca negativos)
   const compCur = useMemo(() => compsOf(edit).length, [edit, compEquip, compsOf])
@@ -787,7 +807,18 @@ export default function Usuarios() {
               {edit.avatar_url ? <img className="big-avatar" src={edit.avatar_url} alt="" /> : <div className="big">{initials(edit.full_name || edit.email)}</div>}
               <div className="pf-head-info">
                 <h3>Editar perfil</h3>
-                <p className="muted">{edit.email}</p>
+                {mailEdit === null ? (
+                  <p className="muted pf-mail">
+                    {edit.email}
+                    {isAdmin && edit.email && <button className="btn-icon" type="button" title="Cambiar correo" onClick={() => setMailEdit(edit.email)}><Icon n="edit" /></button>}
+                  </p>
+                ) : (
+                  <div className="pf-mail-edit">
+                    <input type="email" value={mailEdit} autoFocus onChange={(e) => setMailEdit(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && changeEmail()} placeholder="nuevo.correo@billcapital.com" />
+                    <button className="btn-sm btn-lime" type="button" disabled={mailBusy} onClick={changeEmail}>{mailBusy ? 'Cambiando…' : 'Guardar'}</button>
+                    <button className="btn-sm" type="button" disabled={mailBusy} onClick={() => setMailEdit(null)}>Cancelar</button>
+                  </div>
+                )}
                 <div className="pf-head-actions">
                   <button className="btn-sm" onClick={() => fileRef.current?.click()}>{edit.avatar_url ? 'Cambiar foto' : 'Subir foto'}</button>
                   {edit.avatar_url && <button className="btn-sm btn-danger" onClick={() => setEdit({ ...edit, avatar_url: '' })}>Quitar foto</button>}
