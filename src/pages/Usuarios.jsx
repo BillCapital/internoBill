@@ -33,6 +33,21 @@ const SKU_NAMES = {
   POWER_BI_STANDARD: 'Power BI (gratis)', FLOW_FREE: 'Power Automate (gratis)', TEAMS_EXPLORATORY: 'Teams Exploratory',
 }
 const skuName = (part) => SKU_NAMES[part] || (part || '').replace(/_/g, ' ')
+// Página de COMPRA de cada producto en el marketplace del centro de administración
+// (skuPartNumber → id de producto comercial). A diferencia de "Sus productos", el
+// marketplace no depende del filtro de cuenta de facturación, así que Exchange sí aparece.
+const BUY_PRODUCT = {
+  O365_BUSINESS_PREMIUM: ['microsoft-365-business-standard', 'CFQ7TTC0LDPB'],
+  O365_BUSINESS_ESSENTIALS: ['microsoft-365-business-basic', 'CFQ7TTC0LH18'],
+  EXCHANGESTANDARD: ['exchange-online-plan-1', 'CFQ7TTC0LH16'],
+  Microsoft_365_Copilot: ['microsoft-365-copilot', 'CFQ7TTC0MM8R'],
+}
+const buyUrl = (part) => {
+  const p = BUY_PRODUCT[part]
+  return p
+    ? `https://admin.microsoft.com/Adminportal/Home#/catalog/offer-details/${p[0]}/${p[1]}`
+    : 'https://admin.microsoft.com/Adminportal/Home#/catalog'
+}
 // UPN a partir del nombre: "María Pérez" → "maria.perez"
 const upnSlug = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '')
 // Contraseña aleatoria segura: 16 caracteres, con mayúsculas, minúsculas, números y símbolos
@@ -766,7 +781,7 @@ export default function Usuarios() {
                       </div>
                       <div className="lic-bar" title={`${s.used} de ${s.total} usados`}><span className={full ? 'full' : ''} style={{ width: `${pct}%` }} /></div>
                       <div className="lic-meta"><span className="lic-frac">{s.used}<span className="muted"> / {s.total}</span> usados</span><span className="muted">{pct}%</span></div>
-                      <button type="button" className={`lic-buy ${full ? 'is-full' : ''}`} onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')}>{full ? 'Comprar licencias' : 'Agregar licencias'}</button>
+                      <button type="button" className={`lic-buy ${full ? 'is-full' : ''}`} title={`Abre la página de compra de ${skuName(s.skuPartNumber)} en M365`} onClick={() => window.open(buyUrl(s.skuPartNumber), '_blank', 'noopener')}>{full ? 'Comprar licencias' : 'Agregar licencias'}</button>
                     </div>
                   )
                 })}
@@ -1095,9 +1110,9 @@ export default function Usuarios() {
                           <label key={x.skuId} className={`perm-row wiz-lic ${!disp ? 'off' : ''}`}>
                             <input type="radio" name="wiz-lic" disabled={!disp} checked={n.licSku === x.skuId} onChange={() => setNewUser({ ...n, licSku: x.skuId })} />
                             <span><strong>{skuName(x.skuPartNumber)}</strong><br />
-                              <span className="muted">{disp ? `${x.available} de ${x.total} disponibles` : 'Sin cupo — en Sus productos entra a la suscripción y usa «Comprar licencias». Si no aparece en la lista, aprieta «Restablecer todo» en los filtros o cambia la cuenta de facturación.'}</span>
+                              <span className="muted">{disp ? `${x.available} de ${x.total} disponibles` : 'Sin cupo — el botón abre la página de compra de este plan en el centro de administración.'}</span>
                               {!disp && <span className="wiz-buy">
-                                <button type="button" className="btn-sm btn-lime" title="Facturación → Sus productos: entra a la suscripción y usa «Comprar licencias»" onClick={() => window.open(M365_SUBS_URL, '_blank', 'noopener')}><Icon n="cart" /> Comprar en M365</button>
+                                <button type="button" className="btn-sm btn-lime" title={`Abre la página de compra de ${skuName(x.skuPartNumber)} en M365`} onClick={() => window.open(buyUrl(x.skuPartNumber), '_blank', 'noopener')}><Icon n="cart" /> Comprar en M365</button>
                                 <button type="button" className="btn-sm" title="Vuelve a consultar los cupos después de comprar" onClick={() => { setWizSkus(null) }}><Icon n="refresh" /> Actualizar cupos</button>
                               </span>}</span>
                           </label>
