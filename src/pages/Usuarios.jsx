@@ -45,8 +45,8 @@ const BUY_PRODUCT = {
 const buyUrl = (part) => {
   const p = BUY_PRODUCT[part]
   return p
-    ? `https://admin.microsoft.com/Adminportal/Home#/catalog/offer-details/${p[0]}/${p[1]}`
-    : 'https://admin.microsoft.com/Adminportal/Home#/catalog'
+    ? `https://admin.cloud.microsoft/?#/catalog/m/offer-details/${p[0]}/${p[1]}`
+    : 'https://admin.cloud.microsoft/?#/catalog'
 }
 // UPN a partir del nombre: "María Pérez" → "maria.perez"
 const upnSlug = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '')
