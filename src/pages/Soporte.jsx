@@ -39,7 +39,9 @@ export default function Soporte() {
     for (const it of items) { if (it.type && it.type.startsWith('image/')) { const f = it.getAsFile(); if (f) files.push(f) } }
     if (files.length) { e.preventDefault(); setNt((t) => ({ ...t, imgs: [...t.imgs, ...files.map((f) => ({ file: f, preview: URL.createObjectURL(f) }))] })) }
   }
-  const removeImg = (i) => setNt((t) => ({ ...t, imgs: t.imgs.filter((_, j) => j !== i) }))
+  const removeImg = (i) => setNt((t) => { try { URL.revokeObjectURL(t.imgs[i]?.preview) } catch { /* noop */ } return { ...t, imgs: t.imgs.filter((_, j) => j !== i) } })
+  // Libera las miniaturas al cerrar el formulario (evita fuga de memoria con muchas capturas)
+  const closeNt = () => setNt((t) => { (t?.imgs || []).forEach((im) => { try { URL.revokeObjectURL(im.preview) } catch { /* noop */ } }); return null })
   const submitTicket = async () => {
     const subject = (nt.subject || '').trim(); const desc = (nt.desc || '').trim()
     if (!subject || !desc) return alertDialog('El asunto y la descripción son obligatorios.')
@@ -52,11 +54,11 @@ export default function Soporte() {
           const path = `${tid}/${Date.now()}_${(im.file.name || 'img').replace(/[^\w.\-]+/g, '_')}`
           const { error } = await supabase.storage.from('soporte').upload(path, im.file, { contentType: im.file.type || undefined })
           if (error) continue
-          const { data } = supabase.storage.from('soporte').getPublicUrl(path)
-          if (data?.publicUrl) await api('post_message', { p_type: 'ticket', p_id: tid, p_body: data.publicUrl })
+          // Bucket privado: se guarda la ruta y el chat la muestra con URL firmada
+          await api('post_message', { p_type: 'ticket', p_id: tid, p_body: 'soporte:' + path })
         } catch { /* continúa con las demás imágenes */ }
       }
-      setNt(null); load()
+      closeNt(); load()
     } catch (e) { alertDialog(e.message); setNt((t) => ({ ...t, busy: false })) }
   }
   const changeStatus = async (id, p_status) => {
@@ -140,7 +142,7 @@ export default function Soporte() {
               </label>
             </div>
             <div className="modal-actions">
-              <button className="btn" onClick={() => setNt(null)} disabled={nt.busy}>Cancelar</button>
+              <button className="btn" onClick={closeNt} disabled={nt.busy}>Cancelar</button>
               <button className="btn btn-primary" onClick={submitTicket} disabled={nt.busy}>{nt.busy ? 'Creando…' : 'Crear ticket'}</button>
             </div>
           </div>

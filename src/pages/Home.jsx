@@ -7,7 +7,7 @@ import { Icon } from '../lib/icons'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
 export default function Home() {
-  const { profile, role, canManageOrders, canManageRooms, canManageInventory, isAdmin, isAreaManager } = useAuth()
+  const { profile, role, canManageOrders, canManageRooms, canManageInventory, isAdmin, isAreaManager, managedDepts } = useAuth()
   const nav = useNavigate()
   const first = (profile?.full_name || profile?.email || '').split(' ')[0]
   const canManage = canManageOrders || isAdmin
@@ -26,18 +26,20 @@ export default function Home() {
     // ¿soy aprobador de tecnología?
     tasks.push(supabase.from('profiles').select('is_tech_approver,is_hr,is_it_manager').eq('id', profile.id).single()
       .then(({ data }) => setIsTech(!!(data?.is_tech_approver || data?.is_hr || data?.is_it_manager))).catch(() => {}))
-    // Solicitudes (RLS: gestora/admin ven todas; aprobador tec. ve las tecnológicas)
-    if (canManage || true) {
-      tasks.push(supabase.from('requests').select('status, created_at').then(({ data }) => {
-        const c = { pending: 0, manager_review: 0, approved: 0, rejected: 0, delivered: 0, total: 0, oldPending: null, oldReview: null }
-        ;(data || []).forEach((r) => {
-          c[r.status] = (c[r.status] || 0) + 1; c.total++
-          if (r.status === 'pending' && (!c.oldPending || r.created_at < c.oldPending)) c.oldPending = r.created_at
-          if (r.status === 'manager_review' && (!c.oldReview || r.created_at < c.oldReview)) c.oldReview = r.created_at
-        })
-        setReq(c)
-      }).catch(() => {}))
-    }
+    // Solicitudes: consultan todos (RLS filtra — cada uno ve lo suyo; gestora/firmantes/gerentes ven más)
+    tasks.push(supabase.from('requests').select('status, created_at, department').then(({ data }) => {
+      const c = { pending: 0, manager_review: 0, approved: 0, rejected: 0, delivered: 0, total: 0, oldPending: null, oldReview: null, reviewMine: 0, oldReviewMine: null }
+      ;(data || []).forEach((r) => {
+        c[r.status] = (c[r.status] || 0) + 1; c.total++
+        if (r.status === 'pending' && (!c.oldPending || r.created_at < c.oldPending)) c.oldPending = r.created_at
+        if (r.status === 'manager_review') {
+          if (!c.oldReview || r.created_at < c.oldReview) c.oldReview = r.created_at
+          // Para el gerente de área: solo cuentan las compras de SUS departamentos
+          if ((managedDepts || []).includes(r.department)) { c.reviewMine++; if (!c.oldReviewMine || r.created_at < c.oldReviewMine) c.oldReviewMine = r.created_at }
+        }
+      })
+      setReq(c)
+    }).catch(() => {}))
     if (canManageRooms) {
       tasks.push(supabase.from('reservations').select('id', { count: 'exact', head: true }).eq('status', 'pending')
         .then(({ count }) => setResPend(count || 0)).catch(() => {}))
@@ -51,7 +53,7 @@ export default function Home() {
     }
     await Promise.all(tasks)
     setLoading(false)
-  }, [profile?.id, canManage, canManageRooms, canManageInventory])
+  }, [profile?.id, canManage, canManageRooms, canManageInventory, managedDepts])
   useEffect(() => { load() }, [load])
 
   // Tarjeta KPI reutilizable
@@ -80,7 +82,8 @@ export default function Home() {
   // Lista de "pendientes de acción" — cada uno se muestra como tarjeta con número, color por urgencia y contexto
   const todos = []
   if (canManageOrders && req.pending > 0) todos.push({ k: 'p', ico: 'clock', n: req.pending, txt: 'Solicitud(es) por revisar', sub: agoTxt(req.oldPending), tone: 'warn', to: '/solicitudes' })
-  if ((isTech || isAdmin || isAreaManager) && req.manager_review > 0) todos.push({ k: 'm', ico: 'key', n: req.manager_review, txt: 'Compra(s) esperando tu autorización', sub: agoTxt(req.oldReview), tone: 'warn', to: '/solicitudes' })
+  if ((isTech || isAdmin) && req.manager_review > 0) todos.push({ k: 'm', ico: 'key', n: req.manager_review, txt: 'Compra(s) esperando tu autorización', sub: agoTxt(req.oldReview), tone: 'warn', to: '/solicitudes' })
+  else if (isAreaManager && (req.reviewMine || 0) > 0) todos.push({ k: 'm', ico: 'key', n: req.reviewMine, txt: 'Compra(s) de tu área esperando tu autorización', sub: agoTxt(req.oldReviewMine), tone: 'warn', to: '/solicitudes' })
   else if (canManageOrders && req.manager_review > 0) todos.push({ k: 'm2', ico: 'key', n: req.manager_review, txt: 'Compra(s) esperando autorización', sub: agoTxt(req.oldReview), tone: 'info', to: '/solicitudes' })
   if (canManageOrders && req.approved > 0) todos.push({ k: 'a', ico: 'box', n: req.approved, txt: 'Aprobada(s) por entregar', sub: 'listas para coordinar entrega', tone: 'ok', to: '/solicitudes' })
   if (canManageRooms && resPend > 0) todos.push({ k: 'r', ico: 'calendar', n: resPend, txt: 'Reserva(s) de sala por aceptar', sub: '', tone: 'info', to: '/salas' })

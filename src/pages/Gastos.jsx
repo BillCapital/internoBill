@@ -77,6 +77,7 @@ export default function Gastos() {
 
   useEffect(() => {
     (async () => {
+      try {
       const tree = await loadDepts()
       setDepts(tree.filter((d) => (d.depth || 0) === 0).map((d) => d.name))
       const { data: secs } = await supabase.from('equipment_sections').select('id').eq('name', 'Teléfonos')
@@ -101,7 +102,7 @@ export default function Gastos() {
         }
       }))
       await loadDocs()
-      setLoading(false)
+      } catch { /* corte de red: no dejar el esqueleto para siempre */ } finally { setLoading(false) }
     })()
   }, [loadDocs])
 

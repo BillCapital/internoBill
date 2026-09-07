@@ -165,7 +165,7 @@ export default function Inventario() {
     const norm = (s) => (s || '').trim().toLowerCase()
     const comps = compSection ? (bySection[compSection.id] || []) : []
     // Los usuarios deshabilitados (active === false) no cuentan como "sin computador"
-    return countryUsers.filter((u) => u.active !== false).filter((u) => !comps.some((c) => (c.user_id && c.user_id === u.id) || norm(c.assigned_to_email) === norm(u.email) || (u.full_name && norm(c.assigned_to_name) === norm(u.full_name))))
+    return countryUsers.filter((u) => u.active !== false).filter((u) => !comps.some((c) => (c.user_id && c.user_id === u.id) || (u.email && norm(c.assigned_to_email) === norm(u.email)) || (u.full_name && norm(c.assigned_to_name) === norm(u.full_name))))
   }, [countryUsers, bySection, compSection])
   // Datos faltantes en el registro de equipos físicos (campos base + de esquema)
   const gaps = useMemo(() => {
@@ -257,8 +257,10 @@ export default function Inventario() {
   const periphAsg = useMemo(() => { const m = {}; cPeriphAssign.forEach((a) => { m[a.peripheral_id] = (m[a.peripheral_id] || 0) + (a.qty || 0) }); return m }, [cPeriphAssign])
   const periphMembers = useMemo(() => { const m = {}; cPeriphAssign.forEach((a) => { (m[a.peripheral_id] = m[a.peripheral_id] || []).push(a) }); return m }, [cPeriphAssign])
   const savePeriph = async () => {
+    if (savingRef.current) return
     if (!(periphForm.name || '').trim()) return alertDialog('Ponle un nombre al periférico.')
-    try { await api('peripheral_upsert', { p: { ...periphForm, total_qty: Number(periphForm.total_qty) || 0 } }); setPeriphForm(null); load() } catch (e) { alertDialog(e.message) }
+    savingRef.current = true
+    try { await api('peripheral_upsert', { p: { ...periphForm, total_qty: Number(periphForm.total_qty) || 0 } }); setPeriphForm(null); load() } catch (e) { alertDialog(e.message) } finally { savingRef.current = false }
   }
   const delPeriph = async (p) => {
     if (!(await confirmDialog(`¿Eliminar "${p.name}"? Se quitan también sus asignaciones.`, { title: 'Eliminar periférico', danger: true, okText: 'Eliminar' }))) return
@@ -284,7 +286,9 @@ export default function Inventario() {
     const visIds = new Set(visibleSections.map((s) => s.id))
     return fItems.filter((e) => visIds.has(e.section_id) && e.condition === 'En mantenimiento')
   }, [fItems, visibleSections])
-  const switchView = (v) => { setView(v); setOpen({}) }
+  const switchView = (v) => { setView(v); setOpen({}); clearSel() }
+  // La selección masiva no debe sobrevivir a un cambio de país (aplicaría sobre equipos ocultos)
+  useEffect(() => { clearSel() }, [country]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ===== Mantenimientos programados =====
   const comps = useMemo(() => (compSection ? (bySection[compSection.id] || []) : []), [compSection, bySection])
@@ -331,17 +335,23 @@ export default function Inventario() {
     try { const r = await api('maint_clear', {}); alertDialog(`Se borraron ${r ?? 0} mantenimientos programados.`); load() } catch (e) { alertDialog(e.message) }
   }
 
+  const savingRef = useRef(false) // evita duplicados por doble clic en Guardar
   const saveEquip = async () => {
+    if (savingRef.current) return
     if (!(edit.name || '').trim()) return alertDialog('Indica el tipo/nombre del equipo.')
     const s = secById[edit.section_id]
+    const dhcpOn = String(edit.attributes?.dhcp ?? '').toLowerCase().startsWith('s')
     for (const f of (s?.fields || [])) {
+      // Con DHCP activo la IP se borra y deshabilita: no puede ser obligatoria
+      if (dhcpOn && (f.key === 'ip' || /^direcci[oó]n ip$/i.test(f.label || ''))) continue
       if (f.required && !String(edit.attributes?.[f.key] ?? '').trim()) return alertDialog(`El campo "${f.label}" es obligatorio.`)
     }
     // Si se asigna a alguien, deja de ser stock disponible.
     const p = (edit.assigned_to_name || edit.assigned_to_email)
       ? { ...edit, attributes: { ...(edit.attributes || {}), disponible: false } }
       : edit
-    try { await api('equipment_upsert', { p }); setEdit(null); load() } catch (e) { alertDialog(e.message) }
+    savingRef.current = true
+    try { await api('equipment_upsert', { p }); setEdit(null); load() } catch (e) { alertDialog(e.message) } finally { savingRef.current = false }
   }
   // Marca / quita un equipo del stock disponible sin abrir el formulario.
   const setDisponible = async (e, val) => {

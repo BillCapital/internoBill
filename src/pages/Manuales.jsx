@@ -44,9 +44,18 @@ export default function Manuales() {
   }, [])
   useEffect(() => { load() }, [load])
 
-  const publicUrl = useCallback((path) => {
-    try { return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl } catch { return '#' }
-  }, [])
+  // URL firmada temporal (el bucket es privado: los manuales solo se ven con sesión iniciada)
+  const [viewerUrl, setViewerUrl] = useState('')
+  useEffect(() => {
+    let alive = true
+    setViewerUrl('')
+    if (viewer?.file_path) {
+      supabase.storage.from(BUCKET).createSignedUrl(viewer.file_path, 3600)
+        .then(({ data }) => { if (alive) setViewerUrl(data?.signedUrl || '') })
+        .catch(() => { if (alive) setViewerUrl('') })
+    }
+    return () => { alive = false }
+  }, [viewer])
 
   // Descarga real: baja el archivo como blob y lo guarda con su nombre (el atributo
   // download no funciona sobre URLs públicas de otro origen, por eso se hace así).
@@ -90,9 +99,10 @@ export default function Manuales() {
   const del = async (m) => {
     if (!(await confirmDialog(`¿Eliminar el manual "${m.title}"? También se borra el archivo.`, { title: 'Eliminar manual', danger: true, okText: 'Eliminar' }))) return
     try {
-      await supabase.storage.from(BUCKET).remove([m.file_path])
+      // Primero el registro (si falla, el archivo sigue disponible); el archivo después.
       const { error } = await supabase.from('manuals').delete().eq('id', m.id)
       if (error) throw error
+      try { await supabase.storage.from(BUCKET).remove([m.file_path]) } catch { /* registro ya borrado; archivo huérfano inofensivo */ }
       load()
     } catch (e) { alertDialog(e.message) }
   }
@@ -140,7 +150,7 @@ export default function Manuales() {
       </div>
 
       {viewer && (() => {
-        const url = publicUrl(viewer.file_path)
+        const url = viewerUrl
         const kind = previewKind(viewer)
         return (
           <div className="backdrop open" onClick={() => setViewer(null)}>

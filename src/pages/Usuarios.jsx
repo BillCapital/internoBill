@@ -12,6 +12,8 @@ import { SkeletonKpis, SkeletonTableRows } from '../components/Skeleton'
 import { exportCsv } from '../lib/export'
 
 const initials = (n) => (n || '?').split(' ').slice(0, 2).map((x) => x[0]).join('').toUpperCase()
+// Búsqueda sin distinguir acentos ni mayúsculas ("maria" encuentra "María")
+const fold = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 const VIEW = 220, OUT = 200
 const COUNTRIES = [['Chile', 'CL'], ['Colombia', 'CO'], ['Perú', 'PE']]
@@ -126,6 +128,7 @@ export default function Usuarios() {
   const [logOpen, setLogOpen] = useState(false)
   const fileRef = useRef(null)
   const [cropImg, setCropImg] = useState(null)
+  const [saveBusy, setSaveBusy] = useState(false) // evita doble guardado
   const [scale, setScale] = useState(1)
   const [minScale, setMinScale] = useState(1)
   const [off, setOff] = useState({ x: 0, y: 0 })
@@ -195,6 +198,8 @@ export default function Usuarios() {
 
   // Al abrir la edición, precargar la cantidad actual; se refresca tras crear
   useEffect(() => { if (edit) setCompTarget(String(compsOf(edit).length)) }, [edit?.id, compEquip])
+  // Al cambiar de persona editada, limpiar selecciones del modal (evita asignar al usuario equivocado)
+  useEffect(() => { setAssignPick(''); setPPick({ per: '', qty: 1 }); setCropImg(null) }, [edit?.id])
 
   // Cuántos tiene y cuántos se crearían con el total pedido (nunca negativos)
   const compCur = useMemo(() => compsOf(edit).length, [edit, compEquip, compsOf])
@@ -274,6 +279,8 @@ export default function Usuarios() {
   const roleHasInv = useMemo(() => Object.fromEntries(roles.map((r) => [r.key, !!(r.permissions?.full_admin || r.permissions?.manage_inventory)])), [roles])
 
   const save = async () => {
+    if (saveBusy) return
+    setSaveBusy(true)
     try {
       const payload = {
         p_user: edit.id, p_full_name: (edit.full_name || '').trim(),
@@ -295,7 +302,7 @@ export default function Usuarios() {
       }
       if (edit.id === user?.id) await refreshProfile()
       setEdit(null); load()
-    } catch (e) { alertDialog(e.message) }
+    } catch (e) { alertDialog(e.message) } finally { setSaveBusy(false) }
   }
 
   // Crear un usuario nuevo en Microsoft 365 (y perfil en la app) — paso final del asistente
@@ -390,14 +397,17 @@ export default function Usuarios() {
 
   // ===== Licencias M365 =====
   const usageOf = (country) => country === 'Colombia' ? 'CO' : country === 'Perú' ? 'PE' : 'CL'
+  const licSeq = useRef(0)
   const loadLicenses = useCallback(async (u) => {
+    const seq = ++licSeq.current // descarta respuestas tardías de otra ficha
     if (!u || !isM365(u.email)) { setMsSkus([]); setMsLic(null); return }
     setMsLic(null); setLicPick('')
     try {
       const [skusR, licR] = await Promise.all([msUsers('listSkus'), msUsers('userLicenses', { id: u.email })])
+      if (seq !== licSeq.current) return
       setMsSkus(skusR?.skus || [])
       setMsLic({ assignedLicenses: licR?.assignedLicenses || [], usageLocation: licR?.usageLocation })
-    } catch (e) { setMsSkus([]); setMsLic({ error: e.message, assignedLicenses: [] }) }
+    } catch (e) { if (seq === licSeq.current) { setMsSkus([]); setMsLic({ error: e.message, assignedLicenses: [] }) } }
   }, [])
   useEffect(() => { if (edit) loadLicenses(edit); else { setMsSkus([]); setMsLic(null) } }, [edit?.id, loadLicenses])
   const assignLic = async (skuId) => {
@@ -463,7 +473,7 @@ export default function Usuarios() {
     const rank = (d) => d === 'billcapital.com' ? 0 : isBillDomain(d) ? 1 : d === 'sin dominio' ? 3 : 2
     return Object.keys(domainCounts).sort((a, b) => (rank(a) - rank(b)) || a.localeCompare(b))
   }, [domainCounts])
-  const data = rows.filter((u) => (statusFilter === 'all' || (statusFilter === 'disabled' ? u.active === false : u.active !== false)) && (!roleFilter || u.role === roleFilter) && (!deptFilter || (u.department || '') === deptFilter) && (!countryFilter || (u.country || '') === countryFilter) && (!domainFilter || domainOf(u.email) === domainFilter) && (!missingFilter || (isPerson(u) && lacks(u, missingFilter))) && (!mgmtFilter || isMgmt(u)) && (!q || (u.full_name || '').toLowerCase().includes(q.toLowerCase()) || (u.email || '').toLowerCase().includes(q.toLowerCase())))
+  const data = rows.filter((u) => (statusFilter === 'all' || (statusFilter === 'disabled' ? u.active === false : u.active !== false)) && (!roleFilter || u.role === roleFilter) && (!deptFilter || (u.department || '') === deptFilter) && (!countryFilter || (u.country || '') === countryFilter) && (!domainFilter || domainOf(u.email) === domainFilter) && (!missingFilter || (isPerson(u) && lacks(u, missingFilter))) && (!mgmtFilter || isMgmt(u)) && (!q || fold(u.full_name).includes(fold(q)) || fold(u.email).includes(fold(q))))
     .sort((a, b) => {
       let r = 0
       if (sortField === 'recent') r = new Date(a.last_sign_in_at || a.created_at || 0) - new Date(b.last_sign_in_at || b.created_at || 0)
@@ -898,7 +908,7 @@ export default function Usuarios() {
                 : <span />}
               <span style={{ display: 'flex', gap: '.5rem' }}>
                 <button className="btn" onClick={() => setEdit(null)}>Cancelar</button>
-                <button className="btn btn-primary" onClick={save}>Guardar cambios</button>
+                <button className="btn btn-primary" disabled={saveBusy} onClick={save}>{saveBusy ? 'Guardando…' : 'Guardar cambios'}</button>
               </span>
             </div>
 

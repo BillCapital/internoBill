@@ -212,6 +212,7 @@ export default function Solicitudes() {
   const startWizard = () => {
     setCreating((v) => !v); setStep(1); setCart({}); setNote(''); setCustom(''); setWSection('')
     setWMode('catalogo'); setTecView('choose'); setProducts([]); setPUrl(''); setPErr('')
+    setAvailSel({}); setAvailOpen({})
     setWDept(canChooseDept ? '' : ownDept)
     if (!canChooseDept && ownDept) setStep(2)
   }
@@ -226,8 +227,10 @@ export default function Solicitudes() {
   const cartCount = cartList.reduce((a, x) => a + x.qty, 0)
   const setQty = (id, q, max) => setCart((c) => ({ ...c, [id]: Math.max(0, Math.min(q, max)) }))
   const submit = async () => {
+    if (tecBusy) return // evita solicitudes duplicadas por doble clic
     // Solicitud tecnológica: conversable, la aprueban RRHH + Gerente TI + encargado del área
     if (wMode === 'tec') {
+      if (canChooseDept && !wDept) return alertDialog('Primero elige el departamento para el que es la solicitud.')
       if (note.trim().length < 5) return alertDialog('Describe qué necesitas (al menos unas palabras).')
       setTecBusy(true)
       try {
@@ -239,10 +242,11 @@ export default function Solicitudes() {
     const items = Object.entries(cart).filter(([, q]) => q > 0).map(([id, quantity]) => ({ item_id: id, quantity }))
     if (!items.length && !custom.trim()) return alertDialog('Agrega al menos un artículo del catálogo o describe el insumo que necesitas.')
     if (note.trim().length < 10) return alertDialog('La justificación debe tener al menos 10 caracteres.')
+    setTecBusy(true)
     try {
       await api('create_request', { p_note: note.trim(), p_department: rootDeptOf(wDept || ownDept || ''), p_items: items, p_custom: custom.trim() || null, p_products: [] })
       setCart({}); setNote(''); setCustom(''); setWMode('catalogo'); setCreating(false); setStep(1); load()
-    } catch (e) { alertDialog(e.message) }
+    } catch (e) { alertDialog(e.message) } finally { setTecBusy(false) }
   }
 
   // ---- Adjuntos de una solicitud tecnológica (links y archivos/cotizaciones) ----
@@ -315,7 +319,7 @@ export default function Solicitudes() {
     let reason = ''
     if (!approve) { const r = await promptDialog('Motivo del rechazo de este producto', { title: 'Rechazar producto', placeholder: 'Explica por qué…' }); if (r === null) return; reason = r || '' }
     setProdApprovals((prev) => { const rest = prev.filter((x) => !(x.product_id === p.id && x.approver_id === profile?.id)); return [...rest, { product_id: p.id, approver_id: profile?.id, decision: approve ? 'approve' : 'reject', reason }] })
-    try { await api('tech_product_decide', { p_product: p.id, p_approve: approve, p_reason: reason }) } catch (e) { alertDialog(e.message) } finally { load() }
+    try { await api('tech_product_decide', { p_product: p.id, p_approve: approve, p_reason: reason }) } catch (e) { alertDialog(e.message) } finally { load(); loadMgr() }
   }
   const delTecProduct = async (p) => {
     if (!(await confirmDialog(`¿Quitar el producto "${p.name}"?`, { title: 'Quitar producto', danger: true, okText: 'Quitar' }))) return
@@ -393,7 +397,7 @@ export default function Solicitudes() {
   }
 
   // La gestora de pedidos NO ve las solicitudes tecnológicas (salvo que sea firmante o dueña); admin sí.
-  const canSee = (t) => t.kind !== 'tec' || isAdmin || canViewOrders || t.user_id === profile?.id || myIsSigner(t)
+  const canSee = (t) => t.kind !== 'tec' || isAdmin || t.user_id === profile?.id || myIsSigner(t)
   const visibleRows = rows.filter(canSee)
   const data = visibleRows
     .filter((t) => !status || t.status === status)
@@ -417,7 +421,7 @@ export default function Solicitudes() {
               <span className={`wz-step ${step === 3 ? 'on' : ''}`}>3 · Artículos</span>
             </> : <span className={`wz-step on`}>2 · Descripción</span>}
             <div className="wz-actions">
-              <button className="btn btn-primary btn-sm" onClick={submit}>Enviar solicitud</button>
+              <button className="btn btn-primary btn-sm" disabled={tecBusy} onClick={submit}>{tecBusy ? 'Enviando…' : 'Enviar solicitud'}</button>
               <button className="btn btn-sm" onClick={() => { setCreating(false); setStep(1) }}>Cancelar</button>
             </div>
           </div>
@@ -610,7 +614,7 @@ export default function Solicitudes() {
             <label className="muted" style={{ display: 'block', marginTop: '.6rem' }}>Justificación (obligatoria)</label>
             <textarea style={{ width: '100%', minHeight: 64 }} value={note} onChange={(e) => setNote(e.target.value)} placeholder="¿Para qué necesitas estos insumos?" />
             <div style={{ marginTop: '.6rem', textAlign: 'right' }}>
-              <button className="btn btn-primary" onClick={submit}>Enviar solicitud</button>
+              <button className="btn btn-primary" disabled={tecBusy} onClick={submit}>{tecBusy ? 'Enviando…' : 'Enviar solicitud'}</button>
             </div>
           </div>
           )}
@@ -704,7 +708,7 @@ export default function Solicitudes() {
               )}
               {/* Productos de una solicitud tecnológica: cada uno con link + cotización y firma por firmante */}
               {t.kind === 'tec' && (() => {
-                const canAdd = t.user_id === profile?.id || isAdmin || canManageOrders
+                const canAdd = t.user_id === profile?.id || isAdmin
                 const active = t.status !== 'rejected' && t.status !== 'delivered' && t.status !== 'approved'
                 const products = t.request_products || []
                 const req = requiredSigners(t)
@@ -718,8 +722,8 @@ export default function Solicitudes() {
                     )}
                   </div>
 
-                  {(myIsSigner(t) || isAdmin || canManageOrders || t.budget_min != null || t.budget_max != null) && (() => {
-                    const canEditBudget = myIsSigner(t) || isAdmin || canManageOrders
+                  {(myIsSigner(t) || isAdmin || t.budget_min != null || t.budget_max != null) && (() => {
+                    const canEditBudget = myIsSigner(t) || isAdmin
                     const bf = budgetForm[t.id]
                     const hasRange = t.budget_min != null || t.budget_max != null
                     return (

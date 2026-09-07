@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { confirmDialog, alertDialog } from '../lib/ui'
@@ -66,17 +66,18 @@ export default function AccesosClaves() {
   useEffect(() => { loadDeptNames().then(setDEPTS) }, [])
 
   const load = useCallback(async () => {
-    const [{ data: secs }, { data: eq }, { data: us }] = await Promise.all([
-      supabase.from('equipment_sections').select('id,name,icon,fields,assign_to').order('name'),
-      supabase.from('equipment').select('id,name,assigned_to_name,assigned_to_email,section_id,attributes,created_at').is('returned_at', null).order('name'),
-      supabase.from('profiles').select('id,full_name,email,department,app_access').order('full_name'),
-    ])
-    const cred = (secs ?? []).filter((s) => CRED_NAMES.includes(s.name))
-    const credIds = new Set(cred.map((s) => s.id))
-    setSections(cred)
-    setItems((eq ?? []).filter((e) => credIds.has(e.section_id)))
-    setUsers((us ?? []).filter((u) => u.app_access !== false))
-    setLoading(false)
+    try {
+      const [{ data: secs }, { data: eq }, { data: us }] = await Promise.all([
+        supabase.from('equipment_sections').select('id,name,icon,fields,assign_to').order('name'),
+        supabase.from('equipment').select('id,name,assigned_to_name,assigned_to_email,section_id,attributes,created_at').is('returned_at', null).order('name'),
+        supabase.from('profiles').select('id,full_name,email,department,app_access').order('full_name'),
+      ])
+      const cred = (secs ?? []).filter((s) => CRED_NAMES.includes(s.name))
+      const credIds = new Set(cred.map((s) => s.id))
+      setSections(cred)
+      setItems((eq ?? []).filter((e) => credIds.has(e.section_id)))
+      setUsers((us ?? []).filter((u) => u.app_access !== false))
+    } finally { setLoading(false) } // sin esto, un corte de red deja el esqueleto para siempre
   }, [])
   useEffect(() => { load() }, [load])
 
@@ -107,9 +108,12 @@ export default function AccesosClaves() {
   }, [items, secById])
   const credCards = useMemo(() => Object.values(credGaps).sort((a, b) => b.items.length - a.items.length).map((g) => ({ key: g.key, label: g.label, n: g.items.length })), [credGaps])
 
+  const savingCred = useRef(false)
   const saveCred = async () => {
+    if (savingCred.current) return // doble clic no debe duplicar credenciales
     if (!(edit.name || '').trim()) return alertDialog('Indica el nombre.')
-    try { await api('equipment_upsert', { p: edit }); setEdit(null); load() } catch (e) { alertDialog(e.message) }
+    savingCred.current = true
+    try { await api('equipment_upsert', { p: edit }); setEdit(null); load() } catch (e) { alertDialog(e.message) } finally { savingCred.current = false }
   }
   const delCred = async (e) => {
     if (!(await confirmDialog(`¿Eliminar "${e.name}"?`, { title: 'Eliminar registro', danger: true, okText: 'Eliminar' }))) return
@@ -158,7 +162,7 @@ export default function AccesosClaves() {
                       <td><strong>{e.name}</strong></td>
                       <td>{e.assigned_to_name || e.assigned_to_email || <span className="muted">—</span>}</td>
                       <td><PassCell value={e.attributes?.contrasena} /></td>
-                      <td className="actions"><button className="btn-sm" onClick={() => setEdit({ ...emptyCred(e.section_id), ...e, attributes: e.attributes || {} })}>Completar</button></td>
+                      <td className="actions">{!roClaves && <button className="btn-sm" onClick={() => setEdit({ ...emptyCred(e.section_id), ...e, attributes: e.attributes || {} })}>Completar</button>}</td>
                     </tr>
                   ))}</tbody>
                 </table></div>
@@ -173,7 +177,8 @@ export default function AccesosClaves() {
         const all = bySection[s.id] || []
         const q = (fq[s.id] || '').trim().toLowerCase()
         const falta = ffilter[s.id]?.falta || ''
-        let filtered = all.filter((e) => !q || `${e.name || ''} ${e.assigned_to_name || ''} ${e.assigned_to_email || ''} ${e.attributes?.usuario || ''}`.toLowerCase().includes(q))
+        const fold = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+        let filtered = all.filter((e) => !q || fold(`${e.name || ''} ${e.assigned_to_name || ''} ${e.assigned_to_email || ''} ${e.attributes?.usuario || ''}`).includes(fold(q)))
         if (falta === 'pass') filtered = filtered.filter((e) => !(e.attributes?.contrasena || '').trim())
         else if (falta === 'asig') filtered = filtered.filter((e) => !(e.assigned_to_name || e.assigned_to_email))
         const fDom = ffilter[s.id]?.dom || '', fDept = ffilter[s.id]?.dept || ''

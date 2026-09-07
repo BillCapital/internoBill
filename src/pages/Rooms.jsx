@@ -15,9 +15,21 @@ const LUNCH_AFTER = MORNING.length
 const pad = (n) => String(n).padStart(2, '0')
 const iso = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const isWknd = (ds) => { const d = new Date(ds + 'T12:00:00').getDay(); return d === 0 || d === 6 }
-const slotStart = (ds, t) => new Date(`${ds}T${t}:00`)
+// Instante real cuyo reloj de SANTIAGO marca ds+t, sin importar la zona horaria del navegador
+const sclOffsetMs = (utcGuess) => {
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(utcGuess)
+  const o = {}; p.forEach((x) => { o[x.type] = x.value })
+  return Date.UTC(+o.year, +o.month - 1, +o.day, +o.hour % 24, +o.minute, +o.second) - utcGuess.getTime()
+}
+const slotStart = (ds, t) => {
+  const guess = new Date(`${ds}T${t}:00Z`)
+  const first = new Date(guess.getTime() - sclOffsetMs(guess))
+  return new Date(guess.getTime() - sclOffsetMs(first)) // 2º pase por cambios de hora (DST)
+}
+// Fecha (YYYY-MM-DD) de un timestamp, vista desde Santiago
+const sclDateOf = (isoStr) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(isoStr))
 const addMin = (dt, m) => new Date(dt.getTime() + m * 60000)
-const hhmm = (dt) => `${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+const hhmm = (dt) => new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: false }).format(dt)
 const monthName = (y, m) => new Date(y, m, 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
 const dayLong = (ds) => new Date(ds + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })
 const emptyRoom = { name: '', location: '', capacity: 4, description: '', is_active: true }
@@ -54,6 +66,7 @@ export default function Rooms() {
   const [extAtt, setExtAtt] = useState('')       // correo externo manual
   const [attQuery, setAttQuery] = useState('')   // búsqueda de convocados
   const [attOpen, setAttOpen] = useState(false)  // lista de convocados desplegada
+  const [resBusy, setResBusy] = useState(false)  // evita doble reserva por doble clic
   const attChain = useRef(Promise.resolve())     // serializa el chequeo de disponibilidad al seleccionar rápido
 
   const load = useCallback(async () => {
@@ -66,17 +79,18 @@ export default function Rooms() {
   }, [])
   useEffect(() => { load() }, [load])
 
-  const dayRes = useMemo(() => res.filter((r) => calDay && r.starts_at.slice(0, 10) === calDay), [res, calDay])
+  const dayRes = useMemo(() => res.filter((r) => calDay && sclDateOf(r.starts_at) === calDay), [res, calDay])
   const slots = useMemo(() => daySlots(calDay), [calDay])
+  // Ancla la reserva al bloque que CONTIENE su inicio (tolera datos históricos desalineados)
   const resAt = (roomId, t) => {
-    const s = slotStart(calDay, t)
-    return dayRes.find((r) => r.room_id === roomId && new Date(r.starts_at).getTime() === s.getTime())
+    const s = slotStart(calDay, t).getTime()
+    return dayRes.find((r) => { if (r.room_id !== roomId) return false; const rs = new Date(r.starts_at).getTime(); return rs >= s && rs < s + 1800000 })
   }
   const covered = (roomId, t) => {
     const s = slotStart(calDay, t).getTime()
     return dayRes.some((r) => r.room_id === roomId && new Date(r.starts_at).getTime() <= s && s < new Date(r.ends_at).getTime())
   }
-  const durSlots = (r) => Math.round((new Date(r.ends_at) - new Date(r.starts_at)) / 1800000)
+  const durSlots = (r) => Math.max(1, Math.round((new Date(r.ends_at) - new Date(r.starts_at)) / 1800000))
 
   const maxDur = (roomId, idx) => {
     const blockEnd = idx < LUNCH_AFTER ? LUNCH_AFTER : slots.length
@@ -100,9 +114,13 @@ export default function Rooms() {
   }
 
   const submitReserve = async () => {
+    if (resBusy) return
     const t = slots[form.slotIdx]
     const ns = nowSCL()
     if (calDay < ns.date || (calDay === ns.date && toMin(t) <= ns.min)) return alertDialog('Esa hora ya pasó (hora de Santiago). Elige un horario futuro.')
+    if (!(form.just || '').trim()) return alertDialog('La justificación es obligatoria. Cuéntanos brevemente para qué es la reunión.')
+    setResBusy(true)
+    try {
     const start = slotStart(calDay, t)
     const end = addMin(start, form.dur * 30)
     const attendees = (form.att || []).map((a) => ({ email: a.email, name: a.name || '' }))
@@ -131,6 +149,7 @@ export default function Rooms() {
       })
       setForm(null); setExtAtt(''); load()
     } catch (e) { alertDialog(e.message) }
+    } finally { setResBusy(false) }
   }
   // Acción sobre una reserva: cierra al instante, refleja el cambio localmente y reconcilia en segundo plano (tras completar).
   const act = (action, p_id) => {
@@ -203,7 +222,7 @@ export default function Rooms() {
             {Array.from({ length: startDow }).map((_, i) => <div className="day other" key={'o' + i}></div>)}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const d = i + 1, ds = iso(calY, calM, d), wknd = isWknd(ds), past = ds < scl.date
-              const has = res.some((r) => r.starts_at.slice(0, 10) === ds)
+              const has = res.some((r) => sclDateOf(r.starts_at) === ds)
               const cl = ['day']; if (wknd) cl.push('wknd'); if (past) cl.push('past'); if (ds === scl.date) cl.push('today'); if (ds === calDay && !wknd && !past) cl.push('sel')
               return <button className={cl.join(' ')} key={ds} disabled={wknd || past} onClick={() => { setCalDay(ds); setForm(null); setOpenRes(null) }}>{d}{has && !wknd ? <span className="dot"></span> : null}</button>
             })}
@@ -337,7 +356,7 @@ export default function Rooms() {
             </label>
             <label>Justificación <span className="req-pill">obligatoria</span></label>
             <textarea value={form.just} onChange={(e) => setForm({ ...form, just: e.target.value })} placeholder="¿Para qué necesitas la sala?" />
-            <div className="modal-actions"><button className="btn" onClick={() => setForm(null)}>Cancelar</button><button className="btn btn-primary" onClick={submitReserve}>Reservar</button></div>
+            <div className="modal-actions"><button className="btn" onClick={() => setForm(null)}>Cancelar</button><button className="btn btn-primary" disabled={resBusy} onClick={submitReserve}>{resBusy ? 'Reservando…' : 'Reservar'}</button></div>
           </div>
         </div>
       )}
