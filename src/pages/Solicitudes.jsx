@@ -40,6 +40,7 @@ export default function Solicitudes() {
   const [availEquip, setAvailEquip] = useState(null) // equipos sin asignar
   const [availPeriph, setAvailPeriph] = useState(null) // periféricos con stock
   const [tecBusy, setTecBusy] = useState(false)
+  const [wImgs, setWImgs] = useState([]) // imágenes pegadas (Ctrl+V) al crear la solicitud
   const [attBusy, setAttBusy] = useState(false)
   const [attPrev, setAttPrev] = useState({})       // vista previa por adjunto: { [id]: {open,loading,loaded,fileUrl,isImg,ogTitle,ogImage,price,currency,site,error} }
   const [prodForm, setProdForm] = useState({})     // formulario "agregar producto" por solicitud: { [reqId]: {open,name,url,file,busy} }
@@ -213,6 +214,7 @@ export default function Solicitudes() {
     setCreating((v) => !v); setStep(1); setCart({}); setNote(''); setCustom(''); setWSection('')
     setWMode('catalogo'); setTecView('choose'); setProducts([]); setPUrl(''); setPErr('')
     setAvailSel({}); setAvailOpen({})
+    setWImgs((cur) => { cur.forEach((im) => { try { URL.revokeObjectURL(im.preview) } catch { /* noop */ } }); return [] })
     setWDept(canChooseDept ? '' : ownDept)
     if (!canChooseDept && ownDept) setStep(2)
   }
@@ -226,6 +228,38 @@ export default function Solicitudes() {
     .map(([id, qty]) => ({ item: catalog.find((i) => i.id === id), qty })).filter((x) => x.item)
   const cartCount = cartList.reduce((a, x) => a + x.qty, 0)
   const setQty = (id, q, max) => setCart((c) => ({ ...c, [id]: Math.max(0, Math.min(q, max)) }))
+  // Pegar imágenes (Ctrl+V) en los campos del asistente: quedan como primeros mensajes del chat
+  const onWizPaste = (e) => {
+    const items = e.clipboardData?.items || []
+    const files = []
+    for (const it of items) { if (it.type && it.type.startsWith('image/')) { const f = it.getAsFile(); if (f) files.push(f) } }
+    if (files.length) { e.preventDefault(); setWImgs((cur) => [...cur, ...files.map((f) => ({ file: f, preview: URL.createObjectURL(f) }))]) }
+  }
+  const removeWImg = (i) => setWImgs((cur) => { try { URL.revokeObjectURL(cur[i]?.preview) } catch { /* noop */ } return cur.filter((_, j) => j !== i) })
+  const sendWizImgs = async (reqId) => {
+    if (!reqId || !wImgs.length) { setWImgs([]); return }
+    for (const im of wImgs) {
+      try {
+        const path = `chat/request/${reqId}/${Date.now()}_${(im.file.name || 'img.png').replace(/[^\w.\-]+/g, '_')}`
+        const { error } = await supabase.storage.from('soporte').upload(path, im.file, { contentType: im.file.type || undefined })
+        if (!error) await api('post_message', { p_type: 'request', p_id: reqId, p_body: 'soporte:' + path })
+      } catch { /* la solicitud ya existe; la imagen puede reenviarse desde su chat */ }
+    }
+    wImgs.forEach((im) => { try { URL.revokeObjectURL(im.preview) } catch { /* noop */ } })
+    setWImgs([])
+  }
+  // Miniaturas de las imágenes pegadas, con su X para quitarlas
+  const WizImgStrip = () => wImgs.length ? (
+    <div className="chat-pending">
+      {wImgs.map((im, i) => (
+        <span className="chat-thumb" key={i}>
+          <img src={im.preview} alt="" />
+          <button type="button" title="Quitar" onClick={() => removeWImg(i)}><Icon n="close" /></button>
+        </span>
+      ))}
+    </div>
+  ) : null
+
   const submit = async () => {
     if (tecBusy) return // evita solicitudes duplicadas por doble clic
     // Solicitud tecnológica: conversable, la aprueban RRHH + Gerente TI + encargado del área
@@ -234,7 +268,8 @@ export default function Solicitudes() {
       if (note.trim().length < 5) return alertDialog('Describe qué necesitas (al menos unas palabras).')
       setTecBusy(true)
       try {
-        await api('create_tech_request', { p_note: note.trim(), p_department: rootDeptOf(wDept || ownDept || '') })
+        const newId = await api('create_tech_request', { p_note: note.trim(), p_department: rootDeptOf(wDept || ownDept || '') })
+        await sendWizImgs(newId)
         setNote(''); setWMode('catalogo'); setCreating(false); setStep(1); load(); loadMgr()
       } catch (e) { alertDialog(e.message) } finally { setTecBusy(false) }
       return
@@ -244,7 +279,8 @@ export default function Solicitudes() {
     if (note.trim().length < 10) return alertDialog('La justificación debe tener al menos 10 caracteres.')
     setTecBusy(true)
     try {
-      await api('create_request', { p_note: note.trim(), p_department: rootDeptOf(wDept || ownDept || ''), p_items: items, p_custom: custom.trim() || null, p_products: [] })
+      const newId = await api('create_request', { p_note: note.trim(), p_department: rootDeptOf(wDept || ownDept || ''), p_items: items, p_custom: custom.trim() || null, p_products: [] })
+      await sendWizImgs(newId)
       setCart({}); setNote(''); setCustom(''); setWMode('catalogo'); setCreating(false); setStep(1); load()
     } catch (e) { alertDialog(e.message) } finally { setTecBusy(false) }
   }
@@ -535,8 +571,9 @@ export default function Solicitudes() {
                     <div className="tec-desc-s muted">Cuéntanos para qué lo necesitas y qué problema tienes; nosotros vemos la mejor opción.</div></div>
                   <button className="btn-sm tec-back" onClick={() => setTecView('choose')}>‹ Volver</button>
                 </div>
-                <textarea style={{ width: '100%', minHeight: 110 }} value={note} onChange={(e) => setNote(e.target.value)}
-                  placeholder="Ej: Mi computador se pone muy lento con Chrome y varias pestañas de Google (Gmail, Sheets, Drive) abiertas; tiene poca RAM. Necesito ampliar la memoria o reemplazarlo." />
+                <textarea style={{ width: '100%', minHeight: 110 }} value={note} onChange={(e) => setNote(e.target.value)} onPaste={onWizPaste}
+                  placeholder="Ej: Mi computador se pone muy lento con Chrome y varias pestañas de Google (Gmail, Sheets, Drive) abiertas; tiene poca RAM. Necesito ampliar la memoria o reemplazarlo. Puedes pegar capturas con Ctrl+V." />
+                <WizImgStrip />
                 <div className="tec-info">
                   <Icon n="key" /> <span>Al enviarla podrás <strong>adjuntar links y cotizaciones en PDF</strong> y conversar dentro de la solicitud. La autorizan <strong>RRHH, el Gerente de TI y el encargado de tu área</strong>; la gestora de pedidos no interviene.</span>
                 </div>
@@ -610,9 +647,10 @@ export default function Solicitudes() {
           {wMode === 'catalogo' && (
           <div className="wz-foot">
             <label className="muted" style={{ display: 'block' }}>¿No encuentras el insumo en la lista? Descríbelo aquí <span className="muted">(opcional)</span></label>
-            <textarea style={{ width: '100%', minHeight: 56 }} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Ej: Teclado mecánico compacto, 2 unidades. Se coordina por chat." />
+            <textarea style={{ width: '100%', minHeight: 56 }} value={custom} onChange={(e) => setCustom(e.target.value)} onPaste={onWizPaste} placeholder="Ej: Teclado mecánico compacto, 2 unidades. Se coordina por chat. Puedes pegar una foto con Ctrl+V." />
             <label className="muted" style={{ display: 'block', marginTop: '.6rem' }}>Justificación (obligatoria)</label>
-            <textarea style={{ width: '100%', minHeight: 64 }} value={note} onChange={(e) => setNote(e.target.value)} placeholder="¿Para qué necesitas estos insumos?" />
+            <textarea style={{ width: '100%', minHeight: 64 }} value={note} onChange={(e) => setNote(e.target.value)} onPaste={onWizPaste} placeholder="¿Para qué necesitas estos insumos?" />
+            <WizImgStrip />
             <div style={{ marginTop: '.6rem', textAlign: 'right' }}>
               <button className="btn btn-primary" disabled={tecBusy} onClick={submit}>{tecBusy ? 'Enviando…' : 'Enviar solicitud'}</button>
             </div>
