@@ -196,7 +196,8 @@ export default function AccesosClaves() {
         const sorted = [...filtered].sort(cmp)
         const rows = dir === 'desc' ? sorted.reverse() : sorted
         const isOpen = !!open[s.id]
-        const showAssigned = all.some((r) => r.assigned_to_name)
+        const isWifi = s.name === 'Redes WiFi'
+        const showAssigned = isWifi || all.some((r) => r.assigned_to_name)
         const showUser = (s.fields || []).some((f) => f.key === 'usuario')
         const cols = 2 + (showAssigned ? 1 : 0) + (showUser ? 1 : 0)
         return (
@@ -248,7 +249,7 @@ export default function AccesosClaves() {
                 </div>
                 <div className="table-wrap"><table className="tbl-compact cred-cards">
                   <thead><tr>
-                    <th>Nombre</th>{showAssigned && <th>Asignado a</th>}{showUser && <th>Usuario / correo</th>}<th>Contraseña</th><th></th>
+                    <th>Nombre</th>{showAssigned && <th>{isWifi ? 'Tipo' : 'Asignado a'}</th>}{showUser && <th>Usuario / correo</th>}<th>Contraseña</th><th></th>
                   </tr></thead>
                   <tbody>
                     {rows.length === 0 && <tr><td colSpan={cols} className="muted" style={{ padding: '.7rem' }}>Sin registros.</td></tr>}
@@ -265,7 +266,9 @@ export default function AccesosClaves() {
                       return (
                         <tr key={e.id}>
                           <td><strong>{e.name}</strong></td>
-                          {showAssigned && <td>{e.assigned_to_name || <span className="muted">Sin asignar</span>}{e.assigned_to_email && <><br /><span className="muted">{e.assigned_to_email}</span></>}</td>}
+                          {showAssigned && <td>{isWifi
+                            ? (e.attributes?.tipo_red ? <span className={`badge ${e.attributes.tipo_red === 'Principal' ? 's-approved' : ''}`}>{e.attributes.tipo_red}</span> : <span className="muted">—</span>)
+                            : <>{e.assigned_to_name || <span className="muted">Sin asignar</span>}{e.assigned_to_email && <><br /><span className="muted">{e.assigned_to_email}</span></>}</>}</td>}
                           {showUser && <td>{e.attributes?.usuario || e.assigned_to_email || <span className="muted">—</span>}</td>}
                           <td><PassCell value={pass} /></td>
                           <td className="actions">
@@ -306,6 +309,15 @@ export default function AccesosClaves() {
                   </div>
                 ))}
 
+                {s.name === 'Redes WiFi' && (
+                  <div><label>Tipo de red</label>
+                    <select value={edit.attributes?.tipo_red || ''} onChange={(e) => setAttr('tipo_red', e.target.value)}>
+                      <option value="">—</option>
+                      <option value="Principal">Principal</option>
+                      <option value="Secundaria">Secundaria</option>
+                    </select>
+                  </div>
+                )}
                 {s.name !== 'Redes WiFi' && (<>
                   <div style={{ gridColumn: '1 / -1' }}><label>¿A quién se asigna?</label>
                     <select value={assignMode} onChange={(e) => { setAssignMode(e.target.value); setManualAssign(false); setEdit({ ...edit, assigned_to_name: '', assigned_to_email: '' }) }}>
