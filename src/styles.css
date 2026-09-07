@@ -2308,3 +2308,13 @@ body.light .role-badge.gerente_cobranza{background:#8a6212;color:#fff}
 .btn-icon svg { width: 14px; height: 14px; }
 .pf-mail-edit { display: flex; align-items: center; gap: .4rem; margin: .15rem 0 .3rem; flex-wrap: wrap; }
 .pf-mail-edit input { min-width: 260px; font-size: .85rem; }
+
+/* ===== Imágenes en el chat (todos los hilos) ===== */
+.chat-pending { display: flex; gap: .45rem; flex-wrap: wrap; padding: .4rem .2rem .1rem; }
+.chat-thumb { position: relative; display: inline-flex; }
+.chat-thumb img { width: 58px; height: 58px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border, #2c3140); }
+.chat-thumb button { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; border: none; cursor: pointer; background: var(--danger, #e5484d); color: #fff; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.chat-thumb button svg { width: 10px; height: 10px; }
+.chat-attach { background: var(--soft); border: 1.5px solid var(--line); border-radius: 10px; cursor: pointer; color: var(--muted, #8b93a7); display: inline-flex; align-items: center; justify-content: center; padding: 0 .55rem; align-self: stretch; }
+.chat-attach:hover { color: var(--text, inherit); }
+.chat-attach svg { width: 17px; height: 17px; }
