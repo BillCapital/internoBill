@@ -183,7 +183,7 @@ button{font-family:inherit;cursor:pointer}
 /* ===== Salas — paneles de selección de horario ===== */
 .room-legend{display:flex;flex-wrap:wrap;gap:.9rem;margin:.2rem 0 .7rem;font-size:.72rem;color:var(--muted)}
 .room-legend .rl-item{display:inline-flex;align-items:center;gap:.35rem}
-.room-legend .dot{width:.65rem;height:.65rem;border-radius:3px;display:inline-block}
+.room-legend .dot{width:.65rem;height:.65rem;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.35)}
 .room-legend .free .dot{background:var(--lime)}
 .room-legend .resv .dot{background:var(--lav)}
 .room-legend .pend .dot{background:var(--info)}
@@ -272,7 +272,7 @@ button{font-family:inherit;cursor:pointer}
 .gap-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin:0 0 .35rem}
 .gap-legend{display:inline-flex;gap:.7rem;font-size:.7rem;color:var(--muted)}
 .gap-legend .gl{display:inline-flex;align-items:center;gap:.3rem}
-.gap-legend .dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block}
+.gap-legend .dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block;border:1px solid rgba(0,0,0,.35)}
 .gap-legend .crit .dot{background:var(--bad)}
 .gap-legend .warn .dot{background:var(--warn)}
 .gap-legend .info .dot{background:var(--info)}
@@ -344,11 +344,11 @@ button{font-family:inherit;cursor:pointer}
 .month{display:grid;grid-template-columns:repeat(7,36px);gap:5px}
 .dow{color:var(--muted);font-size:.68rem;text-align:center;padding:.15rem 0;font-weight:600}
 .day{width:36px;height:38px;border:1.5px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;font-size:.85rem}
-.day:hover{border-color:var(--lime-text)}
+.day:hover{border-color:var(--lime-text);background:color-mix(in srgb,var(--lime) 10%,var(--panel))}
 .day.other{opacity:.3}
-.day.today{color:var(--lime-text);font-weight:700}
-.day.sel{border-color:var(--lime-text);box-shadow:0 0 0 1px var(--lime) inset}
-.day .dot{position:absolute;bottom:7px;width:6px;height:6px;border-radius:50%;background:var(--lime)}
+.day.today{color:var(--lime-text);font-weight:700;border-color:color-mix(in srgb,var(--lime) 55%,var(--line))}
+.day.sel{border-color:var(--lime-text);box-shadow:0 0 0 1px var(--lime) inset;color:var(--lime-text);font-weight:700}
+.day .dot{position:absolute;bottom:6px;width:7px;height:7px;border-radius:50%;background:var(--lav);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--lav) 30%,transparent)}
 .day.wknd{opacity:.32;cursor:not-allowed}
 .day-detail{margin-top:1.2rem}
 .slot.pending{background:color-mix(in srgb,var(--info) 22%,var(--panel));color:var(--info)}
@@ -1117,7 +1117,7 @@ input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{b
 
 
 /* Salas: día seleccionado y slots más vivos */
-.day.sel{background:linear-gradient(180deg,color-mix(in srgb,var(--lime) 16%,transparent),transparent)}
+.day.sel{background:color-mix(in srgb,var(--lime) 22%,var(--panel))}
 .slot{transition:.13s}
 .slot:hover{transform:translateY(-1px)}
 .cal{box-shadow:var(--shadow-sm)}
@@ -2319,3 +2319,11 @@ body.light .role-badge.gerente_cobranza{background:#8a6212;color:#fff}
 body.light .pass-cell{background:#eef1f5}
 body.light .sw-app{background:#f4f6f9}
 body.light .m-chips span{background:#eef1f5}
+
+/* ===== Calendario con más color (especialmente en claro) ===== */
+.dow { color: var(--lime-text); font-weight: 600; }
+.day.wknd { background: color-mix(in srgb, var(--muted) 8%, var(--panel)); }
+.day.past { background: color-mix(in srgb, var(--muted) 6%, var(--panel)); }
+body.light .day { box-shadow: 0 1px 2px rgba(20,33,61,.06); }
+body.light .day:hover { background: color-mix(in srgb, var(--lime) 18%, #ffffff); }
+body.light .day.sel { background: color-mix(in srgb, var(--lime) 34%, #ffffff); }
