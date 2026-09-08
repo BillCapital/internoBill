@@ -2492,3 +2492,15 @@ body.light .day.sel { background: var(--lime); color: var(--accent-ink); }
   .todo-card .tc-t{font-size:.8rem}
   .todo-card .tc-sub{font-size:.66rem}
 }
+
+/* Móvil: tarjeta de producto tecnológico — distribución en dos filas limpias */
+@media(max-width:520px){
+  .rp2-head{flex-wrap:wrap;align-items:center;row-gap:.35rem}
+  .rp2-head .badge{margin-left:auto}
+  .rp2-del{flex:none}
+  .rp2-info{order:9;flex:1 1 100%;min-width:0}
+  .rp2-name{display:block;font-size:.88rem}
+  /* Firmantes: el texto fluye en línea (nombre · rol) sin cortes raros */
+  .rp2-sig{display:block;width:100%;box-sizing:border-box;line-height:1.35;padding:.25rem .5rem;border-radius:8px}
+  .rp2-sig .licon{display:inline-block;vertical-align:-2px;margin-right:.25rem}
+}
