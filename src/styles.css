@@ -2856,3 +2856,8 @@ body.light .rq-mob.rq-tec{color:#5747ad}
 .perm-row{display:flex !important;align-items:center !important;gap:.5rem !important;line-height:1.25}
 .perm-row>input[type=checkbox]{margin:0 !important;flex:none;align-self:center}
 .perm-row>span{display:inline-flex;align-items:center;min-width:0}
+
+/* Móvil: el input de stock realmente pequeño (gana a la regla de escritorio) */
+@media(max-width:760px){
+  .ins-table td .stock-cell .stock-in{width:38px !important;height:22px !important;font-size:.7rem !important;padding:.05rem .15rem !important;border-radius:6px}
+}
