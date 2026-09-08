@@ -445,7 +445,7 @@ export default function Inventario() {
           <button className={`seg-btn ${view === 'equipos' ? 'on' : ''}`} onClick={() => switchView('equipos')}><Icon n="monitor" /> Equipos</button>
           <button className={`seg-btn ${view === 'perif' ? 'on' : ''}`} onClick={() => switchView('perif')}><Icon n="mouse" /> Periféricos</button>
           <button className={`seg-btn ${view === 'stock' ? 'on' : ''}`} onClick={() => switchView('stock')}><Icon n="layers" /> Stock</button>
-          {canManageInventory && <button className={`seg-btn ${view === 'mant' ? 'on' : ''}`} onClick={() => switchView('mant')}><Icon n="wrench" /> Mantenimientos</button>}
+          {canManageInventory && <button className={`seg-btn ${view === 'mant' ? 'on' : ''}`} onClick={() => switchView('mant')}><Icon n="wrench" /> <span className="lbl-desk">Mantenimientos</span><span className="lbl-mob">Mantención</span></button>}
         </div>
       </div>
 

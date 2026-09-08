@@ -2938,3 +2938,11 @@ body.light .rq-mob.rq-tec{color:#5747ad}
 @media(max-width:760px){
   .seg{display:flex;width:100%;min-width:0;box-sizing:border-box;margin-left:0;margin-right:0}
 }
+
+/* Pestaña de mantenimiento: palabra corta en móvil para que la barra quepa entera */
+.lbl-mob{display:none}
+@media(max-width:760px){
+  .lbl-desk{display:none}
+  .lbl-mob{display:inline}
+  .seg-btn{font-size:.68rem;padding:.22rem .42rem;gap:.2rem}
+}
