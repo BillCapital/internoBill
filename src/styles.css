@@ -2926,3 +2926,15 @@ body.light .rq-mob.rq-tec{color:#5747ad}
 .gap-legend .crit .dot{background:var(--bad)}
 .gap-legend .warn .dot{background:var(--warn)}
 .gap-legend .info .dot{background:var(--info)}
+
+/* Móvil: pestañas del inventario aún más pequeñas */
+@media(max-width:760px){
+  .seg{padding:.15rem;gap:.15rem;border-radius:9px}
+  .seg-btn{padding:.24rem .5rem;font-size:.72rem;border-radius:7px;gap:.25rem}
+  .seg-btn .licon{width:.75rem;height:.75rem}
+}
+
+/* Móvil: la barra de pestañas queda contenida dentro de la pantalla (se desliza por dentro) */
+@media(max-width:760px){
+  .seg{display:flex;width:100%;min-width:0;box-sizing:border-box;margin-left:0;margin-right:0}
+}
