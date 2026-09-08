@@ -2861,3 +2861,11 @@ body.light .rq-mob.rq-tec{color:#5747ad}
 @media(max-width:760px){
   .ins-table td .stock-cell .stock-in{width:38px !important;height:22px !important;font-size:.7rem !important;padding:.05rem .15rem !important;border-radius:6px}
 }
+
+/* Móvil: en "No se piden" la categoría va como texto en línea, sin icono suelto */
+@media(max-width:760px){
+  .ins-table .ins-depts .dept-chip .licon{display:none}
+  .ins-table .ins-depts{min-height:0}
+  .ins-table tr{row-gap:.12rem}
+  .ins-table .noped-tag{white-space:nowrap}
+}
