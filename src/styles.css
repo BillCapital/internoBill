@@ -2876,3 +2876,12 @@ body.light .rq-mob.rq-tec{color:#5747ad}
   .ins-table .noped-tag{position:absolute;top:.42rem;right:1.9rem;margin:0}
   .ins-table .ins-cell{padding-right:1.5rem}
 }
+
+/* Etiquetas "no se pide"/"tecnológico": inline en escritorio, esquina en móvil */
+.tag-mob{display:none}
+@media(max-width:760px){
+  .ins-table .tag-desk{display:none}
+  .ins-table .tag-mob{display:inline-flex;align-items:center;gap:.2rem;position:absolute;top:.4rem;right:1.8rem;margin:0;white-space:nowrap}
+  .ins-table .req-tech-tag.tag-mob{right:auto;left:auto;top:.4rem;right:1.8rem}
+  .ins-table .noped-tag.tag-mob ~ .req-tech-tag.tag-mob{right:6.2rem}
+}

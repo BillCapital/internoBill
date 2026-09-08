@@ -240,12 +240,14 @@ export default function Insumos() {
                           : <span className="ins-thumb ph"><Icon n="box" /></span>}
                         <div className="ins-info">
                           <div className="ins-name"><strong>{i.name}</strong>
-                            {i.orderable === false ? <span className="noped-tag" title="No se pide: se lleva el stock pero no aparece en Solicitudes"><Icon n="lock" /> no se pide</span> : null}
-                            {i.requires_manager ? <span className="req-tech-tag" title="Requiere doble aprobación (gerente de área)"><Icon n="key" /> tecnológico</span> : null}</div>
+                            {i.orderable === false ? <span className="noped-tag tag-desk" title="No se pide: se lleva el stock pero no aparece en Solicitudes"><Icon n="lock" /> no se pide</span> : null}
+                            {i.requires_manager ? <span className="req-tech-tag tag-desk" title="Requiere doble aprobación (gerente de área)"><Icon n="key" /> tecnológico</span> : null}</div>
                           <span className="ins-unit muted">{i.description || 'Unidad'}</span>
                           {i.purchase_url ? <a className="btn-sm btn-lime ins-buy" href={/^https?:\/\//i.test(i.purchase_url) ? i.purchase_url : 'https://' + i.purchase_url} target="_blank" rel="noreferrer"><Icon n="cart" /> Comprar</a> : null}
                         </div>
-                      </div></td>
+                      </div>
+                      {i.orderable === false ? <span className="noped-tag tag-mob"><Icon n="lock" /> no se pide</span> : null}
+                      {i.requires_manager ? <span className="req-tech-tag tag-mob"><Icon n="key" /> tecnológico</span> : null}</td>
                       <td><div className="ins-depts">
                         {noped
                           ? <span className="dept-chip"><Icon n="folder" /> {i.category || 'Sin categoría'}</span>
