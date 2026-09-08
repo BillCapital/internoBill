@@ -4,7 +4,7 @@
   /* Rediseño 2026 · oscuro (colores BillCapital, oficio Adminator) */
   --bg:#0f1118; --panel:#181b24; --panel2:#20242f; --soft:#1e222d; --topbar:#181b24; --sidebar:#161922;
   --line:#282d3a; --lime:#b4e48d; --lime-text:#b4e48d; --accent-ink:#14213d; --lav:#b3a6ef; --text:#eef0f6; --muted:#8b91a4; --danger:#ff6b6b; --radius:14px;
-  --ok:#34d399; --warn:#f5b13d; --bad:#ff6b6b; --info:#5b9bd5;
+  --ok:#34d399; --warn:#e0821f; --bad:#ff6b6b; --info:#5b9bd5;
 }
 *{box-sizing:border-box}
 html,body{overflow-x:clip}
@@ -543,7 +543,7 @@ tr:last-child td{border-bottom:none}
 .err{color:var(--danger);font-size:.85rem;margin-top:.5rem}
 
 /* MODO CLARO */
-body.light{ --bg:#dbdfe7; --panel:#ffffff; --panel2:#eef1f5; --soft:#eef1f5; --topbar:#14213d; --sidebar:#e8ebf1; --line:#d0d6e0; --text:#14213d; --muted:#54607a; --danger:#b5302a; --lime:#b4e48d; --lime-text:#456d1f; --accent-ink:#14213d; --ok:#2b8154; --warn:#c2410c; --bad:#b5302a; --info:#2f6fb0; }
+body.light{ --bg:#dbdfe7; --panel:#ffffff; --panel2:#eef1f5; --soft:#eef1f5; --topbar:#14213d; --sidebar:#e8ebf1; --line:#d0d6e0; --text:#14213d; --muted:#54607a; --danger:#b5302a; --lime:#b4e48d; --lime-text:#456d1f; --accent-ink:#14213d; --ok:#2b8154; --warn:#e0821f; --bad:#b5302a; --info:#2f6fb0; }
 /* Top bar navy (estilo app BillCapital) en tema claro */
 body.light .topbar{border-bottom-color:#243257}
 body.light .brand,body.light .brand-name{color:#ffffff}
@@ -2921,3 +2921,8 @@ body.light .rq-mob.rq-tec{color:#5747ad}
   .gap-legend{font-size:.64rem;gap:.5rem}
   .page-head .btn,.page-head button.btn{padding:.35rem .6rem;font-size:.8rem}
 }
+
+/* Leyenda de datos faltantes: siempre los mismos tokens del tema */
+.gap-legend .crit .dot{background:var(--bad)}
+.gap-legend .warn .dot{background:var(--warn)}
+.gap-legend .info .dot{background:var(--info)}
