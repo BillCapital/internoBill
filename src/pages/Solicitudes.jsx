@@ -572,7 +572,7 @@ export default function Solicitudes() {
                   <button className="btn-sm tec-back" onClick={() => setTecView('choose')}>‹ Volver</button>
                 </div>
                 <textarea style={{ width: '100%', minHeight: 110 }} value={note} onChange={(e) => setNote(e.target.value)} onPaste={onWizPaste}
-                  placeholder="Ej: Mi computador se pone muy lento con Chrome y varias pestañas de Google (Gmail, Sheets, Drive) abiertas; tiene poca RAM. Necesito ampliar la memoria o reemplazarlo. Puedes pegar capturas con Ctrl+V." />
+                  placeholder="Ej: Mi computador está lento; necesito más RAM o un reemplazo." />
                 <WizImgStrip />
                 <div className="tec-info">
                   <Icon n="key" /> <span>Al enviarla podrás <strong>adjuntar links y cotizaciones en PDF</strong> y conversar dentro de la solicitud. La autorizan <strong>RRHH, el Gerente de TI y el encargado de tu área</strong>; la gestora de pedidos no interviene.</span>
@@ -646,10 +646,10 @@ export default function Solicitudes() {
           {/* Pie del asistente (catálogo): insumo no listado + justificación */}
           {wMode === 'catalogo' && (
           <div className="wz-foot">
-            <label className="muted" style={{ display: 'block' }}>¿No encuentras el insumo en la lista? Descríbelo aquí <span className="muted">(opcional)</span></label>
-            <textarea style={{ width: '100%', minHeight: 56 }} value={custom} onChange={(e) => setCustom(e.target.value)} onPaste={onWizPaste} placeholder="Ej: Teclado mecánico compacto, 2 unidades. Se coordina por chat. Puedes pegar una foto con Ctrl+V." />
-            <label className="muted" style={{ display: 'block', marginTop: '.6rem' }}>Justificación (obligatoria)</label>
-            <textarea style={{ width: '100%', minHeight: 64 }} value={note} onChange={(e) => setNote(e.target.value)} onPaste={onWizPaste} placeholder="¿Para qué necesitas estos insumos?" />
+            <label className="muted wz-lbl">¿No encuentras el insumo? Descríbelo <span className="muted">(opcional)</span></label>
+            <textarea style={{ width: '100%', minHeight: 52 }} value={custom} onChange={(e) => setCustom(e.target.value)} onPaste={onWizPaste} placeholder="Ej: Teclado mecánico, 2 unidades." />
+            <label className="muted wz-lbl wz-lbl2">Justificación (obligatoria)</label>
+            <textarea style={{ width: '100%', minHeight: 60 }} value={note} onChange={(e) => setNote(e.target.value)} onPaste={onWizPaste} placeholder="¿Para qué lo necesitas?" />
             <WizImgStrip />
             <div style={{ marginTop: '.6rem', textAlign: 'right' }}>
               <button className="btn btn-primary" disabled={tecBusy} onClick={submit}>{tecBusy ? 'Enviando…' : 'Enviar solicitud'}</button>
@@ -701,10 +701,13 @@ export default function Solicitudes() {
             <span className="ico"><Icon n="box" /></span>
             <span className="t">
               <span className="rq-title"><strong>Solicitud #{t.folio || String(t.id).slice(0, 4)}</strong>
-                {t.department ? <span className="rq-area" title={`Área que pide: ${t.department}`}>{t.department}</span> : null}
-                {t.kind === 'tec' ? <span className="rq-tec" title="Compra tecnológica: requiere firmas">Tecnológica</span> : null}
+                {t.department ? <span className="rq-area rq-desk" title={`Área que pide: ${t.department}`}>{t.department}</span> : null}
+                {t.kind === 'tec' ? <span className="rq-tec rq-desk" title="Compra tecnológica: requiere firmas">Tecnológica</span> : null}
               </span>
-              <span className="prev">{canManageOrders && (t.profiles?.full_name || t.profiles?.email) ? (t.profiles.full_name || t.profiles.email) + ' · ' : ''}{t.note}</span></span>
+              <span className="prev">
+                {t.department ? <span className="rq-area rq-mob">{t.department}</span> : null}
+                {t.kind === 'tec' ? <span className="rq-tec rq-mob">Tecnológica</span> : null}
+                {canManageOrders && (t.profiles?.full_name || t.profiles?.email) ? (t.profiles.full_name || t.profiles.email) + ' · ' : ''}{t.note}</span></span>
             <span className={`badge ${cls(t.status)}`}>{label(t.status)}</span><span className="chev">▾</span>
           </button>
           {open === t.id && (

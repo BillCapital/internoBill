@@ -289,7 +289,7 @@ export default function Rooms() {
               <div className="att-picker">
               <div className="att-inputwrap">
                 <span className="att-ico"><Icon n="search" /></span>
-                <input className="att-search" placeholder="Buscar persona por nombre o correo…" value={attQuery}
+                <input className="att-search" placeholder="Buscar por nombre o correo…" value={attQuery}
                   onChange={(e) => { setAttQuery(e.target.value); setAttOpen(true) }}
                   onFocus={() => setAttOpen(true)}
                   onBlur={() => setTimeout(() => setAttOpen(false), 150)} />
@@ -327,7 +327,7 @@ export default function Rooms() {
               })()}
             </div>
               <div className="mr-ext">
-                <input placeholder="o invita a un correo externo…" value={extAtt}
+                <input placeholder="correo externo…" value={extAtt}
                   onChange={(e) => setExtAtt(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('add-ext-att')?.click() } }} />
                 <button id="add-ext-att" className="btn-sm" type="button" onClick={() => {

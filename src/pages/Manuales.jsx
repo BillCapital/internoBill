@@ -111,7 +111,7 @@ export default function Manuales() {
     <div>
       <div className="page-head"><div className="row">
         <div><h2>Manuales y guías</h2><p className="muted">Documentación interna: procedimientos, instructivos y guías paso a paso.</p></div>
-        <div className="row" style={{ gap: '.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div className="row man-controls" style={{ gap: '.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <input className="search" placeholder="Buscar manual…" value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 240 }} />
           {canManage && <button className="btn btn-lime" onClick={startNew}>＋ Subir manual</button>}
         </div>
