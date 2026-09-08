@@ -2905,3 +2905,19 @@ body.light .rq-mob.rq-tec{color:#5747ad}
   .ins-table .ins-name{margin:0;display:flex;align-items:center}
   .ins-table .ins-depts{margin-left:1.75rem;margin-top:-.1rem}
 }
+
+/* Móvil: Inventario — pestañas deslizables y tarjetas aún más planas */
+@media(max-width:760px){
+  .seg{max-width:100%;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .seg::-webkit-scrollbar{display:none}
+  .seg-btn{white-space:nowrap;flex:none}
+  .kpi-grid.compact .kpi{padding:.4rem .25rem;gap:.1rem}
+  .kpi-grid.compact .kpi .num{font-size:.95rem}
+  .kpi-grid.compact .kpi .lbl{font-size:.58rem;line-height:1.1}
+  .kpi-grid.compact .kpi .ico .licon{width:.8rem;height:.8rem}
+  .kpi-grid.compact .kpi-all{padding:.4rem .6rem;flex-direction:row;display:flex;align-items:center;justify-content:center;gap:.5rem}
+  .kpi-grid.compact .kpi-all .num{font-size:1.1rem}
+  .kpi-grid.compact .kpi-all .lbl{font-size:.66rem}
+  .gap-legend{font-size:.64rem;gap:.5rem}
+  .page-head .btn,.page-head button.btn{padding:.35rem .6rem;font-size:.8rem}
+}
