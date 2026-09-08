@@ -2328,3 +2328,17 @@ body.light .day { box-shadow: 0 1px 2px rgba(20,33,61,.06); }
 body.light .day:hover { background: color-mix(in srgb, var(--lime) 18%, #ffffff); }
 body.light .day.sel { background: var(--lime); color: var(--accent-ink); }
 .day.sel .dot{background:var(--accent-ink);box-shadow:none}
+
+/* ===== Calendario de salas en móvil: tamaños y espacios definidos ===== */
+@media(max-width:760px){
+  .sal-date{font-size:1rem;margin:.9rem 0 .45rem;text-transform:capitalize}
+  .room-legend{gap:.45rem .9rem;font-size:.7rem;margin:.1rem 0 .55rem}
+  .cal th,.cal td{padding:.28rem .35rem}
+  .cal thead th{font-size:.6rem;letter-spacing:.04em;padding:.4rem .35rem}
+  .cal td:first-child{font-size:.68rem;padding-left:.45rem;padding-right:.45rem}
+  /* Objetivo táctil cómodo (≥40px) y jerarquía clara entre estados */
+  .cal td .slot{min-height:40px;font-size:1rem;border-radius:10px}
+  .cal td .slot.busy,.cal td .slot.pending{min-height:40px;padding:.32rem .5rem;font-size:.76rem;line-height:1.25}
+  .cal td .slot.slot-off{min-height:40px;border-radius:10px}
+  .cal tr.lunch td{font-size:.7rem;padding:.42rem .35rem;letter-spacing:.02em}
+}
