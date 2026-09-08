@@ -2514,3 +2514,9 @@ body.light .day.sel { background: var(--lime); color: var(--accent-ink); }
   .cal tr.lunch td{font-size:.64rem;padding:.32rem .3rem}
   .sal-date{margin:.7rem 0 .35rem}
 }
+
+/* Móvil: los registros de actividad quedan pegados al pie de la página */
+@media(max-width:760px){
+  .content{padding-bottom:.7rem}
+  .log-foot{margin-bottom:0}
+}
