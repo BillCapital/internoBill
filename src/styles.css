@@ -346,8 +346,8 @@ button{font-family:inherit;cursor:pointer}
 .day{width:36px;height:38px;border:1.5px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;font-size:.85rem}
 .day:hover{border-color:var(--lime-text);background:color-mix(in srgb,var(--lime) 10%,var(--panel))}
 .day.other{opacity:.3}
-.day.today{color:var(--lime-text);font-weight:700;border-color:color-mix(in srgb,var(--lime) 55%,var(--line))}
-.day.sel{border-color:var(--lime-text);box-shadow:0 0 0 1px var(--lime) inset;color:var(--lime-text);font-weight:700}
+.day.today{color:var(--lime-text);font-weight:700;border:2px solid var(--lime-text)}
+.day.sel{border-color:var(--lime-text);color:var(--accent-ink);font-weight:700}
 .day .dot{position:absolute;bottom:6px;width:7px;height:7px;border-radius:50%;background:var(--lav);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--lav) 30%,transparent)}
 .day.wknd{opacity:.32;cursor:not-allowed}
 .day-detail{margin-top:1.2rem}
@@ -1117,7 +1117,7 @@ input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{b
 
 
 /* Salas: día seleccionado y slots más vivos */
-.day.sel{background:color-mix(in srgb,var(--lime) 22%,var(--panel))}
+.day.sel{background:var(--lime)}
 .slot{transition:.13s}
 .slot:hover{transform:translateY(-1px)}
 .cal{box-shadow:var(--shadow-sm)}
@@ -2326,4 +2326,5 @@ body.light .m-chips span{background:#eef1f5}
 .day.past { background: color-mix(in srgb, var(--muted) 6%, var(--panel)); }
 body.light .day { box-shadow: 0 1px 2px rgba(20,33,61,.06); }
 body.light .day:hover { background: color-mix(in srgb, var(--lime) 18%, #ffffff); }
-body.light .day.sel { background: color-mix(in srgb, var(--lime) 34%, #ffffff); }
+body.light .day.sel { background: var(--lime); color: var(--accent-ink); }
+.day.sel .dot{background:var(--accent-ink);box-shadow:none}
