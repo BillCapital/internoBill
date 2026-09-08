@@ -2555,3 +2555,29 @@ body.light .room-legend .lunch .dot{background:repeating-linear-gradient(45deg,#
   .rp2-sig .muted{display:none}
   .rp2-reason{font-size:.72rem;padding:.3rem .45rem}
 }
+
+/* Modo claro: las líneas de Colación con contraste visible */
+body.light .cal tr.lunch td{background:repeating-linear-gradient(45deg,#e9e3d0 0 8px,#faf7ef 8px 16px)}
+body.light .room-legend .lunch .dot{background:repeating-linear-gradient(45deg,#e9e3d0 0 2px,#faf7ef 2px 4px)}
+
+/* Móvil: las etiquetas de la segunda línea no se recortan verticalmente */
+@media(max-width:520px){
+  .cv-head .prev{line-height:1.7;margin-top:.1rem}
+  .rq-mob{font-size:.56rem;padding:.05rem .35rem;line-height:1.3;vertical-align:baseline}
+}
+
+/* Móvil: al cerrar el menú solo se desliza — no se encoge (las letras se veían cortadas) */
+@media(max-width:760px){
+  .sidebar{transition:transform .28s ease}
+  body.sb-collapsed .sidebar{width:242px;padding:1rem .7rem}
+  body.sb-collapsed .sidebar .mlbl,body.sb-collapsed .sidebar .side-user .nm,body.sb-collapsed .sidebar .side-user .rl{display:inline !important}
+  body.sb-collapsed .sidebar .menu-item{justify-content:flex-start;padding:.5rem .7rem;position:static}
+  body.sb-collapsed .sidebar .menu-group{display:block}
+  body.sb-collapsed .sidebar .side-user{justify-content:flex-start;padding:.5rem .6rem}
+  body.sb-collapsed .sidebar .side-user>div:not(.avatar){display:block !important}
+}
+/* Chat en móvil: más alto y con desplazamiento limpio */
+@media(max-width:640px){
+  .chat{max-height:62vh;min-height:220px;overscroll-behavior:contain;padding:.7rem .6rem}
+  .bubble{font-size:.86rem}
+}
