@@ -187,7 +187,9 @@ export default function Inventario() {
       if (!e.model) add('sin_modelo', 'Sin modelo', e)
       if (!e.serial_number) add('sin_serie', 'Sin identificador de dispositivo', e)
       if (!e.location) add('sin_ubicacion', 'Sin ubicación', e)
-      if (s.name === 'Computadores' && !(e.antivirus || '').trim()) add('sin_av', 'Sin antivirus', e)
+      // Antivirus: solo cuenta en computadores en uso (asignados y no dados de baja / en stock)
+      const enUso = (e.assigned_to_name || e.assigned_to_email) && e.condition !== 'De baja' && e.condition !== 'Sin asignar' && e.attributes?.disponible !== true
+      if (s.name === 'Computadores' && enUso && !(e.antivirus || '').trim()) add('sin_av', 'Sin antivirus', e)
       ;(s.fields || []).forEach((f) => {
         // La IP no cuenta como faltante si el equipo está en DHCP (es automática)
         if (f.key === 'ip' && e.attributes?.dhcp === 'Sí') return
