@@ -1446,6 +1446,18 @@ body.light .menu-item:hover{background:#e6e9f0;color:var(--text)}
   .rq-title{display:flex;flex-wrap:wrap;gap:.25rem .35rem;align-items:center}
   .cv-head .badge{font-size:.62rem;padding:.14rem .45rem;flex:none}
   .cv-head .ico{width:30px;height:30px;flex:none}
+  /* Altura uniforme de las tarjetas: folio corto en una sola línea */
+  .cv-head{min-height:58px;align-items:center}
+  .rq-title{flex-wrap:nowrap;overflow:hidden}
+  .rq-title strong{white-space:nowrap}
+  .rq-title .rq-area,.rq-title .rq-tec{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:9.5rem}
+  /* Selector de departamento del asistente: pastillas compactas */
+  .dept-pick{display:flex;flex-wrap:wrap;gap:.35rem;margin:.6rem 0 .8rem}
+  .dept-pick .kpi{display:inline-flex;align-items:center;gap:.35rem;width:auto;flex:0 1 auto;padding:.3rem .55rem;border-radius:999px;border-width:1px}
+  .dept-pick .kpi .ico{display:none}
+  .dept-pick .kpi .lbl{font-size:.7rem;line-height:1.2;white-space:nowrap;color:var(--text)}
+  .dept-pick .kpi.active::after{display:none}
+  .dept-pick .kpi.active{background:color-mix(in srgb,var(--lime) 16%,var(--panel))}
 }
 /* Glosario: botón + ventana superpuesta */
 .tec-topbar{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;margin-bottom:.7rem}

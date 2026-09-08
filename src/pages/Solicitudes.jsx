@@ -127,7 +127,7 @@ export default function Solicitudes() {
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('requests')
-      .select('id, status, kind, note, custom, department, needs_manager, l1_by, mgr_by, budget_min, budget_max, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock)), request_products(id,product_url,name,image_url,price,currency,quantity,status,reject_reason,file_url,file_name,file_mime), request_attachments(id,kind,url,name,mime,size,uploaded_by,created_at)')
+      .select('id, folio, status, kind, note, custom, department, needs_manager, l1_by, mgr_by, budget_min, budget_max, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock)), request_products(id,product_url,name,image_url,price,currency,quantity,status,reject_reason,file_url,file_name,file_mime), request_attachments(id,kind,url,name,mime,size,uploaded_by,created_at)')
       .order('created_at', { ascending: false })
     setRows(data ?? [])
     setLoading(false)
@@ -586,7 +586,7 @@ export default function Solicitudes() {
             <div>
               <h3 style={{ fontSize: '1rem' }}>¿Para qué departamento es la solicitud?</h3>
               {canChooseDept ? (
-                <div className="kpi-grid compact">
+                <div className="kpi-grid compact dept-pick">
                   {topDepts.map((d) => (
                     <button key={d} className={`kpi ${wDept === d ? 'active' : ''}`} onClick={() => { if (d !== wDept) setCart({}); setWDept(d); setWSection(''); setStep(2) }}>
                       <div className="ico"><Icon n="building" /></div><div className="lbl">{d}</div>
@@ -700,7 +700,7 @@ export default function Solicitudes() {
           <button className="cv-head" onClick={() => setOpen(open === t.id ? null : t.id)}>
             <span className="ico"><Icon n="box" /></span>
             <span className="t">
-              <span className="rq-title"><strong>Solicitud #{String(t.id).slice(0, 8)}</strong>
+              <span className="rq-title"><strong>Solicitud #{t.folio || String(t.id).slice(0, 4)}</strong>
                 {t.department ? <span className="rq-area" title={`Área que pide: ${t.department}`}>{t.department}</span> : null}
                 {t.kind === 'tec' ? <span className="rq-tec" title="Compra tecnológica: requiere firmas">Tecnológica</span> : null}
               </span>
