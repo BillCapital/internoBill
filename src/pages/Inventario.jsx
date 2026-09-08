@@ -156,6 +156,12 @@ export default function Inventario() {
   }
   // Tarjeta de datos faltantes seleccionada
   const [gapSel, setGapSel] = useState(null)
+  const gapDetRef = useRef(null)
+  const pickGap = (key) => {
+    const next = gapSel === key ? null : key
+    setGapSel(next)
+    if (next) setTimeout(() => gapDetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
+  }
   const [credSel, setCredSel] = useState(null)
   const [sinAsigOpen, setSinAsigOpen] = useState(false)  // detalle de la tarjeta "Sin asignar"
   const [mantOpen, setMantOpen] = useState(false)        // detalle de la tarjeta "En mantenimiento"
@@ -685,7 +691,7 @@ export default function Inventario() {
           </div>
           <div className="kpi-grid compact">
             {gapCards.map((c) => (
-              <button key={c.key} className={`kpi gap-${c.sev} ${gapSel === c.key ? 'active' : ''}`} onClick={() => setGapSel(gapSel === c.key ? null : c.key)}>
+              <button key={c.key} className={`kpi gap-${c.sev} ${gapSel === c.key ? 'active' : ''}`} onClick={() => pickGap(c.key)}>
                 <div className="ico"><Icon n={c.icon} /></div>
                 <div className="num">{c.n}</div>
                 <div className="lbl">{c.label}</div>
@@ -699,7 +705,7 @@ export default function Inventario() {
               ? [...noPc].sort((a, b) => (a.full_name || a.email).localeCompare(b.full_name || b.email, 'es'))
               : [...(gaps[gapSel]?.items || [])].sort((a, b) => `${a.name} ${a.assigned_to_name || ''}`.localeCompare(`${b.name} ${b.assigned_to_name || ''}`, 'es'))
             return (
-              <div className="section open" style={{ marginTop: '.5rem' }}><div className="sec-body">
+              <div className="section open" ref={gapDetRef} style={{ marginTop: '.5rem' }}><div className="sec-body">
                 <div className="row" style={{ marginBottom: '.4rem' }}>
                   <strong>{card.label} · {card.n}</strong>
                   <button className="btn-sm" onClick={() => setGapSel(null)}><Icon n="close" /> Cerrar</button>

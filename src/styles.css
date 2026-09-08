@@ -2946,3 +2946,8 @@ body.light .rq-mob.rq-tec{color:#5747ad}
   .lbl-mob{display:inline}
   .seg-btn{font-size:.68rem;padding:.22rem .42rem;gap:.2rem}
 }
+
+/* Móvil: las 4 pestañas centradas en la barra */
+@media(max-width:760px){
+  .seg{justify-content:center}
+}
