@@ -365,10 +365,9 @@ export default function Solicitudes() {
   const parseNum = (v) => { const n = parseFloat(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.')); return isNaN(n) ? null : n }
   const saveBudget = async (reqId) => {
     const f = budgetForm[reqId] || {}
-    const lo = parseNum(f.min), hi = parseNum(f.max)
-    if (lo != null && hi != null && lo > hi) return alertDialog('El mínimo no puede ser mayor que el máximo.')
+    const hi = parseNum(f.max)
     setBudgetForm((s) => ({ ...s, [reqId]: { ...f, busy: true } }))
-    try { await api('tech_set_budget', { p_request: reqId, p_min: lo, p_max: hi }); setBudgetForm((s) => { const n = { ...s }; delete n[reqId]; return n }) }
+    try { await api('tech_set_budget', { p_request: reqId, p_min: null, p_max: hi }); setBudgetForm((s) => { const n = { ...s }; delete n[reqId]; return n }) }
     catch (e) { alertDialog(e.message || 'No se pudo guardar el rango.'); setBudgetForm((s) => ({ ...s, [reqId]: { ...f, busy: false } })) }
     finally { load() }
   }
@@ -769,21 +768,20 @@ export default function Solicitudes() {
                     const hasRange = t.budget_min != null || t.budget_max != null
                     return (
                       <div className="rqa-budget">
-                        <span className="rqb-label"><Icon n="tag" /> Rango de precio autorizado</span>
+                        <span className="rqb-label"><Icon n="tag" /> Precio máximo autorizado</span>
                         {bf ? (
                           <span className="rqb-edit">
-                            <input type="text" inputMode="numeric" placeholder="Mín" value={bf.min ?? ''} onChange={(e) => setBudgetForm((s) => ({ ...s, [t.id]: { ...bf, min: e.target.value } }))} />
-                            <span className="rqb-dash">–</span>
-                            <input type="text" inputMode="numeric" placeholder="Máx" value={bf.max ?? ''} onChange={(e) => setBudgetForm((s) => ({ ...s, [t.id]: { ...bf, max: e.target.value } }))} />
+                            <span className="muted">Hasta</span>
+                            <input type="text" inputMode="numeric" placeholder="Monto máximo" value={bf.max ?? ''} onChange={(e) => setBudgetForm((s) => ({ ...s, [t.id]: { ...bf, max: e.target.value } }))} />
                             <button className="btn-sm btn-lime" onClick={() => saveBudget(t.id)} disabled={bf.busy}>{bf.busy ? 'Guardando…' : 'Guardar'}</button>
                             <button className="btn-sm" onClick={() => setBudgetForm((s) => { const n = { ...s }; delete n[t.id]; return n })} disabled={bf.busy}>Cancelar</button>
                           </span>
                         ) : (
                           <span className="rqb-view">
-                            {hasRange
-                              ? <strong>{t.budget_min != null ? fmtMoney(t.budget_min, 'CLP') : '—'} <span className="muted">a</span> {t.budget_max != null ? fmtMoney(t.budget_max, 'CLP') : '—'}</strong>
+                            {t.budget_max != null
+                              ? <strong><span className="muted">Hasta</span> {fmtMoney(t.budget_max, 'CLP')}</strong>
                               : <span className="muted">Sin definir</span>}
-                            {canEditBudget && <button className="btn-sm rqb-set" onClick={() => setBudgetForm((s) => ({ ...s, [t.id]: { min: t.budget_min ?? '', max: t.budget_max ?? '' } }))}>{hasRange ? 'Editar' : 'Definir'}</button>}
+                            {canEditBudget && <button className="btn-sm rqb-set" onClick={() => setBudgetForm((s) => ({ ...s, [t.id]: { max: t.budget_max ?? '' } }))}>{t.budget_max != null ? 'Editar' : 'Definir'}</button>}
                           </span>
                         )}
                         <span className="rqb-hint muted">Se compara con el total (precio × cantidad) de cada opción.</span>

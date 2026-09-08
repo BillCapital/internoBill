@@ -2536,11 +2536,22 @@ body.light .day.sel { background: var(--lime); color: var(--accent-ink); }
 .room-legend .rl-item{line-height:1}
 .room-legend .dot{flex:none}
 
-/* Leyenda: el punto de Colación usa el tono cálido real de esa fila */
-.room-legend .lunch .dot{background:#857435}
-body.light .room-legend .lunch .dot{background:#e8dcb2}
+/* Leyenda: el punto de Colación replica el patrón de líneas de la fila */
+.room-legend .lunch .dot{background:repeating-linear-gradient(45deg,var(--soft) 0 2px,var(--panel) 2px 4px)}
+body.light .room-legend .lunch .dot{background:repeating-linear-gradient(45deg,#e4e7ee 0 2px,#ffffff 2px 4px)}
+/* Separación mínima entre el contenido y el registro anclado al pie */
+.log-foot{margin-top:1rem}
 /* Móvil: la hora completa siempre visible, sin recortes */
 @media(max-width:600px){
   .cal th:first-child,.cal td:first-child{width:96px;overflow:visible}
   .cal td:first-child{font-size:.6rem}
+}
+
+/* Móvil: firmas compactas — solo el nombre, en pastillas pequeñas en línea */
+@media(max-width:520px){
+  .rp2-signers{gap:.3rem;flex-direction:row;flex-wrap:wrap}
+  .rp2-sig{display:inline-flex;align-items:center;width:auto;font-size:.66rem;padding:.14rem .45rem;line-height:1.2;border-radius:999px}
+  .rp2-sig .licon{display:inline-block;vertical-align:middle;margin-right:.2rem;width:.7rem;height:.7rem}
+  .rp2-sig .muted{display:none}
+  .rp2-reason{font-size:.72rem;padding:.3rem .45rem}
 }
