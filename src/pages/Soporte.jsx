@@ -149,7 +149,7 @@ export default function Soporte() {
         </div>
       )}
 
-      {canManageSupport && <ActivityLog kinds={['Soporte']} title="Registro de soporte" />}
+      {canManageSupport && <div style={{ marginTop: 'auto' }}><ActivityLog kinds={['Soporte']} title="Registro de soporte" /></div>}
     </div>
   )
 }

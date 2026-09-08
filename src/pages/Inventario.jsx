@@ -1155,7 +1155,7 @@ export default function Inventario() {
         </div>
       )}
 
-      <ActivityLog kinds={['Equipo']} title="Registro de equipos" />
+      <div style={{ marginTop: 'auto' }}><ActivityLog kinds={['Equipo']} title="Registro de equipos" /></div>
     </div>
   )
 }

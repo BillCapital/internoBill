@@ -354,7 +354,7 @@ export default function Insumos() {
         </div>
       )}
 
-      <ActivityLog kinds={['Insumo']} title="Registro de insumos" />
+      <div style={{ marginTop: 'auto' }}><ActivityLog kinds={['Insumo']} title="Registro de insumos" /></div>
     </div>
   )
 }

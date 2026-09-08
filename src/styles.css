@@ -2504,3 +2504,13 @@ body.light .day.sel { background: var(--lime); color: var(--accent-ink); }
   .rp2-sig{display:block;width:100%;box-sizing:border-box;line-height:1.35;padding:.25rem .5rem;border-radius:8px}
   .rp2-sig .licon{display:inline-block;vertical-align:-2px;margin-right:.25rem}
 }
+
+/* Móvil: filas del calendario de salas más compactas */
+@media(max-width:600px){
+  .cal td .slot{min-height:32px;font-size:.9rem;border-radius:8px}
+  .cal td .slot.slot-off{min-height:28px}
+  .cal td .slot.busy,.cal td .slot.pending{min-height:32px}
+  .cal th,.cal td{padding:.28rem .3rem}
+  .cal tr.lunch td{font-size:.64rem;padding:.32rem .3rem}
+  .sal-date{margin:.7rem 0 .35rem}
+}

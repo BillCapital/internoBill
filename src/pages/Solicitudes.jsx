@@ -980,7 +980,7 @@ export default function Solicitudes() {
         </div>
       ))}
 
-      {canManageOrders && <ActivityLog kinds={['Solicitud']} title="Registro de solicitudes" />}
+      {canManageOrders && <div style={{ marginTop: 'auto' }}><ActivityLog kinds={['Solicitud']} title="Registro de solicitudes" /></div>}
 
       {/* Glosario de términos (ventana superpuesta) */}
       {glossOpen && (
