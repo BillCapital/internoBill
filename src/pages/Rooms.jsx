@@ -398,7 +398,7 @@ export default function Rooms() {
         </div>
       )}
 
-      {canManageRooms && <ActivityLog kinds={['Reserva']} title="Registro de reservas" />}
+      {canManageRooms && <div style={{ marginTop: 'auto' }}><ActivityLog kinds={['Reserva']} title="Registro de reservas" /></div>}
     </div>
   )
 }
