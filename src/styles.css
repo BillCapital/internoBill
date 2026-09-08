@@ -2439,3 +2439,17 @@ body.light .day.sel { background: var(--lime); color: var(--accent-ink); }
   .man-meta .badge{font-size:.6rem;padding:.1rem .4rem}
   .man-actions .btn-sm{padding:.3rem .55rem;font-size:.76rem}
 }
+
+/* Móvil: la tabla de salas cabe completa en el ancho, sin scroll lateral */
+@media(max-width:600px){
+  .sal-right{min-width:0;max-width:100%}
+  .sal-right table.cal{width:100%;min-width:0;table-layout:fixed}
+  .cal .slot,.sal-right .cal .slot{min-width:0;width:100%;box-sizing:border-box}
+  .cal th:first-child,.cal td:first-child{width:76px;white-space:nowrap;padding-left:.3rem;padding-right:.3rem}
+  .cal th,.cal td{padding:.4rem .3rem}
+  .cal td:first-child{font-size:.64rem}
+  .cal thead th{font-size:.58rem;letter-spacing:.03em}
+  .cal td .slot.busy,.cal td .slot.pending{font-size:.72rem;padding:.28rem .4rem}
+  .room-legend{font-size:.66rem;gap:.35rem .7rem}
+  .sal-date{font-size:.95rem}
+}
