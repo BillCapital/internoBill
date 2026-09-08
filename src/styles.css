@@ -2581,3 +2581,55 @@ body.light .room-legend .lunch .dot{background:repeating-linear-gradient(45deg,#
   .chat{max-height:62vh;min-height:220px;overscroll-behavior:contain;padding:.7rem .6rem}
   .bubble{font-size:.86rem}
 }
+
+/* Móvil: en la tarjeta de usuario, nombre y rol en líneas separadas */
+@media(max-width:760px){
+  body .sidebar .side-user .nm,body .sidebar .side-user .rl{display:block !important}
+  body .sidebar .side-user .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body .sidebar .side-user .rl{font-size:.72rem;color:var(--muted)}
+  body .sidebar .side-user>div:not(.avatar){min-width:0;flex:1}
+}
+
+/* Móvil: Insumos — controles compactos y en filas ordenadas */
+@media(max-width:760px){
+  /* Países y agrupador en una línea cada uno, chips pequeños */
+  .country-tabs{gap:.35rem;margin:.1rem 0 .5rem;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .country-tabs::-webkit-scrollbar{display:none}
+  .country-tab{padding:.32rem .6rem;font-size:.78rem;gap:.35rem;border-radius:10px;flex:none}
+  .country-tab .cflag{font-size:.62rem;padding:.12rem .26rem}
+  .seg{padding:.2rem;gap:.2rem}
+  .seg-btn{padding:.3rem .6rem;font-size:.78rem}
+  .seg-btn .licon{width:.85rem;height:.85rem}
+  /* Botón de crear más compacto y sin tanto aire alrededor */
+  .page-head{padding-bottom:.6rem;margin-bottom:.3rem}
+  .page-head .btn{padding:.4rem .7rem;font-size:.85rem}
+}
+@media(max-width:760px){
+  .kpi-grid.ins-kpis{grid-template-columns:repeat(3,1fr);gap:.4rem}
+  .kpi-grid.ins-kpis .kpi{padding:.45rem .3rem}
+  .kpi-grid.ins-kpis .kpi .lbl{height:auto;margin-top:.05rem;font-size:.6rem;line-height:1.15;-webkit-line-clamp:2}
+  .kpi-grid.ins-kpis .kpi .num{font-size:1rem;margin-top:.05rem}
+  .kpi-grid.ins-kpis .kpi-all{grid-column:1/-1;flex-direction:row;justify-content:center;gap:.5rem;padding:.45rem .6rem}
+  .kpi-grid.ins-kpis .kpi-all .num{font-size:1.15rem}
+  .kpi-grid.ins-kpis .kpi-all .lbl{font-size:.68rem}
+}
+
+/* Móvil: tabla de insumos como filas delgadas horizontales (estilo solicitudes) */
+@media(max-width:760px){
+  .table-wrap table{display:block;width:100%}
+  .ins-table colgroup{display:none}
+  .ins-table tr{display:flex;flex-wrap:wrap;align-items:center;column-gap:.55rem;row-gap:.3rem;border:1px solid var(--line);border-radius:10px;padding:.5rem .6rem;margin-bottom:.45rem;background:var(--panel)}
+  .ins-table td{display:contents}
+  .ins-table .ins-cell{flex:1 1 55%;min-width:0;display:flex;align-items:center;gap:.5rem}
+  .ins-table .ins-thumb{width:34px;height:34px;flex:none}
+  .ins-table .ins-info{min-width:0;flex:1}
+  .ins-table .ins-name{font-size:.84rem;min-height:0;display:flex;flex-wrap:wrap;gap:.25rem;align-items:center}
+  .ins-table .ins-unit{font-size:.7rem;display:block}
+  .ins-table .ins-depts{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:.25rem;min-height:0}
+  .ins-table .dept-chip{font-size:.62rem;padding:.08rem .4rem}
+  .ins-table .stock-cell{flex:0 1 auto;display:flex;align-items:center;gap:.3rem;min-height:0;margin-left:auto}
+  .ins-table .stock-in{width:60px;height:28px;font-size:.8rem;margin:0}
+  .ins-table input[type=checkbox]{margin:0;flex:none}
+  .ins-table .icon-btn{margin:0}
+  .ins-table .ins-buy{padding:.2rem .45rem;font-size:.7rem}
+}
