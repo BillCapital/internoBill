@@ -2633,3 +2633,28 @@ body.light .room-legend .lunch .dot{background:repeating-linear-gradient(45deg,#
   .ins-table .icon-btn{margin:0}
   .ins-table .ins-buy{padding:.2rem .45rem;font-size:.7rem}
 }
+@media(max-width:760px){
+  .ins-table{display:block;width:100%}
+  .ins-table tbody{display:block;width:100%}
+  .ins-table tr{width:100%;box-sizing:border-box}
+}
+
+/* Móvil: controles de carpeta (buscar / ordenar / acciones) compactos */
+@media(max-width:760px){
+  .sec-body input[placeholder^="Buscar"]{padding:.42rem .6rem;font-size:.85rem;min-width:0 !important}
+  .sort-ctl{font-size:.76rem;gap:.3rem}
+  .sort-ctl select{padding:.32rem .5rem;font-size:.78rem}
+  .sec-body .btn-sm{padding:.3rem .55rem;font-size:.76rem}
+  .sec-body > .muted, .sec-body p.muted{font-size:.72rem;line-height:1.35}
+}
+
+/* Móvil: modales con listas de casillas (departamentos, permisos) compactas */
+@media(max-width:520px){
+  .modal{padding:1rem .9rem}
+  .modal h3{font-size:1rem}
+  .modal p.muted{font-size:.78rem}
+  .perm-list{gap:.3rem}
+  .perm-row{padding:.35rem .55rem !important;font-size:.8rem;gap:.4rem;border-radius:8px}
+  .perm-row input[type=checkbox]{width:15px;height:15px}
+  .modal .btn-sm{padding:.3rem .55rem;font-size:.78rem}
+}
