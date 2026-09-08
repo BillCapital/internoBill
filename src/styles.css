@@ -2520,3 +2520,18 @@ body.light .day.sel { background: var(--lime); color: var(--accent-ink); }
   .content{padding-bottom:.7rem}
   .log-foot{margin-bottom:0}
 }
+
+/* Móvil: la columna de horas no queda cortada por el borde de la tabla */
+@media(max-width:600px){
+  .cal th:first-child,.cal td:first-child{width:88px;overflow:hidden}
+  .cal td:first-child{font-size:.6rem;letter-spacing:0;padding-left:.25rem;padding-right:.25rem}
+}
+
+/* Botón de menú (☰): icono perfectamente centrado y sin pegarse al borde */
+.hamb{display:flex;align-items:center;justify-content:center;padding:0}
+@media(max-width:760px){
+  .topbar-inner{padding-left:.5rem;padding-right:.5rem}
+}
+/* Leyenda del calendario: punto y texto alineados al centro */
+.room-legend .rl-item{line-height:1}
+.room-legend .dot{flex:none}
