@@ -361,7 +361,7 @@ export default function Inventario() {
     } catch (err) { alertDialog(err.message) }
   }
   const delEquip = async (e) => {
-    if (!(await confirmDialog(`¿Estás seguro de eliminar "${e.name} ${e.brand} ${e.model}"?\nEsta acción no se puede deshacer.`, { title: 'Eliminar equipo', danger: true, okText: 'Sí, eliminar', cancelText: 'No, cancelar' }))) return
+    if (!(await confirmDialog(`¿Estás seguro de eliminar "${e.name} ${e.brand} ${e.model}"?\nEsta acción no se puede deshacer.`, { title: 'Eliminar equipo', danger: true, okText: 'Eliminar' }))) return
     setItems((its) => its.filter((x) => x.id !== e.id))
     try { await api('equipment_delete', { p_id: e.id }) } catch (er) { alertDialog(er.message) } finally { load() }
   }
@@ -844,7 +844,7 @@ export default function Inventario() {
                         <tr key={m.user_id}>
                           <td><strong>{m.user_name || m.user_email}</strong></td>
                           <td><span className="badge">{m.qty}</span></td>
-                          <td className="actions">{ro ? <span className="muted">—</span> : <button className="btn-sm btn-danger" onClick={() => assignPeriph(p.id, m.user_id, 0)}>Quitar</button>}</td>
+                          <td className="actions">{ro ? <span className="muted">—</span> : <button className="btn-sm btn-danger" onClick={async () => { if (await confirmDialog(`¿Quitar este periférico de ${m.user_name || m.user_email}? Vuelve al stock disponible.`, { title: 'Quitar periférico', okText: 'Quitar' })) assignPeriph(p.id, m.user_id, 0) }}>Quitar</button>}</td>
                         </tr>
                       ))}
                     </tbody>

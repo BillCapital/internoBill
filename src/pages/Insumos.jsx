@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, alertDialog, viewImage } from '../lib/ui'
 import ImagePicker from '../components/ImagePicker'
+import SortControl from '../components/SortControl'
 import { loadRootDeptNames, DEFAULT_DEPTS } from '../lib/depts'
 import { useAuth } from '../context/AuthContext'
 import { Icon } from '../lib/icons'
@@ -31,7 +32,9 @@ export default function Insumos() {
   const [stockVals, setStockVals] = useState({})
   const [edit, setEdit] = useState(null)
   const [groupMode, setGroupMode] = useState('cat') // 'cat' = por categoría · 'dept' = por departamento
-  const [sortBy, setSortBy] = useState('az')     // 'az' | 'recent'
+  const [folderQ, setFolderQ] = useState({})       // búsqueda por carpeta
+  const [folderSort, setFolderSort] = useState({}) // criterio de orden por carpeta ('az' | 'recent')
+  const [folderDir, setFolderDir] = useState({})   // dirección por carpeta
   const [deptEdit, setDeptEdit] = useState(null) // { title, itemIds, departments }
   const [sel, setSel] = useState(new Set())      // insumos seleccionados (ids)
   const secRefs = useRef({})
@@ -54,17 +57,25 @@ export default function Insumos() {
   const catOptions = useMemo(() => cats.filter((c) => !cats.some((x) => x.parent_id === c.id)), [cats]) // hojas
   // Insumos del país seleccionado (base de todo lo que se muestra)
   const fItems = useMemo(() => items.filter((i) => (i.country || 'Chile') === effCountry), [items, effCountry])
-  // Orden de los insumos dentro de cada grupo
-  const sortedItems = useMemo(() => {
-    const arr = [...fItems]
-    if (sortBy === 'recent') arr.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-    else arr.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }))
-    return arr
-  }, [fItems, sortBy])
+  // Filtra (búsqueda) y ordena las filas de una carpeta según sus controles propios
+  const filterSortRows = (rows, key) => {
+    // Busca sin acentos
+    const fold = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    const terms = fold((folderQ[key] || '').trim()).split(/\s+/).filter(Boolean)
+    const arr = rows.filter((i) => terms.every((t) => fold(i.name).includes(t)))
+    const field = folderSort[key] || 'az'
+    const dir = folderDir[key] || (field === 'recent' ? 'desc' : 'asc')
+    const cmp = (a, b) => {
+      if (field === 'recent') return new Date(a.created_at || 0) - new Date(b.created_at || 0)
+      return (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' })
+    }
+    const sorted = [...arr].sort(cmp)
+    return dir === 'desc' ? sorted.reverse() : sorted
+  }
   // Los que no se piden salen de las carpetas normales y viven en su propio apartado
   const isNoPed = (i) => i.orderable === false
-  const pedibles = useMemo(() => sortedItems.filter((i) => !isNoPed(i)), [sortedItems])
-  const noPedibles = useMemo(() => sortedItems.filter(isNoPed), [sortedItems])
+  const pedibles = useMemo(() => fItems.filter((i) => !isNoPed(i)), [fItems])
+  const noPedibles = useMemo(() => fItems.filter(isNoPed), [fItems])
   const byCat = useMemo(() => {
     const g = {}; pedibles.forEach((i) => { const k = i.category || 'Sin asignar'; (g[k] = g[k] || []).push(i) }); return g
   }, [pedibles])
@@ -103,7 +114,7 @@ export default function Insumos() {
     try { await api('inventory_upsert', { p }); setEdit(null); load() } catch (e) { alertDialog(e.message) }
   }
   const delItem = async (i) => {
-    if (!(await confirmDialog(`¿Estás seguro de eliminar el insumo "${i.name}"?\nEsta acción no se puede deshacer.`, { title: 'Eliminar insumo', danger: true, okText: 'Sí, eliminar', cancelText: 'No, cancelar' }))) return
+    if (!(await confirmDialog(`¿Estás seguro de eliminar el insumo "${i.name}"?\nEsta acción no se puede deshacer.`, { title: 'Eliminar insumo', danger: true, okText: 'Eliminar' }))) return
     setItems((its) => its.filter((x) => x.id !== i.id))
     try { await api('inventory_delete', { p_id: i.id }) } catch (e) { alertDialog(e.message) } finally { load() }
   }
@@ -156,12 +167,6 @@ export default function Insumos() {
           <button className={`seg-btn ${groupMode === 'cat' ? 'on' : ''}`} onClick={() => setGroupMode('cat')}><Icon n="folder" /> Categorías</button>
           <button className={`seg-btn ${groupMode === 'dept' ? 'on' : ''}`} onClick={() => setGroupMode('dept')}><Icon n="building" /> Departamentos</button>
         </div>
-        <label className="sort-ctl" style={{ marginLeft: 'auto' }}>Ordenar:
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="az">Alfabético (A–Z)</option>
-            <option value="recent">Más recientes</option>
-          </select>
-        </label>
       </div>
 
       <div className="kpi-grid compact ins-kpis">
@@ -176,8 +181,10 @@ export default function Insumos() {
       {orderedGroups.map(([g, arr]) => {
         const isOpen = !!open[g]
         const noped = g === NOPED
+        const rows = filterSortRows(arr, g)
+        const cols = ro ? 3 : 5
         const selArr = arr.filter((i) => sel.has(i.id))
-        const allSel = arr.length > 0 && selArr.length === arr.length
+        const allSel = rows.length > 0 && rows.every((i) => sel.has(i.id))
         return (
           <div className={`section ${isOpen ? 'open' : ''} ${noped ? 'sec-noped' : ''}`} key={g} style={{ marginBottom: '.8rem' }} ref={(el) => { secRefs.current[g] = el }}>
             <button className="sec-head compact" onClick={() => setOpen((o) => ({ ...o, [g]: !o[g] }))}>
@@ -187,6 +194,14 @@ export default function Insumos() {
             </button>
             {isOpen && (
               <div className="sec-body">
+                <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem' }}>
+                  <input placeholder="Buscar en esta carpeta…" value={folderQ[g] || ''} onChange={(e) => setFolderQ((q) => ({ ...q, [g]: e.target.value }))} style={{ flex: 1, minWidth: 200 }} />
+                  <SortControl
+                    fields={[{ value: 'az', label: 'Alfabético (A–Z)' }, { value: 'recent', label: 'Más recientes' }]}
+                    field={folderSort[g] || 'az'} dir={folderDir[g] || ((folderSort[g] || 'az') === 'recent' ? 'desc' : 'asc')}
+                    onField={(v) => setFolderSort((o) => ({ ...o, [g]: v }))}
+                    onToggleDir={() => setFolderDir((d) => { const cur = d[g] || ((folderSort[g] || 'az') === 'recent' ? 'desc' : 'asc'); return { ...d, [g]: cur === 'asc' ? 'desc' : 'asc' } })} />
+                </div>
                 {!ro && <div className="ins-tools">
                   {noped
                     ? <span className="ins-hint"><Icon n="lock" /> Se les lleva el stock, pero no aparecen en Solicitudes.</span>
@@ -209,10 +224,11 @@ export default function Insumos() {
                 <div className="table-wrap"><table className="ins-table inv-table">
                 <colgroup>{!ro && <col className="c-chk" />}<col className="c-name" /><col className="c-dept" /><col className="c-stock" /><col className="c-act" /></colgroup>
                 <thead><tr>
-                  {!ro && <th><input type="checkbox" checked={allSel} onChange={() => setSel((s) => { const n = new Set(s); if (allSel) arr.forEach((i) => n.delete(i.id)); else arr.forEach((i) => n.add(i.id)); return n })} /></th>}
+                  {!ro && <th><input type="checkbox" checked={allSel} onChange={() => setSel((s) => { const n = new Set(s); if (allSel) rows.forEach((i) => n.delete(i.id)); else rows.forEach((i) => n.add(i.id)); return n })} /></th>}
                   <th>Insumo</th><th>{noped ? 'Categoría' : 'Departamentos'}</th><th>Stock</th>{!ro && <th aria-label="Acciones"></th>}</tr></thead>
                 <tbody>
-                  {arr.map((i) => {
+                  {rows.length === 0 && <tr><td colSpan={cols} className="muted" style={{ padding: '.7rem' }}>Sin registros.</td></tr>}
+                  {rows.map((i) => {
                     const dirty = String(stockVals[i.id] ?? '') !== String(i.stock)
                     const cur = Number(stockVals[i.id]) || 0
                     return (
@@ -245,8 +261,8 @@ export default function Insumos() {
                             {dirty && <button className="btn-sm btn-lime" onClick={() => saveStock(i.id)}>Guardar</button>}</>}
                       </div></td>
                       {!ro && <td className="actions">
-                        <button className="icon-btn" title="Editar" onClick={() => setEdit({ ...emptyItem, ...i, category_id: i.category_id || '', departments: i.departments || [] })}><Icon n="edit" /></button>
-                        <button className="icon-btn danger" title="Eliminar" onClick={() => delItem(i)}><Icon n="trash" /></button>
+                        <button className="btn-sm" onClick={() => setEdit({ ...emptyItem, ...i, category_id: i.category_id || '', departments: i.departments || [] })}>Editar</button>
+                        <button className="btn-sm btn-danger" onClick={() => delItem(i)}>Eliminar</button>
                       </td>}
                     </tr>
                     )

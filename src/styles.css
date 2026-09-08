@@ -34,10 +34,7 @@ button{font-family:inherit;cursor:pointer}
 .brand-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .top-right{display:flex;align-items:center;gap:.6rem;flex:0 0 auto}
 .iconbtn{width:40px;height:40px;border-radius:11px;background:#eef0f6;border:none;display:grid;place-items:center;font-size:1.1rem;position:relative}
-.notif-dot{position:absolute;top:-4px;right:-4px;background:var(--danger);color:#2a0d0d;border-radius:999px;font-size:.62rem;min-width:16px;height:16px;display:grid;place-items:center;font-weight:800;padding:0 3px}
 .notif-wrap{position:relative}
-.notif-panel{position:absolute;right:0;top:50px;width:310px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.5);padding:.5rem;display:none;z-index:60}
-.notif-panel.open{display:block}
 .notif-panel h4{margin:.3rem .5rem .5rem;font-size:.85rem}
 .notif-item{display:flex;gap:.6rem;padding:.5rem .6rem;border-radius:8px;cursor:pointer;font-size:.85rem;align-items:flex-start}
 .notif-item:hover{background:var(--panel2)}
@@ -61,7 +58,7 @@ button{font-family:inherit;cursor:pointer}
 .menu-item:hover{color:#fff;background:#22252e}
 .menu-item.active{background:var(--panel2);color:#fff;font-weight:500}
 .menu-item .mi{font-size:1.1rem;width:1.3rem;text-align:center}
-.menu-item .pill{margin-left:auto;background:var(--danger);color:#2a0d0d;border-radius:999px;font-size:.68rem;padding:.02rem .4rem;font-weight:700}
+.menu-item .pill{background:var(--danger);color:#fff;display:flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;font-size:.64rem;line-height:1;font-weight:700;border-radius:999px;margin-left:auto}
 .side-foot{margin-top:auto;padding-top:.6rem}
 .sb-backdrop{display:none}
 
@@ -370,10 +367,10 @@ body.sb-collapsed .menu-item .pill{position:absolute;margin:0;transform:translat
 body.sb-collapsed .menu-item{position:relative}
 
 /* Perfil */
-.pf-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:1.3rem 1.4rem;margin-bottom:1rem}
+.pf-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.1rem;margin-bottom:1rem}
 .pf-top{display:flex;align-items:center;gap:1rem;margin-bottom:.4rem}
 .pf-top .big{width:60px;height:60px;border-radius:50%;background:var(--lime);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:1.4rem}
-.pf-fields{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem 1.4rem;margin-top:.9rem}
+.pf-fields{display:grid;grid-template-columns:1fr 1fr;gap:.9rem 1rem;margin-top:.5rem}
 .pf-fields>div{display:flex;flex-direction:column;gap:.35rem;min-width:0}
 .pf-fields>div label{margin:0;font-size:.78rem;color:var(--muted);font-weight:500}
 .pf-field label{display:block;font-size:.76rem;color:var(--muted);margin-bottom:.3rem}
@@ -611,7 +608,6 @@ body.light .note{background:#fbfbe8;border-color:#ececc0;color:#6b6a2c}
   .eq-info{flex:1 1 100%;min-width:0}
   .eq-qr{flex:1 1 100%;order:2}
   .eq-qr img{width:150px;height:150px}
-  .pf-card{padding:.8rem .9rem}
   .pf-fields{grid-template-columns:1fr}
   /* KPIs de listados: más chicos */
   .kpi-grid.compact{grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:.45rem}
@@ -637,8 +633,8 @@ body.light .note{background:#fbfbe8;border-color:#ececc0;color:#6b6a2c}
 
 /* ==== Notificaciones ==== */
 .notif-wrap{position:relative;display:inline-block}
-.notif-dot{position:absolute;top:-4px;right:-4px;background:#e5484d;color:#fff;font-size:.62rem;font-weight:700;min-width:16px;height:16px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 4px}
-.notif-panel{position:absolute;right:0;top:calc(100% + 8px);width:300px;max-height:60vh;overflow:auto;background:var(--panel);border:1.5px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.35);z-index:60;padding:.35rem}
+.notif-dot{position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;display:flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 3px;font-size:.64rem;line-height:1;font-weight:700;border-radius:999px;box-shadow:0 0 0 2px var(--topbar)}
+.notif-panel{position:absolute;right:0;top:calc(100% + 8px);width:300px;max-height:60vh;overflow:auto;background:var(--panel);border:1.5px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.35);z-index:60;padding:.35rem;display:block;animation:pop .16s ease}
 .notif-head{font-weight:700;padding:.5rem .6rem;border-bottom:1px solid var(--line);margin-bottom:.25rem}
 .notif-empty{padding:1rem .6rem;color:var(--muted);font-size:.88rem;text-align:center}
 .notif-item{display:flex;gap:.55rem;align-items:flex-start;width:100%;text-align:left;background:none;border:none;color:var(--text);padding:.55rem .6rem;border-radius:9px;font-size:.86rem;cursor:pointer}
@@ -915,7 +911,7 @@ body.light tbody tr.row-sel:hover{background:#e3f6d2}
 .stock-dot.low{background:var(--warn,#f59e0b)}
 .stock-dot.zero{background:var(--danger)}
 .stock-in{width:60px;padding:.25rem .4rem;font-size:.8rem}
-.ins-table .stock-cell .btn-sm{padding:.2rem .5rem;font-size:.72rem}
+.ins-table .stock-cell .btn-sm{padding:.2rem .5rem;font-size:.75rem}
 
 /* Botones de acción compactos (ícono) */
 .icon-btn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;transition:background .15s,border-color .15s,color .15s}
@@ -1119,9 +1115,6 @@ input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{b
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 
-/* Notificaciones: panel con aparición */
-.notif-panel{animation:pop .16s ease}
-.notif-dot{box-shadow:0 0 0 2px var(--topbar)}
 
 /* Salas: día seleccionado y slots más vivos */
 .day.sel{background:linear-gradient(180deg,color-mix(in srgb,var(--lime) 16%,transparent),transparent)}
@@ -1250,12 +1243,6 @@ body.light .kpi-all .num{-webkit-text-fill-color:#fff;background:none}
 .role-badge.user{background:var(--lav);color:#231b45}
 .role-badge.propietario{background:linear-gradient(90deg,#d9b23a,#f0d060);color:#2a2205}
 
-/* ==== Punto de notificaciones: blanco y centrado ==== */
-.notif-dot{color:#fff !important;background:var(--danger);display:flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 3px;font-size:.64rem;line-height:1;font-weight:700;border-radius:999px;box-shadow:0 0 0 2px var(--topbar)}
-
-/* ==== Unificar todos los contadores de notificación con el mismo patrón ==== */
-.menu-item .pill{background:var(--danger);color:#fff !important;display:flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;font-size:.64rem;line-height:1;font-weight:700;border-radius:999px;margin-left:auto}
-
 /* ==== Panel de notificaciones (items con mensaje + terminar) ==== */
 .notif-head{display:flex;justify-content:space-between;align-items:center}
 .notif-all{background:none;border:none;color:var(--lime-text);font-size:.76rem;font-weight:600;cursor:pointer}
@@ -1283,9 +1270,6 @@ body.light .kpi-all .num{-webkit-text-fill-color:#fff;background:none}
 .ann-top strong{font-size:.98rem}
 .ann-body{margin:.35rem 0 .3rem;font-size:.9rem;color:var(--text);white-space:pre-wrap}
 .ann-meta{font-size:.74rem}
-
-/* ==== Fix: el panel de notificaciones se renderiza condicionalmente (sin clase .open) ==== */
-.notif-panel{display:block}
 
 /* ==== Inicio: 3 botones de acción centrados ==== */
 .act-grid.three{grid-template-columns:repeat(3,minmax(0,1fr));max-width:860px;margin:2rem auto}
@@ -1358,7 +1342,7 @@ tr.slot-past td:first-child{color:var(--muted);text-decoration:line-through}
 /* La celda de acciones se mantiene como celda de tabla: si es flex, su borde inferior
    deja de alinearse con el resto de la fila y las líneas se ven escalonadas. */
 .tbl-compact td.actions{white-space:nowrap;text-align:right;vertical-align:middle}
-.tbl-compact td.actions .btn-sm{margin:0;padding:.22rem .5rem;font-size:.72rem;display:inline-flex;align-items:center;vertical-align:middle}
+.tbl-compact td.actions .btn-sm{margin:0;padding:.22rem .5rem;font-size:.75rem;display:inline-flex;align-items:center;vertical-align:middle}
 .tbl-compact td.actions .btn-sm+.btn-sm{margin-left:.3rem}
 /* Tabla de inventario (carpetas) — más aire, separación y hover por fila */
 .inv-table{font-size:.82rem}
@@ -1533,6 +1517,7 @@ body.light .menu-item:hover{background:#e6e9f0;color:var(--text)}
 .rqb-set{white-space:nowrap}
 .rqb-hint{flex-basis:100%;font-size:.75rem}
 .rp2-head{display:flex;align-items:flex-start;gap:.6rem}
+.rp2-head .badge{flex:none}
 .rp2-thumb{width:52px;height:52px;border-radius:8px;object-fit:cover;flex:none;background:var(--soft);cursor:pointer}
 .rp2-thumb.ph{display:grid;place-items:center;color:var(--muted);cursor:default}
 .rp2-thumb.ph .licon{width:1.3rem;height:1.3rem}
@@ -1605,7 +1590,6 @@ body.light .att-empty{color:var(--muted);text-align:center}
 .sort-ctl select{font-size:.9rem;padding:.5rem .7rem;min-width:170px}
 
 /* Subtítulos de sección en la ficha del equipo (Detalle editable) */
-.det-sub{margin:1rem 0 .4rem;font-size:.9rem;font-weight:700;color:var(--text,#e6e9ef);border-top:1px solid var(--line,rgba(255,255,255,.08));padding-top:.7rem}
 .det-sub:first-of-type{border-top:0;padding-top:0}
 
 /* Lista de software (habilitado/no + cuentas) */
@@ -1621,11 +1605,8 @@ body.light .att-empty{color:var(--muted);text-align:center}
 .sw-apps-read .sw-field{margin-bottom:.4rem}
 
 /* ===== Ficha de equipo: compacta y uniforme ===== */
-.pf-card{padding:1rem 1.1rem}
-.pf-fields{gap:.55rem .9rem;margin-top:.5rem}
 .pf-fields label{display:block;font-size:.72rem;font-weight:500;color:var(--muted);margin:0 0 .22rem}
 .pf-fields input,.pf-fields select{font-size:.82rem;padding:.4rem .55rem;width:100%}
-.det-sub{margin:.8rem 0 .35rem;padding-top:.55rem;font-size:.85rem}
 /* Software: sin brillo verde y más compacto */
 .sw-app{padding:.45rem .6rem}
 .sw-app.on{border-color:var(--line,rgba(255,255,255,.12));background:rgba(255,255,255,.03)}
@@ -2224,7 +2205,6 @@ body.light .role-badge.gerente_cobranza{background:#8a6212;color:#fff}
 
 /* Pares etiqueta/valor: la etiqueta pesa menos y se pega a su campo;
    el aire va entre filas, no entre etiqueta y dato. */
-.pf-fields{gap:.9rem 1rem}
 .pf-fields label,.pf-fields>div>label{
   font-size:.65rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
   color:var(--muted);margin:0 0 .3rem}

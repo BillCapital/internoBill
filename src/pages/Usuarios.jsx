@@ -481,7 +481,7 @@ export default function Usuarios() {
     if (u.id === user?.id) return alertDialog('No puedes eliminar tu propia cuenta.')
     const m365 = isM365(u.email)
     const extra = m365 ? '\n\nAdemás se LIBERARÁN sus licencias de Microsoft 365 (los cupos vuelven a estar disponibles) y se bloqueará su cuenta de M365.' : ''
-    if (!(await confirmDialog(`¿Eliminar al usuario "${u.full_name || u.email}"?\nSe borra su cuenta y acceso en la app. Los equipos que tenía quedan en el inventario, solo sin el usuario ligado.${extra}\nEsta acción no se puede deshacer.`, { title: 'Eliminar usuario', danger: true, okText: 'Sí, eliminar', cancelText: 'No, cancelar' }))) return
+    if (!(await confirmDialog(`¿Eliminar al usuario "${u.full_name || u.email}"?\nSe borra su cuenta y acceso en la app. Los equipos que tenía quedan en el inventario, solo sin el usuario ligado.${extra}\nEsta acción no se puede deshacer.`, { title: 'Eliminar usuario', danger: true, okText: 'Eliminar' }))) return
     setRows((rs) => rs.filter((x) => x.id !== u.id))
     try {
       if (m365) {
@@ -826,7 +826,7 @@ export default function Usuarios() {
                 {mailEdit === null ? (
                   <p className="muted pf-mail">
                     {edit.email}
-                    {isAdmin && edit.email && <button className="btn-icon" type="button" title="Cambiar correo" onClick={() => setMailEdit(edit.email)}><Icon n="edit" /></button>}
+                    {isAdmin && edit.email && <button className="icon-btn" type="button" title="Cambiar correo" onClick={() => setMailEdit(edit.email)}><Icon n="edit" /></button>}
                   </p>
                 ) : (
                   <div className="pf-mail-edit">

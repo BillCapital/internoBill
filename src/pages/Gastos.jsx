@@ -198,6 +198,7 @@ export default function Gastos() {
     <div>
       <div className="page-head"><div className="row">
         <div><h2>Gastos</h2><p className="muted">Cargos recurrentes, compras y ventas de la empresa, con sus facturas.</p></div>
+        {!ro && <button className="btn btn-lime" onClick={() => { setTab('facturas'); startForm() }}>＋ Nueva factura</button>}
       </div></div>
 
       {ro && <div className="ro-note"><Icon n="lock" /> Acceso de solo lectura: puedes consultar los gastos, pero no editar precios, facturas ni estados.</div>}
@@ -293,7 +294,6 @@ export default function Gastos() {
         {tab === 'facturas' && (
           <>
             <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem' }}>
-              {!ro && <button className="btn btn-lime" onClick={startForm}>＋ Nueva factura</button>}
               <select value={flt.estado} onChange={(e) => setFlt((f) => ({ ...f, estado: e.target.value }))}><option value="">Todos los estados</option><option value="pendiente">Pendientes de pago</option><option value="pagada">Pagadas</option></select>
               <select value={flt.cat} onChange={(e) => setFlt((f) => ({ ...f, cat: e.target.value }))}><option value="">Todas las categorías</option>{CATS.map((c) => <option key={c}>{c}</option>)}</select>
               <select value={flt.dep} onChange={(e) => setFlt((f) => ({ ...f, dep: e.target.value }))}><option value="">Todos los departamentos</option>{depts.map((d) => <option key={d}>{d}</option>)}</select>
@@ -318,7 +318,7 @@ export default function Gastos() {
                           <td className="mny-cell"><Money value={Number(d.monto)} strong /></td>
                           <td className="actions nowrap">
                             {d.file_path ? <button className="btn-sm" onClick={() => openViewer(d)}><Icon n="eye" /> Ver</button> : null}
-                            {!ro && <button className="icon-btn danger" title="Eliminar" onClick={() => del(d)}><Icon n="trash" /></button>}
+                            {!ro && <button className="btn-sm btn-danger" onClick={() => del(d)}>Eliminar</button>}
                           </td>
                         </tr>
                       ))}

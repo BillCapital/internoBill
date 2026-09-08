@@ -732,7 +732,7 @@ export default function Solicitudes() {
                         {p.status === 'rejected' && p.reject_reason ? <div className="rp-reason"><Icon n="ban" /> {p.reject_reason}</div> : null}
                       </div>
                       <div className="rp-side">
-                        <span className={`rp-badge ${p.status}`}>{p.status === 'approved' ? 'Aprobado' : p.status === 'rejected' ? 'Rechazado' : 'Pendiente'}</span>
+                        <span className={`badge s-${p.status === 'approved' ? 'approved' : p.status === 'rejected' ? 'rejected' : 'pending'}`}>{p.status === 'approved' ? 'Aprobado' : p.status === 'rejected' ? 'Rechazado' : 'Pendiente'}</span>
                         {canManageOrders && p.status === 'pending' && (t.status === 'pending' || t.status === 'manager_review') && (
                           <div className="rp-actions">
                             <button className="btn-sm btn-lime" onClick={() => decideProduct(p.id, true)}><Icon n="check" /></button>
@@ -830,7 +830,7 @@ export default function Solicitudes() {
                                   ) : null}
                                 </div>
                               </div>
-                              <span className={`rp2-badge ${p.status}`}>{p.status === 'approved' ? 'Aprobado' : p.status === 'rejected' ? 'Rechazado' : 'Pendiente'}</span>
+                              <span className={`badge s-${p.status === 'approved' ? 'approved' : p.status === 'rejected' ? 'rejected' : 'pending'}`}>{p.status === 'approved' ? 'Aprobado' : p.status === 'rejected' ? 'Rechazado' : 'Pendiente'}</span>
                               {canAdd && active && p.status === 'pending' && <button className="rp2-del" title="Quitar" onClick={() => delTecProduct(p)}><Icon n="close" /></button>}
                             </div>
 
