@@ -2761,3 +2761,32 @@ body.light .rq-mob.rq-tec{color:#5747ad}
 
 /* La descripción del insumo no se muestra en móvil */
 .ins-unit-mob{display:none !important}
+
+/* ===== Rediseño móvil de la fila de insumo: una línea principal + departamentos en texto ===== */
+.ins-act{display:inline-flex;align-items:center;gap:.3rem}
+.ins-act .licon{width:.85rem;height:.85rem}
+@media(max-width:760px){
+  .ins-table tr{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;grid-auto-rows:auto;align-items:center;column-gap:.5rem;row-gap:.2rem;padding:.45rem .55rem;border-radius:10px;margin-bottom:.4rem}
+  /* Fila 1: casilla · imagen+nombre · stock · acciones */
+  .ins-table td:first-child input[type=checkbox]{grid-column:1;grid-row:1;align-self:center;margin:0}
+  .ins-table .ins-cell{grid-column:2;grid-row:1;display:flex;align-items:center;gap:.4rem;min-width:0}
+  .ins-table .ins-thumb{width:26px;height:26px;border-radius:6px}
+  .ins-table .ins-info{flex-direction:row;align-items:center;gap:.3rem;min-width:0}
+  .ins-table .ins-name{font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;min-width:0}
+  .ins-table .ins-name strong{font-weight:600}
+  .ins-table .stock-cell{grid-column:3;grid-row:1;display:flex;align-items:center;gap:.25rem;margin:0;min-height:0;justify-self:end}
+  .ins-table .stock-in{width:48px;height:26px;font-size:.78rem;text-align:center}
+  .ins-table td.actions{grid-column:4;grid-row:1;display:flex !important;gap:.25rem;padding:0;border:0;margin:0}
+  /* Acciones como iconos cuadrados, sin texto */
+  .ins-table .ins-act{padding:.28rem;border-radius:8px}
+  .ins-table .ins-act .al{display:none}
+  .ins-table .ins-act .licon{width:.9rem;height:.9rem;margin:0}
+  /* Fila 2: departamentos como texto corrido, alineados bajo el nombre */
+  .ins-table .ins-depts{grid-column:2/-1;grid-row:2;display:block;min-height:0;line-height:1.5}
+  .ins-table .ins-depts .dept-chip{display:inline;border:0;background:none;padding:0;font-size:.64rem;color:var(--muted)}
+  .ins-table .ins-depts .dept-chip:not(:last-child)::after{content:" · ";color:var(--line)}
+  .ins-table .ins-depts .dept-chip.danger{color:var(--danger);background:none}
+  .ins-table .ins-depts .dept-chip .licon{width:.7rem;height:.7rem;vertical-align:-2px}
+  /* Etiquetas dentro del nombre (no se pide / tecnológico) compactas */
+  .ins-table .noped-tag,.ins-table .req-tech-tag{font-size:.54rem;padding:.04rem .28rem;vertical-align:middle}
+}

@@ -261,8 +261,8 @@ export default function Insumos() {
                             {dirty && <button className="btn-sm btn-lime" onClick={() => saveStock(i.id)}>Guardar</button>}</>}
                       </div></td>
                       {!ro && <td className="actions">
-                        <button className="btn-sm" onClick={() => setEdit({ ...emptyItem, ...i, category_id: i.category_id || '', departments: i.departments || [] })}>Editar</button>
-                        <button className="btn-sm btn-danger" onClick={() => delItem(i)}>Eliminar</button>
+                        <button className="btn-sm ins-act" title="Editar" onClick={() => setEdit({ ...emptyItem, ...i, category_id: i.category_id || '', departments: i.departments || [] })}><Icon n="edit" /><span className="al">Editar</span></button>
+                        <button className="btn-sm btn-danger ins-act" title="Eliminar" onClick={() => delItem(i)}><Icon n="trash" /><span className="al">Eliminar</span></button>
                       </td>}
                     </tr>
                     )
