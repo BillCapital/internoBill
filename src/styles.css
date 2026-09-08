@@ -2824,3 +2824,14 @@ body.light .rq-mob.rq-tec{color:#5747ad}
   .ins-table .stock-dot.ok{background:var(--muted)}
   .ins-table .stock-in{width:44px;height:24px;font-size:.74rem;padding:.1rem .25rem}
 }
+
+/* Móvil insumos v6: casilla en la esquina superior derecha, sin punto de stock, sin sangría izquierda */
+@media(max-width:760px){
+  .ins-table tr{position:relative;grid-template-columns:minmax(0,1fr) auto auto;padding:.5rem .55rem}
+  .ins-table td:first-child input[type=checkbox]{position:absolute;top:.55rem;right:.55rem;grid-area:auto;margin:0 !important}
+  .ins-table .ins-cell{grid-column:1/4;grid-row:1;padding-right:1.5rem}
+  .ins-table .ins-depts{grid-column:1/4;grid-row:2}
+  .ins-table .stock-cell{grid-column:1;grid-row:3;justify-self:start}
+  .ins-table td.actions{grid-column:2/4;grid-row:3;justify-self:end}
+  .ins-table .stock-dot{display:none}
+}
