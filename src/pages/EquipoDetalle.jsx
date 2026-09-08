@@ -10,6 +10,7 @@ import { loadDeptNames, DEFAULT_DEPTS, deptIndentLabel } from '../lib/depts'
 import { Icon } from '../lib/icons'
 
 // Campos sensibles (contraseñas / PIN): se muestran enmascarados con opción de revelar
+const appleLbl = (e, l) => /apple|macbook|imac|mac mini|\bmac\b/i.test(`${e?.brand || ''} ${e?.model || ''} ${e?.name || ''}`) ? String(l || '').replace(/windows/ig, 'Apple') : l
 const isSecretField = (f) => /pass|contrasen|clave/i.test(f.key || '') || f.key === 'pin' || /contrase|pin\b/i.test(f.label || '')
 function SecretField({ value, disabled, placeholder, onChange }) {
   const [show, setShow] = useState(false)
@@ -317,7 +318,7 @@ export default function EquipoDetalle() {
     ['Tipo / Nombre', eq.name], ['Marca', eq.brand], ['Modelo', eq.model], ['N° de serie', eq.serial_number],
     ['Ubicación', eq.location], ['Estado', eq.condition],
     ...(section?.assign_to === 'department' ? [['Departamento', eq.assigned_to_name]] : [['Asignado a', eq.assigned_to_name], ['Correo', eq.assigned_to_email]]),
-    ...((section?.fields || []).map((f) => [f.label, eq.attributes?.[f.key] || '—', isSecretField(f), f.type])),
+    ...((section?.fields || []).map((f) => [appleLbl(eq, f.label), eq.attributes?.[f.key] || '—', isSecretField(f), f.type])),
   ]
 
   // Calendario mensual
@@ -392,7 +393,7 @@ export default function EquipoDetalle() {
                     const dhcpOn = fk.attributes?.dhcp === 'Sí'
                     const ipDisabled = f.key === 'ip' && dhcpOn
                     return (
-                      <div key={f.key}><label>{f.label}</label>
+                      <div key={f.key}><label>{appleLbl(eq, f.label)}</label>
                         {f.type === 'select'
                           ? <select value={fk.attributes?.[f.key] || ''} onChange={(e) => setFkAttr(f.key, e.target.value)}><option value="">—</option>{(f.options || []).map((o) => <option key={o}>{o}</option>)}</select>
                           : f.type === 'bool'

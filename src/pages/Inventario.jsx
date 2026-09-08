@@ -1019,12 +1019,15 @@ export default function Inventario() {
                         </select></div>
                     )
                   })()}
+                  {/* Solo tiene sentido para equipos sin asignar: un equipo de un usuario no está en stock */}
+                  {!(edit.assigned_to_email || edit.assigned_to_name) && (
                   <div><label>Disponible en stock</label>
                     <label className="chk-inline" title="Liberado y listo para entregar — aparece en la pestaña Stock">
                       <input type="checkbox" checked={edit.attributes?.disponible === true} onChange={(ev) => setAttr('disponible', ev.target.checked)} />
                       <span>Listo para entregar</span>
                     </label>
                   </div>
+                  )}
                   {(() => {
                     const asgUser = edit.assigned_to_email ? users.find((u) => normc(u.email) === normc(edit.assigned_to_email)) : null
                     const derived = asgUser ? (asgUser.country || 'Chile') : null
@@ -1061,8 +1064,11 @@ export default function Inventario() {
                 {(s.fields || []).map((f) => {
                   const dhcpOn = edit.attributes?.dhcp === 'Sí'
                   const ipDisabled = f.key === 'ip' && dhcpOn
+                  // En equipos Apple los campos "… Windows" se muestran como "… Apple"
+                  const apple = /apple|macbook|imac|mac mini|\bmac\b/i.test(`${edit.brand || ''} ${edit.model || ''} ${edit.name || ''}`)
+                  const lbl = apple ? String(f.label || '').replace(/windows/ig, 'Apple') : f.label
                   return (
-                  <div key={f.key}><label>{f.label}{f.required && <span style={{ color: 'var(--danger)' }}> *</span>}</label>
+                  <div key={f.key}><label>{lbl}{f.required && <span style={{ color: 'var(--danger)' }}> *</span>}</label>
                     {f.type === 'select'
                       ? <select value={edit.attributes?.[f.key] || ''} onChange={(e) => setAttr(f.key, e.target.value)}><option value="">—</option>{(f.options || []).map((o) => <option key={o}>{o}</option>)}</select>
                       : f.type === 'bool'

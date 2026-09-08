@@ -2951,3 +2951,6 @@ body.light .rq-mob.rq-tec{color:#5747ad}
 @media(max-width:760px){
   .seg{justify-content:center}
 }
+
+/* Aclaraciones dentro de una etiqueta ("según usuario"): pequeñas y en minúscula */
+label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacing:normal}
