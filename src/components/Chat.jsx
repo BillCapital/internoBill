@@ -111,7 +111,7 @@ export default function Chat({ type, id, locked = false }) {
           <div className="chat-in">
             <button type="button" className="chat-attach" title="Adjuntar imagen (o pega con Ctrl+V)" disabled={busy} onClick={() => fileRef.current?.click()}><Icon n="image" /></button>
             <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
-            <input type="text" value={text} placeholder="Escribe un mensaje o pega una imagen…"
+            <input type="text" value={text} placeholder="Escribe un mensaje…"
               onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} onPaste={onPaste} />
             <button className="btn btn-primary" onClick={send} disabled={busy || (!text.trim() && !imgs.length)}>{busy ? 'Enviando…' : 'Enviar'}</button>
           </div>

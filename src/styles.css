@@ -2662,3 +2662,47 @@ body.light .room-legend .lunch .dot{background:repeating-linear-gradient(45deg,#
 /* Casillas: separación consistente entre la casilla y su texto */
 label>input[type=checkbox]{margin-right:.45rem}
 .perm-row>input[type=checkbox],.mr-self>input[type=checkbox]{margin-right:0}
+
+/* Móvil: tarjeta de insumo ordenada — nombre arriba, chips al medio, stock y acciones en una fila */
+@media(max-width:760px){
+  .ins-table tr{align-items:center;row-gap:.4rem;padding:.55rem .65rem}
+  .ins-table td:first-child input[type=checkbox]{margin:0}
+  .ins-table .ins-cell{flex:1 1 calc(100% - 2.2rem)}
+  .ins-table .ins-depts{flex:1 1 100%}
+  .ins-table .stock-cell{margin-left:0;flex:0 0 auto}
+  .ins-table td.actions{display:flex !important;flex:1 1 auto;justify-content:flex-end;align-items:center;gap:.35rem;padding:0;border:0;margin:0;white-space:nowrap}
+  .ins-table td.actions .btn-sm,.ins-table td.actions button{padding:.28rem .55rem;font-size:.74rem}
+  .ins-table .stock-cell .btn-sm{padding:.25rem .5rem;font-size:.72rem}
+}
+
+/* Móvil: producto tecnológico aún más compacto; hasta 3 llaves por fila */
+@media(max-width:520px){
+  .rp2-card{padding:.45rem .5rem;gap:.35rem}
+  .rp2-thumb{width:30px;height:30px}
+  .rp2-name{font-size:.82rem;line-height:1.25}
+  .rp2-price{font-size:.78rem}
+  .rp2-chip{font-size:.64rem;padding:.1rem .38rem}
+  .rp2-head .badge{font-size:.56rem;padding:.1rem .35rem}
+  .rp2-signers{gap:.25rem}
+  .rp2-sig{font-size:.6rem;padding:.1rem .38rem;gap:.2rem}
+  .rp2-sig .licon{width:.62rem;height:.62rem;margin-right:.15rem}
+  .rp2-reason{font-size:.68rem;padding:.25rem .4rem}
+}
+
+/* Chat: se restaura el alcance de la caja de escritura y mensajes de sistema compactos */
+@media(max-width:640px){
+  .chat{max-height:44vh;overscroll-behavior:auto}
+}
+.bubble.b-system{font-size:.68rem;padding:.28rem .55rem;line-height:1.3;border-radius:10px;margin:-.15rem 0}
+
+/* Móvil: barra del chat en una sola fila */
+@media(max-width:640px){
+  .chat-in{flex-wrap:nowrap;padding:.5rem .6rem;gap:.4rem}
+  .chat-in input[type=text]{min-width:0;padding:.45rem .6rem;font-size:.88rem}
+  .chat-in .btn{padding:.45rem .7rem;font-size:.84rem;white-space:nowrap;flex:none}
+  .chat-attach{padding:0 .45rem}
+}
+
+/* Modo claro: la etiqueta "Tecnológica" con contraste legible */
+body.light .rq-tec{color:#5747ad;background:color-mix(in srgb,#7a68d6 14%,transparent)}
+body.light .rq-mob.rq-tec{color:#5747ad}
