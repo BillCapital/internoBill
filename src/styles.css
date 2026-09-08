@@ -2535,3 +2535,12 @@ body.light .day.sel { background: var(--lime); color: var(--accent-ink); }
 /* Leyenda del calendario: punto y texto alineados al centro */
 .room-legend .rl-item{line-height:1}
 .room-legend .dot{flex:none}
+
+/* Leyenda: el punto de Colación usa el tono cálido real de esa fila */
+.room-legend .lunch .dot{background:#857435}
+body.light .room-legend .lunch .dot{background:#e8dcb2}
+/* Móvil: la hora completa siempre visible, sin recortes */
+@media(max-width:600px){
+  .cal th:first-child,.cal td:first-child{width:96px;overflow:visible}
+  .cal td:first-child{font-size:.6rem}
+}
