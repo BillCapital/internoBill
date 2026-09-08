@@ -163,7 +163,7 @@ export default function Home() {
         </>
       )}
 
-      {canManage && <ActivityLog kinds={['Anuncio']} title="Registro de anuncios" />}
+      {canManage && <div style={{ marginTop: 'auto' }}><ActivityLog kinds={['Anuncio']} title="Registro de anuncios" /></div>}
     </div>
   )
 }
