@@ -2885,3 +2885,23 @@ body.light .rq-mob.rq-tec{color:#5747ad}
   .ins-table .req-tech-tag.tag-mob{right:auto;left:auto;top:.4rem;right:1.8rem}
   .ins-table .noped-tag.tag-mob ~ .req-tech-tag.tag-mob{right:6.2rem}
 }
+
+/* Móvil insumos: tipografía más pequeña en toda la tarjeta */
+@media(max-width:760px){
+  .ins-table .ins-name,.ins-table .ins-name strong{font-size:.72rem !important;line-height:1.25}
+  .ins-table .ins-depts,.ins-table .ins-depts .dept-chip{font-size:.56rem !important}
+  .ins-table .tag-mob{font-size:.5rem !important;padding:.04rem .28rem}
+  .ins-table td .stock-cell .stock-in{width:34px !important;height:20px !important;font-size:.64rem !important}
+  .ins-table .ins-act{padding:.16rem}
+  .ins-table .ins-act .licon{width:.7rem;height:.7rem}
+  .ins-table .ins-thumb{width:20px;height:20px}
+  .ins-table tr{padding:.3rem .4rem}
+}
+
+/* Móvil insumos: título centrado a la altura del cuadrado y carpeta alineada bajo el título */
+@media(max-width:760px){
+  .ins-table .ins-cell{align-items:center !important}
+  .ins-table .ins-info{align-items:center !important;margin:0}
+  .ins-table .ins-name{margin:0;display:flex;align-items:center}
+  .ins-table .ins-depts{margin-left:1.75rem;margin-top:-.1rem}
+}
