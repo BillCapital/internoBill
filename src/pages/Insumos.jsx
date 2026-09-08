@@ -252,7 +252,7 @@ export default function Insumos() {
                           : (i.departments && i.departments.length)
                             ? i.departments.map((d) => <span key={d} className="dept-chip">{d}</span>)
                             : <span className="dept-chip danger"><Icon n="alert" /> Sin asignar</span>}
-                      </div></td>
+                      </div><span className="ins-unit-mob muted">{i.description || 'Unidad'}</span></td>
                       <td><div className="stock-cell">
                         <span className={`stock-dot ${cur === 0 ? 'zero' : cur <= 5 ? 'low' : 'ok'}`} />
                         {ro

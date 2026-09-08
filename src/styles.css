@@ -2736,3 +2736,25 @@ body.light .rq-mob.rq-tec{color:#5747ad}
   .ins-table .ins-info{display:flex;flex-direction:column;gap:.05rem;min-width:0;flex:1}
   .ins-table .ins-unit{margin:0}
 }
+
+/* Móvil: nombre y unidad en una sola línea dentro de la tarjeta de insumo */
+@media(max-width:760px){
+  .ins-table .ins-info{flex-direction:row;align-items:baseline;flex-wrap:wrap;column-gap:.4rem;row-gap:0}
+  .ins-table .ins-unit{display:inline;font-size:.66rem}
+  .ins-table .ins-buy{margin-left:auto}
+  .ins-table tr{row-gap:.35rem}
+}
+
+/* Tarjeta de insumo (móvil): nombre limpio arriba, descripción al final en letra mínima */
+.ins-unit-mob{display:none}
+@media(max-width:760px){
+  .ins-table tr{grid-template-columns:auto minmax(0,1fr) auto;align-items:center}
+  .ins-table td:first-child input[type=checkbox]{align-self:center;margin:0}
+  .ins-table .ins-cell{align-items:center}
+  .ins-table .ins-info{flex-direction:row;align-items:center;gap:.3rem}
+  .ins-table .ins-unit{display:none}
+  .ins-table .ins-depts{grid-row:2;width:100%;gap:.2rem .25rem}
+  .ins-table .stock-cell{grid-row:3}
+  .ins-table td.actions{grid-row:3}
+  .ins-unit-mob{display:block;grid-column:1/-1;grid-row:4;font-size:.6rem;line-height:1.25;margin:0}
+}
