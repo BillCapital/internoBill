@@ -2810,3 +2810,9 @@ body.light .rq-mob.rq-tec{color:#5747ad}
   .ins-table td.actions{grid-column:3/5;grid-row:3;justify-self:end}
   .ins-table tr{row-gap:.3rem}
 }
+
+/* Móvil insumos v5: borde visible en todas las tarjetas y casilla centrada en toda la tarjeta */
+@media(max-width:760px){
+  .ins-table tbody tr,.ins-table tbody tr:first-child{border:1px solid var(--line) !important}
+  .ins-table td:first-child input[type=checkbox]{grid-row:1/4;align-self:center !important}
+}
