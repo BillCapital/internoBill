@@ -2869,3 +2869,10 @@ body.light .rq-mob.rq-tec{color:#5747ad}
   .ins-table tr{row-gap:.12rem}
   .ins-table .noped-tag{white-space:nowrap}
 }
+
+/* Móvil: la etiqueta "no se pide" va a la esquina superior derecha, junto a la casilla;
+   el nombre queda limpio y la categoría directamente debajo */
+@media(max-width:760px){
+  .ins-table .noped-tag{position:absolute;top:.42rem;right:1.9rem;margin:0}
+  .ins-table .ins-cell{padding-right:1.5rem}
+}
