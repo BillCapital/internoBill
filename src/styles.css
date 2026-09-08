@@ -2835,3 +2835,24 @@ body.light .rq-mob.rq-tec{color:#5747ad}
   .ins-table td.actions{grid-column:2/4;grid-row:3;justify-self:end}
   .ins-table .stock-dot{display:none}
 }
+
+/* Móvil insumos v7: tarjeta mínima */
+@media(max-width:760px){
+  .ins-table tr{padding:.35rem .45rem;row-gap:.15rem;column-gap:.4rem;margin-bottom:.3rem;border-radius:8px}
+  .ins-table .ins-thumb{width:22px;height:22px;border-radius:5px}
+  .ins-table .ins-thumb.ph .licon{width:.75rem;height:.75rem}
+  .ins-table .ins-name{font-size:.78rem;line-height:1.25}
+  .ins-table .ins-cell{gap:.35rem;padding-right:1.4rem}
+  .ins-table td:first-child input[type=checkbox]{top:.4rem;right:.45rem;width:14px;height:14px}
+  .ins-table .ins-depts{font-size:.6rem;line-height:1.35;-webkit-line-clamp:1}
+  .ins-table .ins-depts .dept-chip{font-size:.6rem}
+  .ins-table .stock-in{width:40px;height:22px;font-size:.7rem;padding:.05rem .2rem}
+  .ins-table .ins-act{padding:.2rem;border-radius:6px}
+  .ins-table .ins-act .licon{width:.78rem;height:.78rem}
+  .ins-table .stock-cell .btn-sm{padding:.15rem .4rem;font-size:.66rem}
+}
+
+/* Listas de casillas: texto centrado verticalmente con su casilla y con separación */
+.perm-row{display:flex !important;align-items:center !important;gap:.5rem !important;line-height:1.25}
+.perm-row>input[type=checkbox]{margin:0 !important;flex:none;align-self:center}
+.perm-row>span{display:inline-flex;align-items:center;min-width:0}
