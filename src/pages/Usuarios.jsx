@@ -293,6 +293,7 @@ export default function Usuarios() {
     try { await api('peripheral_assign', { p_peripheral: pPick.per, p_user: edit.id, p_qty: Number(pPick.qty) || 0 }); setPPick({ per: '', qty: 1 }); await load() } catch (e) { alertDialog(e.message) } finally { setCompBusy(false) }
   }
   const removePeriphUser = async (perId) => {
+    if (!(await confirmDialog(`¿Quitar este periférico de ${edit.full_name || edit.email}? Vuelve al stock disponible.`, { title: 'Quitar periférico', okText: 'Quitar' }))) return
     setCompBusy(true)
     try { await api('peripheral_assign', { p_peripheral: perId, p_user: edit.id, p_qty: 0 }); await load() } catch (e) { alertDialog(e.message) } finally { setCompBusy(false) }
   }
@@ -972,7 +973,7 @@ export default function Usuarios() {
                   <input type="range" min={minScale} max={minScale * 4} step="0.01" value={scale} onChange={(e) => { const sc = Number(e.target.value); setScale(sc); setOff((o) => clampOff(o, sc)) }} style={{ width: VIEW, marginTop: '.7rem' }} />
                   <div className="modal-actions" style={{ justifyContent: 'center' }}>
                     <button className="btn" onClick={() => setCropImg(null)}>Cancelar</button>
-                    <button className="btn btn-primary" onClick={applyCrop}>Usar foto</button>
+                    <button className="btn btn-primary" onClick={applyCrop}>Guardar foto</button>
                   </div>
                 </div>
               </div>

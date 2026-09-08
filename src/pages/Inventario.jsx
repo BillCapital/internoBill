@@ -1145,7 +1145,7 @@ export default function Inventario() {
                 </select>
                 {f.type === 'select' && <input style={{ flex: '1 1 160px' }} placeholder="Opciones separadas por coma" value={f.optionsText || ''} onChange={(e) => { const fs = [...schemaEdit.fields]; fs[i] = { ...f, optionsText: e.target.value }; setSchemaEdit({ ...schemaEdit, fields: fs }) }} />}
                 <label className="fld-req" title="Campo obligatorio"><input type="checkbox" checked={!!f.required} onChange={(e) => { const fs = [...schemaEdit.fields]; fs[i] = { ...f, required: e.target.checked }; setSchemaEdit({ ...schemaEdit, fields: fs }) }} /> Obligatorio</label>
-                <button className="btn-sm btn-danger" onClick={() => setSchemaEdit({ ...schemaEdit, fields: schemaEdit.fields.filter((_, j) => j !== i) })}><Icon n="close" /></button>
+                <button className="btn-sm btn-danger" title="Quitar campo" onClick={() => setSchemaEdit({ ...schemaEdit, fields: schemaEdit.fields.filter((_, j) => j !== i) })}><Icon n="trash" /></button>
               </div>
             ))}
             <div style={{ marginTop: '.5rem' }}><button className="btn-sm" onClick={() => setSchemaEdit({ ...schemaEdit, fields: [...(schemaEdit.fields || []), { label: '', type: 'text' }] })}>＋ Agregar dato</button></div>

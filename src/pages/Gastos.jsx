@@ -292,8 +292,8 @@ export default function Gastos() {
 
         {tab === 'facturas' && (
           <>
-            <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.8rem' }}>
-              {!ro && <button className="btn btn-lime" onClick={startForm}><Icon n="plus" /> Nueva factura</button>}
+            <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem' }}>
+              {!ro && <button className="btn btn-lime" onClick={startForm}>＋ Nueva factura</button>}
               <select value={flt.estado} onChange={(e) => setFlt((f) => ({ ...f, estado: e.target.value }))}><option value="">Todos los estados</option><option value="pendiente">Pendientes de pago</option><option value="pagada">Pagadas</option></select>
               <select value={flt.cat} onChange={(e) => setFlt((f) => ({ ...f, cat: e.target.value }))}><option value="">Todas las categorías</option>{CATS.map((c) => <option key={c}>{c}</option>)}</select>
               <select value={flt.dep} onChange={(e) => setFlt((f) => ({ ...f, dep: e.target.value }))}><option value="">Todos los departamentos</option>{depts.map((d) => <option key={d}>{d}</option>)}</select>

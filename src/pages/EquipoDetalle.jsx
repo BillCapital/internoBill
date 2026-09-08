@@ -560,7 +560,7 @@ export default function EquipoDetalle() {
                         <td>{m.note || <span className="muted">—</span>}</td>
                         {canManageInventory && <td className="actions" style={{ whiteSpace: 'nowrap' }}>
                           <button className="btn-sm btn-lime" title="Marcar realizado" onClick={() => completeMaint(m.id)}><Icon n="check" /></button>
-                          <button className="btn-sm btn-danger" title="Cancelar" onClick={() => delMaint(m.id)}><Icon n="close" /></button>
+                          <button className="btn-sm btn-danger" title="Eliminar" onClick={() => delMaint(m.id)}><Icon n="trash" /></button>
                         </td>}
                       </tr>
                     )
@@ -615,7 +615,7 @@ export default function EquipoDetalle() {
                       <td>{ev.actor_name}</td>
                       {canManageInventory && <td className="actions">{String(ev.id).startsWith('tmp-') ? <span className="muted">…</span> : <>
                         <button className="btn-sm" onClick={() => openEditEv(ev)}>Editar</button>
-                        <button className="btn-sm btn-danger" onClick={() => delEvent(ev.id)}><Icon n="close" /></button>
+                        <button className="btn-sm btn-danger" title="Eliminar" onClick={() => delEvent(ev.id)}><Icon n="trash" /></button>
                       </>}</td>}
                     </tr>
                   ))}

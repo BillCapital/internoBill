@@ -112,7 +112,7 @@ export default function Listas() {
         <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
           <button className={`btn ${gloss ? 'on' : ''}`} onClick={() => setGloss((v) => !v)}><Icon n="info" /> Glosario</button>
           {!ro && <button className={`btn ${syncing ? 'is-sync' : ''}`} onClick={sync} disabled={syncing}><Icon n="refresh" /> {syncing ? 'Sincronizando…' : 'Sincronizar'}</button>}
-          {!ro && <button className="btn btn-lime" onClick={() => setNw({ name: '', nick: '', desc: '', busy: false })}><Icon n="plus" /> Nueva lista</button>}
+          {!ro && <button className="btn btn-lime" onClick={() => setNw({ name: '', nick: '', desc: '', busy: false })}>＋ Nueva lista</button>}
         </div>
       </div></div>
 
@@ -167,7 +167,7 @@ export default function Listas() {
 
             <div className="dl-members-head">
               <span className="th-eyebrow">Miembros {members ? `· ${members.length}` : ''}</span>
-              {!ro && <button className="btn-sm btn-lime" onClick={() => setAddOpen((v) => { const nv = !v; if (nv) ensureUsers(); return nv })}><Icon n="plus" /> Agregar persona</button>}
+              {!ro && <button className="btn-sm btn-lime" onClick={() => setAddOpen((v) => { const nv = !v; if (nv) ensureUsers(); return nv })}>＋ Agregar persona</button>}
             </div>
 
             {addOpen && (

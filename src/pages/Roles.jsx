@@ -207,7 +207,7 @@ export default function Roles() {
         {isOpen && (
           <div className="sec-body">
             {headExtra}
-            <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.5rem' }}>
+            <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem' }}>
               <input placeholder="Buscar por nombre o correo…" value={fSearch[fkey] || ''} onChange={(e) => setFSearch((s) => ({ ...s, [fkey]: e.target.value }))} style={{ flex: 1, minWidth: 200 }} />
               <SortControl
                 fields={[{ value: 'name', label: 'Alfabético (A–Z)' }, { value: 'antiguedad', label: 'Antigüedad' }]}

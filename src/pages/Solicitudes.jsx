@@ -756,7 +756,7 @@ export default function Solicitudes() {
                 <div className="rqa-box">
                   <div className="rqa-head"><span><Icon n="cart" /> Productos solicitados</span>
                     {canAdd && active && !pf.open && (
-                      <span className="rqa-add"><button className="btn-sm btn-lime" onClick={() => setProdForm((s) => ({ ...s, [t.id]: { open: true, name: '', url: '', file: null } }))}><Icon n="plus" /> Agregar producto</button></span>
+                      <span className="rqa-add"><button className="btn-sm btn-lime" onClick={() => setProdForm((s) => ({ ...s, [t.id]: { open: true, name: '', url: '', file: null } }))}>＋ Agregar producto</button></span>
                     )}
                   </div>
 
