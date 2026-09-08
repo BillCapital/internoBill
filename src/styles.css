@@ -1431,7 +1431,22 @@ body.light .menu-item.active .mi{color:#3f7a1f}
 body.light .menu-item.active::before{background:#3f7a1f;width:3.5px}
 body.light .menu-item{color:#3b4356}
 body.light .menu-item:hover{background:#e6e9f0;color:var(--text)}
-@media(max-width:520px){.req-kpis{grid-template-columns:repeat(2,1fr)}.rk-n{font-size:1.3rem}}
+@media(max-width:520px){
+  /* KPIs de solicitudes en móvil: 3 por fila, delgados */
+  .req-kpis{grid-template-columns:repeat(3,1fr);gap:.4rem;margin:.8rem 0 1rem}
+  .rk{flex-direction:column;align-items:center;text-align:center;gap:.25rem;padding:.5rem .3rem;border-radius:11px}
+  .rk-ico{width:26px;height:26px;border-radius:8px}
+  .rk-ico .licon{width:.9rem;height:.9rem}
+  .rk-n{font-size:1.05rem;line-height:1.1}
+  .rk-l{font-size:.62rem;margin-top:0;max-width:100%}
+  /* Filas de solicitud delgadas: la descripción se corta en una línea con … */
+  .cv-head{padding:.6rem .75rem;gap:.5rem}
+  .cv-head .t{min-width:0;flex:1}
+  .cv-head .prev{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.76rem}
+  .rq-title{display:flex;flex-wrap:wrap;gap:.25rem .35rem;align-items:center}
+  .cv-head .badge{font-size:.62rem;padding:.14rem .45rem;flex:none}
+  .cv-head .ico{width:30px;height:30px;flex:none}
+}
 /* Glosario: botón + ventana superpuesta */
 .tec-topbar{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;margin-bottom:.7rem}
 .gloss-btn{display:inline-flex;align-items:center;gap:.4rem}
@@ -1801,7 +1816,7 @@ body.light .att-empty{color:var(--muted);text-align:center}
 /* Calendario de salas en móvil: días fluidos que siempre caben (7 columnas) */
 @media(max-width:760px){
   .month{grid-template-columns:repeat(7,1fr);gap:4px;width:100%}
-  .day{width:auto;height:40px;font-size:.82rem;border-radius:8px}
+  .day{width:auto;height:auto;aspect-ratio:1;font-size:.82rem;border-radius:9px}
   .dow{font-size:.62rem;padding:.1rem 0}
   .cal-head{gap:.5rem;margin:.7rem 0 .5rem}
   .cal-title{min-width:0;font-size:.95rem}
@@ -2333,7 +2348,7 @@ body.light .day.sel { background: var(--lime); color: var(--accent-ink); }
 @media(max-width:760px){
   .sal-date{font-size:1rem;margin:.9rem 0 .45rem;text-transform:capitalize}
   .room-legend{gap:.45rem .9rem;font-size:.7rem;margin:.1rem 0 .55rem}
-  .cal th,.cal td{padding:.28rem .35rem}
+  .cal th,.cal td{padding:.45rem .4rem}
   .cal thead th{font-size:.6rem;letter-spacing:.04em;padding:.4rem .35rem}
   .cal td:first-child{font-size:.68rem;padding-left:.45rem;padding-right:.45rem}
   /* Objetivo táctil cómodo (≥40px) y jerarquía clara entre estados */
@@ -2341,4 +2356,10 @@ body.light .day.sel { background: var(--lime); color: var(--accent-ink); }
   .cal td .slot.busy,.cal td .slot.pending{min-height:40px;padding:.32rem .5rem;font-size:.76rem;line-height:1.25}
   .cal td .slot.slot-off{min-height:40px;border-radius:10px}
   .cal tr.lunch td{font-size:.7rem;padding:.42rem .35rem;letter-spacing:.02em}
+  /* Sin scroll lateral: la tabla se ajusta al ancho de la pantalla */
+  .cal{width:100%;table-layout:fixed}
+  .cal th:first-child,.cal td:first-child{width:86px}
+  .cal td .slot.busy,.cal td .slot.pending{white-space:normal;overflow-wrap:break-word}
 }
+/* Los días pasados o de fin de semana no muestran el punto de reservas (no hay nada que hacer ahí) */
+.day.past .dot,.day.wknd .dot{display:none}
