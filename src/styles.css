@@ -2801,3 +2801,12 @@ body.light .rq-mob.rq-tec{color:#5747ad}
   .ins-table .stock-cell{grid-column:3;grid-row:2}
   .ins-table td.actions{grid-column:4;grid-row:2}
 }
+
+/* Móvil insumos v4: departamentos a todo el ancho (máx. 2 líneas) y casilla clavada al centro */
+@media(max-width:760px){
+  .ins-table td:first-child input[type=checkbox]{align-self:center !important;justify-self:center;margin:0 !important;position:relative;top:0}
+  .ins-table .ins-depts{grid-column:2/5;grid-row:2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45}
+  .ins-table .stock-cell{grid-column:2;grid-row:3;justify-self:start}
+  .ins-table td.actions{grid-column:3/5;grid-row:3;justify-self:end}
+  .ins-table tr{row-gap:.3rem}
+}
