@@ -232,6 +232,8 @@ export default function Perfil() {
             <input type="date" value={form.birth_date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setF('birth_date', e.target.value)} />
             <span className="pf-help">La semana de tu cumpleaños se avisa a todo el equipo.</span>
           </div>
+          <div className="pf-field"><label>Departamento</label><div className="val">{profile?.department || '—'} {!isAdmin && <span className="lock"><Icon n="lock" /> fijo</span>}</div></div>
+          <div className="pf-field pf-span2 pf-emerg"><div className="pf-emerg-grid">
           <div className="pf-field"><label>Contacto de emergencia · nombre</label>
             <input value={form.emergency_name} onChange={(e) => setF('emergency_name', e.target.value)} placeholder="Ej: María Pérez (madre)" />
           </div>
@@ -243,7 +245,7 @@ export default function Perfil() {
               <input value={form.emergency_phone} onChange={(e) => setF('emergency_phone', e.target.value.replace(/^\+?5[167]\s*/, ''))} placeholder="9 1234 5678" inputMode="tel" style={{ flex: 1 }} />
             </div>
           </div>
-          <div className="pf-field"><label>Departamento</label><div className="val">{profile?.department || '—'} {!isAdmin && <span className="lock"><Icon n="lock" /> fijo</span>}</div></div>
+          </div></div>
           <div className="pf-field"><label>Rol</label><div className="val">{roleLabel}</div></div>
         </div>
         <div className="row" style={{ marginTop: '.9rem', justifyContent: 'flex-end' }}>

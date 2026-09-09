@@ -3078,3 +3078,19 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .pf-field input,.pf-field select,.pf-field .val{min-height:40px;box-sizing:border-box}
 .pf-field .val{display:flex;align-items:center;gap:.4rem}
 @media(max-width:640px){.pf-fields{gap:.8rem}}
+
+/* Contacto de emergencia: nombre y teléfono siempre en la misma línea */
+.pf-field.pf-span2{grid-column:1 / -1}
+.pf-emerg-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem 1.4rem}
+@media(max-width:520px){.pf-emerg-grid{grid-template-columns:1fr;gap:.8rem}}
+/* Horario de salas: medidas FIJAS (no cambia según el día ni el contenido) y más aire respecto al calendario */
+@media(min-width:761px){
+  .sal-cols{gap:4.5rem !important}
+  .sal-cols.with-form{gap:2.2rem !important}
+  .sal-right table.cal{table-layout:fixed;width:380px !important;min-width:380px;max-width:380px}
+  .sal-right .cal th:first-child,.sal-right .cal td:first-child{width:96px !important}
+  .sal-right .cal tbody tr{height:32px}
+  .sal-right .cal td .slot,.sal-right .cal td .slot.busy,.sal-right .cal td .slot.pending,.sal-right .cal td .slot.slot-off{height:26px;min-height:26px;max-height:26px;line-height:1.1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .sal-right .cal td.spanned .slot{height:auto;max-height:none;white-space:normal}
+  .sal-right .cal tr.lunch td{height:32px !important}
+}
