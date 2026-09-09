@@ -3032,3 +3032,27 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .pf2-grid2{display:grid;grid-template-columns:1fr 120px;gap:.6rem}
 .pf2-readok{color:var(--lime-text);font-weight:600;font-size:.9em}
 @media(max-width:520px){.pf2-grid2{grid-template-columns:1fr}}
+
+/* Etiqueta "Solo lectura" en la lista de usuarios */
+.ro-badge{margin-left:6px;background:color-mix(in srgb,var(--info) 14%,transparent);color:var(--info);display:inline-flex;align-items:center;gap:.25rem}
+.ro-badge .licon{width:.8rem;height:.8rem}
+
+/* Tarjeta de reserva multi-bloque: alineada EXACTAMENTE con las celdas verdes (mismo inset) */
+.sal-right .cal td.spanned{position:relative;padding:0}
+.sal-right .cal td.spanned .slot{position:absolute;inset:.14rem .5rem;width:auto;height:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:7px}
+
+/* Reservar sin salir del horario: el formulario va al costado (PC) o como hoja (móvil) */
+.sal-cols.with-form{justify-content:flex-start;gap:1.6rem;flex-wrap:nowrap}
+.res-wrap{flex:0 0 330px;max-width:330px;min-width:0}
+.res-wrap .modal{position:sticky !important;top:.8rem;max-width:none;width:100%;max-height:calc(100vh - 1.6rem);box-shadow:var(--shadow);animation:none;padding:1rem 1rem 1.1rem;border-radius:14px}
+.res-wrap .modal-x{position:absolute;top:.55rem;right:.55rem}
+.mr-hint{font-size:.74rem;color:var(--muted);background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:.4rem .55rem;margin:.35rem 0 .2rem;line-height:1.3}
+.mr-hint.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent);background:color-mix(in srgb,var(--warn) 12%,transparent)}
+.sal-right .cal td .slot.picked{background:var(--lime);color:#0b0f14;border-color:var(--lime);font-weight:800}
+@media(max-width:1100px){.sal-cols.with-form{flex-wrap:wrap}.res-wrap{flex:1 1 100%;max-width:100%}.res-wrap .modal{position:static;max-height:none}}
+@media(max-width:760px){
+  /* hoja inferior sin fondo oscuro: el horario de arriba sigue visible y se puede tocar otro bloque */
+  .res-wrap{position:fixed;inset:auto 0 0 0;z-index:50;padding:0;flex:none;max-width:none;width:auto;pointer-events:none}
+  .res-wrap .modal{pointer-events:auto;position:static;max-height:58vh;border-radius:16px 16px 0 0;padding:.9rem .85rem 1rem;box-shadow:0 -14px 40px rgba(0,0,0,.35);border-bottom:0}
+  .sal-cols.with-form{padding-bottom:58vh}
+}

@@ -313,6 +313,14 @@ export default function Usuarios() {
 
   const roleLabel = useMemo(() => Object.fromEntries(roles.map((r) => [r.key, r.label])), [roles])
   const roleHasInv = useMemo(() => Object.fromEntries(roles.map((r) => [r.key, !!(r.permissions?.full_admin || r.permissions?.manage_inventory)])), [roles])
+  // Rol de solo lectura: tiene permisos de ver pero ninguno de gestionar (ni admin total)
+  const roleReadOnly = useMemo(() => Object.fromEntries(roles.map((r) => {
+    const p = r.permissions || {}
+    const keys = Object.keys(p).filter((k) => p[k] === true)
+    const canManage = keys.some((k) => k === 'full_admin' || k.startsWith('manage_'))
+    const canView = keys.some((k) => k.startsWith('view_'))
+    return [r.key, canView && !canManage]
+  })), [roles])
 
   const save = async () => {
     if (saveBusy) return
@@ -322,7 +330,7 @@ export default function Usuarios() {
         p_user: edit.id, p_full_name: (edit.full_name || '').trim(),
         p_department: edit.department || '', p_role: edit.role, p_inventory: null,
         p_phone: (edit.phone || '').trim(), p_notes: edit.admin_notes ?? '', p_country: edit.country ?? '',
-        p_is_hr: !!edit.is_hr, p_is_it_manager: !!edit.is_it_manager,
+        p_is_hr: !!edit.is_hr, p_is_it_manager: !!edit.is_it_manager, p_job_title: edit.job_title ?? '',
       }
       if (edit.avatar_url !== edit._avatar0) payload.p_avatar = edit.avatar_url || ''
       await api('admin_update_user', payload)
@@ -717,7 +725,7 @@ export default function Usuarios() {
                   </div></td>
                   <td>{u.department || <span className="muted">—</span>}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{u.country ? <span>{flagOf(u.country)} {u.country}</span> : <span className="muted">—</span>}</td>
-                  <td><span className="badge">{roleLabel[u.role] || (isSuper ? u.role : 'Administrador')}</span></td>
+                  <td><span className="badge">{roleLabel[u.role] || (isSuper ? u.role : 'Administrador')}</span>{roleReadOnly[u.role] && <span className="badge ro-badge" title="Este rol solo puede ver: no crea ni modifica"><Icon n="eye" /> Solo lectura</span>}</td>
                   <td>{compCount[u.id] ? <span className="badge comp-badge"><span className="emo"><Icon n="monitor" /></span><span className="comp-n">{compCount[u.id]}</span></span> : <span className="muted comp-badge"><span className="emo"><Icon n="monitor" /></span><span className="comp-n">0</span></span>}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{u.last_sign_in_at ? fmt(u.last_sign_in_at) : <span className="muted">Nunca</span>}</td>
                   <td className="actions">{ro ? <span className="muted">—</span> : (roleLabel[u.role] || isSuper) ? <>
@@ -845,6 +853,7 @@ export default function Usuarios() {
             <div className="pf-fields">
               <div><label>Nombre</label><input value={edit.full_name} onChange={(e) => setEdit({ ...edit, full_name: e.target.value })} /></div>
               <div><label>Teléfono</label><input value={edit.phone || ''} onChange={(e) => setEdit({ ...edit, phone: e.target.value })} placeholder="+56 9 ..." /></div>
+              <div style={{ gridColumn: '1 / -1' }}><label>Cargo <span className="muted">(del organigrama)</span></label><input value={edit.job_title || ''} onChange={(e) => setEdit({ ...edit, job_title: e.target.value })} placeholder="Ej: Ejecutiva de Cobranzas" /></div>
               <div><label>Departamento</label>
                 <select value={edit.department || ''} onChange={(e) => setEdit({ ...edit, department: e.target.value })}>
                   <option value="">— Sin asignar</option>{DEPTS.map((d) => <option key={d} value={d}>{deptIndentLabel(d)}</option>)}

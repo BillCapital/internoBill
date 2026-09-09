@@ -84,6 +84,8 @@ export function AuthProvider({ children }) {
     canView,
     canManageOrders: canEdit('orders'),
     canManageRooms: canEdit('rooms'),
+    // Aceptar/rechazar reservas: SOLO permiso explícito (encargada de salas), no full_admin
+    canApproveRooms: perms.manage_rooms === true,
     canManageSupplies: canEdit('supplies'),
     canManageInventory: canEdit('inventory'),
     canManageUsers: canEdit('users'),

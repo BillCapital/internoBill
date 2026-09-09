@@ -43,7 +43,7 @@ const nowSCL = () => {
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 
 export default function Rooms() {
-  const { profile, canManageRooms, isSuper } = useAuth()
+  const { profile, canManageRooms, canApproveRooms, isSuper } = useAuth()
   const now = new Date()
   const [calY, setCalY] = useState(now.getFullYear())
   const [calM, setCalM] = useState(now.getMonth())
@@ -118,9 +118,26 @@ export default function Rooms() {
     } catch { return [] }
   }
 
+  // Cambiar de bloque/sala con el formulario abierto: conserva lo escrito y re-chequea disponibilidad de los convocados
+  const pickSlot = (room, idx) => {
+    setForm((f) => {
+      const md = maxDur(room.id, idx)
+      const base = f ? { ...f } : { title: 'Reunión', just: '', att: [], rep: 0, repN: 4 }
+      const nf = { ...base, room: room.id, slotIdx: idx, maxDur: md, dur: f ? Math.min(f.dur, md) || 1 : Math.min(2, md) || 1, att: (base.att || []).map((a) => ({ ...a, busy: false })) }
+      const emails = nf.att.map((a) => a.email)
+      if (emails.length) attChain.current = attChain.current.then(async () => {
+        const busy = await checkBusy(emails, nf)
+        if (busy.length) setForm((g) => g && g.slotIdx === idx && g.room === room.id ? { ...g, att: (g.att || []).map((a) => busy.some((b) => b.toLowerCase() === a.email.toLowerCase()) ? { ...a, busy: true } : a) } : g)
+      }).catch(() => {})
+      return nf
+    })
+    if (!form) setExtAtt('')
+  }
+
   const submitReserve = async () => {
     if (resBusy) return
     const t = slots[form.slotIdx]
+    if (covered(form.room, t)) return alertDialog('Ese bloque ya está ocupado. Toca otro bloque disponible en el horario para cambiar la hora.')
     const ns = nowSCL()
     if (calDay < ns.date || (calDay === ns.date && toMin(t) <= ns.min)) return alertDialog('Esa hora ya pasó (hora de Santiago). Elige un horario futuro.')
     if ((form.just || '').trim().length < 4) return alertDialog('La justificación es obligatoria. Cuéntanos brevemente para qué es la reunión.')
@@ -141,7 +158,7 @@ export default function Rooms() {
           return a?.name && a.name !== a.email ? `${a.name} (${em})` : em
         })
         const ok = await confirmDialog(`Estas personas ya tienen una reunión agendada en ese horario:\n\n• ${names.join('\n• ')}\n\n¿Quieres reservar de todos modos o prefieres elegir otro horario?`, { title: 'Reunión en conflicto a esa hora', danger: true, okText: 'Reservar igual', cancelText: 'Elegir otro horario' })
-        if (!ok) { setForm(null); setExtAtt(''); return }
+        if (!ok) { setForm((f) => f ? { ...f, pickAnother: true } : f); return } // el formulario sigue abierto: se elige otro bloque en el horario
       }
     }
     try {
@@ -195,7 +212,7 @@ export default function Rooms() {
     <div>
       <div className="page-head"><div className="row">
         <div><h2>Reserva de salas</h2>
-          <p className="muted">Reservable 09:00–13:00 y 15:30–18:00 · fines de semana no operativos. {canManageRooms ? 'Aceptas las solicitudes de reserva.' : 'Tu reserva queda pendiente hasta que la acepten.'}</p></div>
+          <p className="muted">Reservable 09:00–13:00 y 15:30–18:00 · fines de semana no operativos. {canApproveRooms ? 'Aceptas las solicitudes de reserva.' : 'Tu reserva queda pendiente hasta que la acepten.'}</p></div>
         {canManageRooms && <button className="btn btn-lime" onClick={() => setManageRooms((v) => !v)}>Gestionar salas</button>}
       </div></div>
 
@@ -231,19 +248,19 @@ export default function Rooms() {
         const upcoming = res.filter((r) => new Date(r.ends_at).getTime() > nowMs)
         const roomName = (id) => rooms.find((x) => x.id === id)?.name || 'Sala'
         const mine = upcoming.filter((r) => r.user_id === profile?.id)
-        const pend = canManageRooms ? upcoming.filter((r) => r.status === 'pending') : []
+        const pend = canApproveRooms ? upcoming.filter((r) => r.status === 'pending') : []
         const shownMap = new Map()
         ;[...pend, ...mine].forEach((r) => shownMap.set(r.id, r))
         const shown = [...shownMap.values()].sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
         if (!shown.length) return null
         return (
           <div className="resq">
-            <div className="th-eyebrow" style={{ margin: '0 0 .4rem .1rem' }}>{canManageRooms ? 'Pendientes y tus reservas' : 'Tus reservas'}</div>
+            <div className="th-eyebrow" style={{ margin: '0 0 .4rem .1rem' }}>{canApproveRooms ? 'Pendientes y tus reservas' : 'Tus reservas'}</div>
             <div className="resq-list">
               {shown.map((r) => (
                 <button key={r.id} className={`resq-item ${r.status}`} onClick={() => setOpenRes(r.id)}>
                   <span className="resq-when">{sclDateOf(r.starts_at).slice(5).split('-').reverse().join('/')} · {hhmm(new Date(r.starts_at))}–{hhmm(new Date(r.ends_at))}</span>
-                  <span className="resq-t"><strong>{r.title}</strong> <span className="muted">· {roomName(r.room_id)}{canManageRooms && r.user_id !== profile?.id ? ` · ${r.profiles?.full_name || r.profiles?.email || ''}` : ''}</span></span>
+                  <span className="resq-t"><strong>{r.title}</strong> <span className="muted">· {roomName(r.room_id)}{canApproveRooms && r.user_id !== profile?.id ? ` · ${r.profiles?.full_name || r.profiles?.email || ''}` : ''}</span></span>
                   <span className={`badge ${r.status === 'approved' ? 's-approved' : 's-pending'}`}>{r.status === 'approved' ? 'Aprobada' : 'Pendiente'}</span>
                   <span className="chev">›</span>
                 </button>
@@ -253,7 +270,7 @@ export default function Rooms() {
         )
       })()}
 
-      <div className="sal-cols">
+      <div className={`sal-cols${form ? ' with-form' : ''}`}>
         <div className="sal-left">
           <div className="cal-head"><button className="cal-nav" onClick={() => shift(-1)}>‹</button><span className="cal-title">{monthName(calY, calM)}</span><button className="cal-nav" onClick={() => shift(1)}>›</button></div>
           <div className="month">
@@ -262,7 +279,7 @@ export default function Rooms() {
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const d = i + 1, ds = iso(calY, calM, d), wknd = isWknd(ds), past = ds < scl.date
               const cl = ['day']; if (wknd) cl.push('wknd'); if (past) cl.push('past'); if (ds === scl.date) cl.push('today'); if (ds === calDay && !wknd && !past) cl.push('sel')
-              return <button className={cl.join(' ')} key={ds} disabled={wknd || past} onClick={() => { setCalDay(ds); setForm(null); setOpenRes(null) }}>{d}</button>
+              return <button className={cl.join(' ')} key={ds} disabled={wknd || past} onClick={() => { setCalDay(ds); setOpenRes(null) }}>{d}</button>
             })}
           </div>
         </div>
@@ -287,11 +304,12 @@ export default function Rooms() {
                         cells={rooms.map((r) => {
                           const b = resAt(r.id, t)
                           const isCov = covered(r.id, t)
-                          return { room: r, res: b, covered: isCov, idx, t }
+                          const picked = form && form.room === r.id && idx >= form.slotIdx && idx < form.slotIdx + form.dur
+                          return { room: r, res: b, covered: isCov, idx, t, picked }
                         })}
                         resAt={resAt} covered={covered} durSlots={durSlots} idx={idx} t={t} slotList={slots}
                         canManageRooms={canManageRooms} profile={profile}
-                        onReserve={(room) => { setExtAtt(''); setForm({ room: room.id, slotIdx: idx, dur: Math.min(2, maxDur(room.id, idx)) || 1, maxDur: maxDur(room.id, idx), title: 'Reunión', just: '', att: [], rep: 0, repN: 4 }) }}
+                        onReserve={(room) => pickSlot(room, idx)}
                         onOpen={(id) => setOpenRes(id)}
                         onPendingInfo={(r) => {
                           const who = r.profiles?.full_name || r.profiles?.email || 'otra persona'
@@ -305,21 +323,30 @@ export default function Rooms() {
             </>
           </div>
         )}
-      </div>
 
-      {form && (
-        <div className="backdrop open">
+      {form && calDay && !isWknd(calDay) && (() => {
+        const t = slots[form.slotIdx]
+        const md = maxDur(form.room, form.slotIdx)
+        const slotTaken = covered(form.room, t)
+        const roomNm = rooms.find((x) => x.id === form.room)?.name || 'Sala'
+        const endT = hhmm(addMin(slotStart(calDay, t), form.dur * 30))
+        return (
+        <div className="res-wrap">
           <div className="modal modal-reserve">
+            <button className="modal-x" title="Cerrar" type="button" onClick={() => setForm(null)}><Icon n="close" /></button>
             <div className="mr-head">
               <span className="mr-ico"><Icon n="calendar" /></span>
               <div><h3>Reservar sala</h3>
-                <p className="mr-meta"><Icon n="clock" /> <span style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</span> · desde {slots[form.slotIdx]}</p></div>
+                <p className="mr-meta"><Icon n="clock" /> <span style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</span> · {roomNm} · {t}–{endT}</p></div>
             </div>
+            {slotTaken
+              ? <div className="mr-hint warn">Ese bloque ya está ocupado este día. Toca otro bloque disponible en el horario para cambiar la hora.</div>
+              : <div className={`mr-hint${form.pickAnother ? ' warn' : ''}`}>{form.pickAnother ? 'Hay un cruce de agenda: ' : ''}Toca otro bloque del horario para cambiar la hora o la sala sin perder lo escrito.</div>}
             <div className="mr-grid">
               <div><label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
               <div><label>Duración</label>
                 <select value={form.dur} onChange={(e) => setForm({ ...form, dur: Number(e.target.value) })}>
-                  {Array.from({ length: form.maxDur }).map((_, i) => { const d = i + 1, mm = d * 30; return <option key={d} value={d}>{mm < 60 ? mm + ' min' : (mm / 60) + ' h'}</option> })}
+                  {Array.from({ length: Math.max(1, md) }).map((_, i) => { const d = i + 1, mm = d * 30; return <option key={d} value={d}>{mm < 60 ? mm + ' min' : (mm / 60) + ' h'}</option> })}
                 </select></div>
               <div><label>Repetir</label>
                 <select value={form.rep} onChange={(e) => setForm({ ...form, rep: Number(e.target.value) })}>
@@ -403,10 +430,12 @@ export default function Rooms() {
             </div>
             <label>Justificación <span className="req-pill">obligatoria</span></label>
             <textarea value={form.just} onChange={(e) => setForm({ ...form, just: e.target.value })} placeholder="¿Para qué necesitas la sala?" />
-            <div className="modal-actions"><button className="btn" onClick={() => setForm(null)}>Cancelar</button><button className="btn btn-primary" disabled={resBusy} onClick={submitReserve}>{resBusy ? 'Reservando…' : 'Reservar'}</button></div>
+            <div className="modal-actions"><button className="btn" onClick={() => setForm(null)}>Cancelar</button><button className="btn btn-primary" disabled={resBusy || slotTaken} onClick={submitReserve}>{resBusy ? 'Reservando…' : 'Reservar'}</button></div>
           </div>
         </div>
-      )}
+        )
+      })()}
+      </div>
 
       {roomEdit && (
         <div className="backdrop open">
@@ -433,7 +462,7 @@ export default function Rooms() {
               <br /><span className="muted">Justificación: {openObj.justification}</span></div>
             <Chat type="reservation" id={openObj.id} />
             <div className="modal-actions res-actions">
-              {canManageRooms && openObj.status === 'pending' && <>
+              {canApproveRooms && openObj.status === 'pending' && <>
                 <button className="btn btn-lime" onClick={async () => { if (await confirmDialog('¿Aceptar la reserva?', { title: 'Aceptar reserva', okText: 'Aceptar' })) act('approve_reservation', openObj.id) }}>Aceptar</button>
                 <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Rechazar la reserva?', { title: 'Rechazar reserva', danger: true, okText: 'Rechazar' })) act('reject_reservation', openObj.id) }}>Rechazar</button>
               </>}
@@ -471,7 +500,7 @@ function ReservRow({ label, lunch, cells, durSlots, canManageRooms, profile, onR
               </button></td>
           }
           if (past) return <td key={c.room.id}><button className="slot slot-off" disabled title="Hora pasada">—</button></td>
-          return <td key={c.room.id}><button className="slot" onClick={() => onReserve(c.room)}>＋</button></td>
+          return <td key={c.room.id}><button className={c.picked ? 'slot picked' : 'slot'} title={c.picked ? 'Bloque elegido' : 'Reservar este bloque'} onClick={() => onReserve(c.room)}>{c.picked ? '✓' : '＋'}</button></td>
         })}
       </tr>
     </>

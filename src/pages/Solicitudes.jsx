@@ -212,7 +212,8 @@ export default function Solicitudes() {
   }
 
   // Paso 1 arranca en el departamento propio (usuarios) o a elección (gestora/admin)
-  const canChooseDept = canManageOrders
+  // Solo Administrador y Gerente de TI eligen para qué departamento es la solicitud; el resto pide para el suyo
+  const canChooseDept = isAdmin || profile?.is_it_manager || profile?.role === 'gerente_ti'
   // El departamento del usuario se resuelve a su departamento raíz (un subdepto pide "desde" su padre).
   const ownDept = rootDeptOf(profile?.department || '')
   const startWizard = () => {
@@ -846,7 +847,7 @@ export default function Solicitudes() {
                               <div className="rp2-info">
                                 <strong className="rp2-name">{p.quantity > 1 ? `${p.quantity} × ` : ''}{p.name}</strong>
                                 <div className="rp2-meta">
-                                  {p.price != null ? <span className="rp2-price">{fmtMoney(p.price, p.currency)}{p.quantity > 1 ? <span className="muted"> c/u</span> : null}</span> : null}
+                                  {p.price != null ? <span className="rp2-price">{fmtMoney(p.price * Math.max(1, p.quantity || 1), p.currency)}{p.quantity > 1 ? <span className="muted"> total · {fmtMoney(p.price, p.currency)} c/u</span> : null}</span> : null}
                                   {purl ? <a className="rp2-chip" href={purl} target="_blank" rel="noreferrer"><Icon n="link" /> Ver link</a> : null}
                                   {p.file_url ? <button className={`rp2-chip ${pp.fileOpen ? 'on' : ''}`} onClick={() => toggleProdFile(p)}><Icon n="eye" /> Cotización</button> : null}
                                   {(() => { const o = prodOutOfRange(t, p); return o ? <span className={`rp2-oor ${o}`} title="El total de esta opción queda fuera del rango autorizado"><Icon n="ban" /> {o === 'high' ? 'Sobre el rango' : 'Bajo el rango'}</span> : null })()}

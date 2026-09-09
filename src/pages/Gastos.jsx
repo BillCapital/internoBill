@@ -345,8 +345,28 @@ export default function Gastos() {
                 <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>{CATS.map((c) => <option key={c}>{c}</option>)}</select></div>
               <div><label>Departamento</label>
                 <select value={form.departamento} onChange={(e) => setForm({ ...form, departamento: e.target.value })}><option value="">— General —</option>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>
-              <div style={{ gridColumn: '1 / -1' }}><label>Factura <span className="muted">(PDF o imagen · opcional)</span></label>
-                <input type="file" accept=".pdf,image/*,application/pdf" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} /></div>
+              <div style={{ gridColumn: '1 / -1' }}><label>Factura <span className="muted">(PDF o imagen · opcional)</span>{form.reading ? <span className="muted"> · leyendo factura…</span> : form.readOk ? <span style={{ color: 'var(--lime-text)', fontWeight: 600 }}> · datos leídos de la factura</span> : null}</label>
+                <input type="file" accept=".pdf,image/*,application/pdf" onChange={async (e) => {
+                  const f = e.target.files?.[0] || null
+                  setForm((s) => ({ ...s, file: f, readOk: false }))
+                  e.target.value = ''
+                  if (f && (f.type || '').includes('pdf')) {
+                    setForm((s) => ({ ...s, reading: true }))
+                    try {
+                      const path = `tmp/${Date.now()}_${(f.name || 'factura.pdf').replace(/[^\w.\-]+/g, '_')}`
+                      await supabase.storage.from(BUCKET).upload(path, f, { contentType: f.type || undefined, upsert: false })
+                      const { data } = await supabase.functions.invoke('cotiz-parse', { body: { path, mime: f.type, bucket: BUCKET } })
+                      await supabase.storage.from(BUCKET).remove([path])
+                      setForm((s) => ({
+                        ...s,
+                        monto: (s.monto && Number(s.monto) > 0) ? s.monto : (data?.price ? String(data.price) : s.monto),
+                        proveedor: s.proveedor?.trim() ? s.proveedor : (data?.provider || s.proveedor),
+                        fecha: data?.date || s.fecha,
+                        reading: false, readOk: !!(data?.ok),
+                      }))
+                    } catch { setForm((s) => ({ ...s, reading: false, readOk: false })) }
+                  }
+                }} /></div>
             </div>
             <div className="modal-actions">
               <button className="btn" onClick={() => setForm(null)} disabled={busy}>Cancelar</button>
