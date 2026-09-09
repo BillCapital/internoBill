@@ -3025,7 +3025,12 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 
 /* Acciones rápidas (escritorio): icono y texto centrados en la tarjeta */
 @media(min-width:761px){
-  .act-grid.compact .act-card{justify-content:center;text-align:center}
+  /* 3 tarjetas iguales a lo ancho del contenido (no auto-fill, que dejaba huecos y las corría) */
+  .act-grid.three.compact{grid-template-columns:repeat(3,minmax(0,1fr));max-width:none;width:100%;margin:.6rem 0 1.4rem;justify-content:stretch;justify-items:stretch}
+  .act-grid.compact .act-card{display:flex;flex-direction:row;align-items:center;justify-content:center;text-align:center;gap:.6rem;width:100%;box-sizing:border-box;padding:.8rem 1rem;min-height:52px}
+  .act-grid.compact .act-card .ico{margin:0;display:flex;align-items:center;line-height:1}
+  .act-grid.compact .act-card .ico svg,.act-grid.compact .act-card .ico .licon{width:22px;height:22px;display:block}
+  .act-grid.compact .act-card strong{margin:0;line-height:1.2}
 }
 
 /* Formulario de producto tecnológico: precio + cantidad en dos columnas */
@@ -3056,3 +3061,10 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
   .res-wrap .modal{pointer-events:auto;position:static;max-height:58vh;border-radius:16px 16px 0 0;padding:.9rem .85rem 1rem;box-shadow:0 -14px 40px rgba(0,0,0,.35);border-bottom:0}
   .sal-cols.with-form{padding-bottom:58vh}
 }
+
+/* Horario de salas: todos los bloques (libres, reservados, pasados) con el MISMO ancho y márgenes */
+.sal-right .cal td{padding:.12rem .4rem !important}
+.sal-right .cal td:first-child{padding-left:.5rem !important;padding-right:.5rem !important}
+.sal-right .cal td .slot{display:block;width:100% !important;min-width:0 !important;max-width:none;box-sizing:border-box;margin:0}
+.sal-right .cal td.spanned{padding:0 !important}
+.sal-right .cal td.spanned .slot{position:absolute;inset:.12rem .4rem !important;width:auto !important;height:auto;display:flex;border-radius:7px}
