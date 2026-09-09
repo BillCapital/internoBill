@@ -2983,3 +2983,10 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 
 /* El día seleccionado no muestra el punto de reservas (ya estás viéndolo) */
 .day.sel .dot{display:none}
+
+/* Calendario mensual sin puntos de reservas */
+.day .dot{display:none}
+
+/* Reserva de varios bloques: el recuadro llena TODA la altura de sus filas */
+.cal td.spanned{position:relative;padding:3px}
+.cal td.spanned .slot{position:absolute;inset:3px;width:auto;height:auto;display:flex;flex-direction:column;align-items:center;justify-content:center}

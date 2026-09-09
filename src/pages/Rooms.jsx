@@ -251,9 +251,8 @@ export default function Rooms() {
             {Array.from({ length: startDow }).map((_, i) => <div className="day other" key={'o' + i}></div>)}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const d = i + 1, ds = iso(calY, calM, d), wknd = isWknd(ds), past = ds < scl.date
-              const has = res.some((r) => sclDateOf(r.starts_at) === ds)
               const cl = ['day']; if (wknd) cl.push('wknd'); if (past) cl.push('past'); if (ds === scl.date) cl.push('today'); if (ds === calDay && !wknd && !past) cl.push('sel')
-              return <button className={cl.join(' ')} key={ds} disabled={wknd || past} onClick={() => { setCalDay(ds); setForm(null); setOpenRes(null) }}>{d}{has && !wknd ? <span className="dot"></span> : null}</button>
+              return <button className={cl.join(' ')} key={ds} disabled={wknd || past} onClick={() => { setCalDay(ds); setForm(null); setOpenRes(null) }}>{d}</button>
             })}
           </div>
         </div>
@@ -403,8 +402,8 @@ export default function Rooms() {
       )}
 
       {openObj && (
-        <div className="backdrop open">
-          <div className="modal">
+        <div className="backdrop open" onClick={() => { if (window.innerWidth > 760) setOpenRes(null) }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Reserva de sala</h3>
             <div className="reqsum"><strong>{openObj.title}</strong> · {openObj.profiles?.full_name || openObj.profiles?.email}
               <span className={`badge ${openObj.status === 'approved' ? 's-approved' : 's-pending'}`} style={{ marginLeft: 6 }}>{openObj.status === 'approved' ? 'Aprobada' : 'Pendiente'}</span>
@@ -442,7 +441,7 @@ function ReservRow({ label, lunch, cells, durSlots, canManageRooms, profile, onR
             const canEdit = mine || canManageRooms
             const isPend = c.res.status === 'pending'
             const clas = c.res.status === 'approved' ? 'slot busy' : 'slot pending'
-            return <td key={c.room.id} rowSpan={durSlots(c.res)}>
+            return <td key={c.room.id} rowSpan={durSlots(c.res)} className="spanned">
               <button className={clas} style={{ height: '100%', width: '100%' }}
                 title={isPend && !canEdit ? 'Solicitud pendiente — toca para coordinar' : undefined}
                 onClick={() => { if (canEdit) onOpen(c.res.id); else if (isPend) onPendingInfo(c.res) }}>
