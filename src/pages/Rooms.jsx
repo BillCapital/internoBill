@@ -118,15 +118,12 @@ export default function Rooms() {
     const t = slots[form.slotIdx]
     const ns = nowSCL()
     if (calDay < ns.date || (calDay === ns.date && toMin(t) <= ns.min)) return alertDialog('Esa hora ya pasó (hora de Santiago). Elige un horario futuro.')
-    if (!(form.just || '').trim()) return alertDialog('La justificación es obligatoria. Cuéntanos brevemente para qué es la reunión.')
+    if ((form.just || '').trim().length < 4) return alertDialog('La justificación es obligatoria. Cuéntanos brevemente para qué es la reunión.')
     setResBusy(true)
     try {
     const start = slotStart(calDay, t)
     const end = addMin(start, form.dur * 30)
     const attendees = (form.att || []).map((a) => ({ email: a.email, name: a.name || '' }))
-    if (form.includeSelf && profile?.email && !attendees.some((a) => a.email.toLowerCase() === profile.email.toLowerCase())) {
-      attendees.push({ email: profile.email, name: profile.full_name || profile.email })
-    }
     // Aviso final: ¿algún convocado —o quien reserva— ya tiene reunión en ese horario?
     // Se incluye siempre al que agenda, aunque no esté marcado como participante.
     const checkList = [...new Set([...attendees.map((a) => a.email), profile?.email].filter((e) => e && e.includes('@')).map((e) => e.toLowerCase()))]
@@ -253,7 +250,7 @@ export default function Rooms() {
                         })}
                         resAt={resAt} covered={covered} durSlots={durSlots} idx={idx} t={t} slotList={slots}
                         canManageRooms={canManageRooms} profile={profile}
-                        onReserve={(room) => { setExtAtt(''); setForm({ room: room.id, slotIdx: idx, dur: Math.min(2, maxDur(room.id, idx)) || 1, maxDur: maxDur(room.id, idx), title: 'Reunión', just: '', att: [], includeSelf: true }) }}
+                        onReserve={(room) => { setExtAtt(''); setForm({ room: room.id, slotIdx: idx, dur: Math.min(2, maxDur(room.id, idx)) || 1, maxDur: maxDur(room.id, idx), title: 'Reunión', just: '', att: [] }) }}
                         onOpen={(id) => setOpenRes(id)}
                         onPendingInfo={(r) => {
                           const who = r.profiles?.full_name || r.profiles?.email || 'otra persona'
@@ -299,6 +296,7 @@ export default function Rooms() {
                 const list = users
                   .filter((u) => u.email && !(form.att || []).some((a) => a.email === u.email))
                   .filter((u) => !q || (u.full_name || '').toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+                  .sort((a, b) => (a.id === profile?.id ? -1 : b.id === profile?.id ? 1 : 0))
                   .slice(0, 60)
                 return (
                   <div className="att-list">
@@ -317,7 +315,7 @@ export default function Rooms() {
                             }).catch(() => {})
                           }}>
                           <span className="att-av">{(u.full_name || u.email).charAt(0).toUpperCase()}</span>
-                          <span className="att-nm">{u.full_name || 'Sin nombre'}<br /><span className="muted">{u.email}</span></span>
+                          <span className="att-nm">{u.full_name || 'Sin nombre'}{u.id === profile?.id ? <span className="att-you"> (tú)</span> : null}<br /><span className="muted">{u.id === profile?.id ? 'Recibirás la invitación en tu Outlook' : u.email}</span></span>
                           <span className="att-plus"><Icon n="plus" /></span>
                         </button>
                       )
@@ -350,10 +348,6 @@ export default function Rooms() {
                 </div>
               )}
             </div>
-            <label className="mr-self">
-              <input type="checkbox" checked={form.includeSelf} onChange={(e) => setForm({ ...form, includeSelf: e.target.checked })} />
-              <span className="mr-self-txt"><strong>Incluirme como participante</strong><span className="muted">Recibirás la invitación en tu Outlook.</span></span>
-            </label>
             <label>Justificación <span className="req-pill">obligatoria</span></label>
             <textarea value={form.just} onChange={(e) => setForm({ ...form, just: e.target.value })} placeholder="¿Para qué necesitas la sala?" />
             <div className="modal-actions"><button className="btn" onClick={() => setForm(null)}>Cancelar</button><button className="btn btn-primary" disabled={resBusy} onClick={submitReserve}>{resBusy ? 'Reservando…' : 'Reservar'}</button></div>

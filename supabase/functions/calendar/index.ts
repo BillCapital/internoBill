@@ -20,13 +20,28 @@ function esc(s: string): string {
 Deno.serve(async (req) => {
   if (req.headers.get('x-internal-key') !== INTERNAL || !INTERNAL) return json(401, { error: 'forbidden' })
   try {
-    const { reservation_id } = await req.json()
+    const { reservation_id, op, event_id, organizer: orgIn } = await req.json()
     const admin = createClient(URL, SERVICE)
+
+    // Cancelación: borra el evento 365 del organizador (invitados reciben la cancelación)
+    if (op === 'cancel') {
+      if (!event_id || !orgIn) return json(400, { error: 'faltan event_id/organizer' })
+      const token = await graphToken()
+      if (!token) return json(500, { error: 'no se pudo obtener token de Graph' })
+      const resp = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(orgIn)}/events/${encodeURIComponent(event_id)}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+      })
+      if (reservation_id) { try { await admin.from('reservations').update({ calendar_event_id: null }).eq('id', reservation_id) } catch (_) { /* noop */ } }
+      if (!resp.ok && resp.status !== 404) console.error('calendar: cancel error', resp.status)
+      return json(200, { ok: resp.ok || resp.status === 404 })
+    }
     const { data: r, error: selErr } = await admin.from('reservations')
-      .select('id,title,starts_at,ends_at,justification,attendees,rooms(name,location),profiles!reservations_user_id_fkey(email,full_name)')
+      .select('id,title,starts_at,ends_at,justification,attendees,calendar_event_id,rooms(name,location),profiles!reservations_user_id_fkey(email,full_name)')
       .eq('id', reservation_id).single()
     if (selErr) { console.error('calendar: select error', selErr.message); return json(500, { error: 'db: ' + selErr.message }) }
     if (!r) return json(404, { error: 'reserva no encontrada' })
+    // Ya tiene evento: no crear otro (evita citas duplicadas por reintentos)
+    if ((r as any).calendar_event_id) return json(200, { ok: true, event: (r as any).calendar_event_id })
 
     const organizer = (r as any).profiles?.email
     if (!organizer) return json(400, { error: 'organizador sin correo' })

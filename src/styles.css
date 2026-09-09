@@ -2954,3 +2954,6 @@ body.light .rq-mob.rq-tec{color:#5747ad}
 
 /* Aclaraciones dentro de una etiqueta ("según usuario"): pequeñas y en minúscula */
 label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacing:normal}
+
+/* Convocados: tu propia opción destacada al inicio de la lista */
+.att-you{color:var(--lime-text);font-weight:700;font-size:.78em}

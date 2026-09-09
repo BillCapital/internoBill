@@ -88,11 +88,26 @@ Deno.serve(async (req) => {
     }
 
     if (RPC_ACTIONS[action]) {
+      // Antes de cancelar/rechazar/eliminar una reserva, se rescata su evento 365 (después la fila puede no existir)
+      let calCancel: { event: string; organizer: string; resId: string } | null = null
+      if (['cancel_reservation', 'reject_reservation', 'reservation_delete'].includes(action) && payload?.p_id) {
+        try {
+          const admin = createClient(URL, SERVICE)
+          const { data: rr } = await admin.from('reservations')
+            .select('calendar_event_id, profiles!reservations_user_id_fkey(email)')
+            .eq('id', payload.p_id).single()
+          const ev = (rr as any)?.calendar_event_id, org = (rr as any)?.profiles?.email
+          if (ev && org) calCancel = { event: ev, organizer: org, resId: payload.p_id }
+        } catch (_) { /* noop */ }
+      }
       const { data, error: e } = await asUser.rpc(RPC_ACTIONS[action], payload ?? {})
       if (e) return json(400, { error: friendly(e.message) })
       if (action === 'create_reservation' || action === 'approve_reservation') {
         const resId = action === 'create_reservation' ? data : payload?.p_id
         try { (globalThis as any).EdgeRuntime?.waitUntil(syncCalendar(resId).catch(() => {})) } catch (_) { /* noop */ }
+      }
+      if (calCancel) {
+        try { (globalThis as any).EdgeRuntime?.waitUntil(cancelCalendarEvent(calCancel).catch(() => {})) } catch (_) { /* noop */ }
       }
       return json(200, { data })
     }
@@ -101,6 +116,14 @@ Deno.serve(async (req) => {
     return json(500, { error: 'Error interno del servidor' })
   }
 })
+
+async function cancelCalendarEvent(info: { event: string; organizer: string; resId: string }) {
+  if (!INTERNAL) return
+  await fetch(`${URL}/functions/v1/calendar`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-key': INTERNAL },
+    body: JSON.stringify({ op: 'cancel', event_id: info.event, organizer: info.organizer, reservation_id: info.resId }),
+  })
+}
 
 async function syncCalendar(reservationId: string) {
   if (!reservationId || !INTERNAL) return
