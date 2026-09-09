@@ -3096,3 +3096,10 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 }
 /* Tarjeta de reserva (varias filas): respeta el margen inferior (el height:100% en línea anulaba el bottom) */
 .sal-right .cal td.spanned .slot{height:auto !important;max-height:none !important;inset:.2rem .4rem !important}
+/* Lista de convocados: en PC se despliega al costado derecho del panel, no encima del formulario */
+@media(min-width:1101px){
+  .res-wrap .modal{overflow:visible !important;max-height:none !important}
+  .res-wrap .mr-att,.res-wrap .att-picker{position:relative}
+  .res-wrap .att-list{left:calc(100% + 1.75rem) !important;right:auto !important;top:-2.6rem !important;width:320px;max-height:360px;box-shadow:var(--shadow-lg)}
+  .res-wrap .att-list::before{content:"";position:absolute;left:-7px;top:2.9rem;width:12px;height:12px;background:var(--panel);border-left:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}
+}
