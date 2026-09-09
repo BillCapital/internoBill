@@ -3068,3 +3068,13 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .sal-right .cal td .slot{display:block;width:100% !important;min-width:0 !important;max-width:none;box-sizing:border-box;margin:0}
 .sal-right .cal td.spanned{padding:0 !important}
 .sal-right .cal td.spanned .slot{position:absolute;inset:.12rem .4rem !important;width:auto !important;height:auto;display:flex;border-radius:7px}
+/* Fila de colación con aire y misma altura que un bloque */
+.sal-right .cal tr.lunch td{height:30px !important;padding:.35rem .5rem !important;font-size:.72rem;vertical-align:middle}
+.sal-right .cal td .slot,.sal-right .cal td.spanned .slot{border-radius:7px;border-width:1px}
+/* Perfil: campos más aireados, ayuda bajo el campo, input de fecha acorde al tema */
+.pf-fields{gap:1.1rem 1.4rem}
+.pf-field .pf-help{display:block;font-size:.72rem;color:var(--muted);margin-top:.3rem}
+.pf-field input[type=date]{color-scheme:light dark;width:100%;box-sizing:border-box}
+.pf-field input,.pf-field select,.pf-field .val{min-height:40px;box-sizing:border-box}
+.pf-field .val{display:flex;align-items:center;gap:.4rem}
+@media(max-width:640px){.pf-fields{gap:.8rem}}

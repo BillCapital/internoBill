@@ -77,14 +77,15 @@ export default function Rooms() {
   const load = useCallback(async () => {
     const [{ data: rms }, { data: rs }, { data: us }] = await Promise.all([
       supabase.from('rooms').select('id,name,location,capacity,description,is_active').eq('is_active', true).order('name'),
-      supabase.from('reservations').select('id,room_id,title,starts_at,ends_at,status,justification,user_id,profiles!reservations_user_id_fkey(full_name,email)').neq('status', 'cancelled').neq('status', 'rejected'),
+      supabase.from('reservations').select('id,room_id,title,starts_at,ends_at,status,justification,attendees,user_id,profiles!reservations_user_id_fkey(full_name,email)').neq('status', 'cancelled').neq('status', 'rejected'),
       supabase.from('profiles').select('id,full_name,email,app_access,active').order('full_name'),
     ])
     setRooms(rms ?? []); setRes(rs ?? []); setUsers((us ?? []).filter((u) => u.app_access !== false && u.active !== false))
   }, [])
   useEffect(() => { load() }, [load])
 
-  const dayRes = useMemo(() => res.filter((r) => calDay && sclDateOf(r.starts_at) === calDay), [res, calDay])
+  // Al reprogramar, la reserva que se mueve no bloquea su propio bloque (permite correrla 30 min, etc.)
+  const dayRes = useMemo(() => res.filter((r) => calDay && sclDateOf(r.starts_at) === calDay && r.id !== form?.reschedId), [res, calDay, form?.reschedId])
   const slots = useMemo(() => daySlots(calDay), [calDay])
   // Ancla la reserva al bloque que CONTIENE su inicio (tolera datos históricos desalineados)
   const resAt = (roomId, t) => {
@@ -162,7 +163,14 @@ export default function Rooms() {
       }
     }
     try {
-      if (form.rep > 0) {
+      if (form.reschedId) {
+        await api('reschedule_reservation', {
+          p_id: form.reschedId, p_room: form.room, p_starts: start.toISOString(), p_ends: end.toISOString(),
+          p_title: form.title || 'Reunión', p_just: form.just || '', p_attendees: attendees,
+        })
+        setForm(null); setExtAtt(''); load()
+        alertDialog('Reunión reprogramada. La cita anterior se eliminó de los calendarios y la nueva se enviará cuando la acepten.')
+      } else if (form.rep > 0) {
         const r = await api('create_reservation_series', {
           p_room: form.room, p_starts: start.toISOString(), p_ends: end.toISOString(),
           p_title: form.title || 'Reunión', p_just: form.just || '', p_attendees: attendees,
@@ -336,26 +344,28 @@ export default function Rooms() {
             <button className="modal-x" title="Cerrar" type="button" onClick={() => setForm(null)}><Icon n="close" /></button>
             <div className="mr-head">
               <span className="mr-ico"><Icon n="calendar" /></span>
-              <div><h3>Reservar sala</h3>
+              <div><h3>{form.reschedId ? 'Reprogramar reunión' : 'Reservar sala'}</h3>
                 <p className="mr-meta"><Icon n="clock" /> <span style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</span> · {roomNm} · {t}–{endT}</p></div>
             </div>
             {slotTaken
               ? <div className="mr-hint warn">Ese bloque ya está ocupado este día. Toca otro bloque disponible en el horario para cambiar la hora.</div>
-              : <div className={`mr-hint${form.pickAnother ? ' warn' : ''}`}>{form.pickAnother ? 'Hay un cruce de agenda: ' : ''}Toca otro bloque del horario para cambiar la hora o la sala sin perder lo escrito.</div>}
+              : form.reschedId
+                ? <div className="mr-hint warn">Elige el nuevo día y bloque en el horario. Al confirmar, la reunión actual se cancela y se elimina de los calendarios; la nueva se envía cuando la acepten.</div>
+                : <div className={`mr-hint${form.pickAnother ? ' warn' : ''}`}>{form.pickAnother ? 'Hay un cruce de agenda: ' : ''}Toca otro bloque del horario para cambiar la hora o la sala sin perder lo escrito.</div>}
             <div className="mr-grid">
               <div><label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
               <div><label>Duración</label>
                 <select value={form.dur} onChange={(e) => setForm({ ...form, dur: Number(e.target.value) })}>
                   {Array.from({ length: Math.max(1, md) }).map((_, i) => { const d = i + 1, mm = d * 30; return <option key={d} value={d}>{mm < 60 ? mm + ' min' : (mm / 60) + ' h'}</option> })}
                 </select></div>
-              <div><label>Repetir</label>
+              {!form.reschedId && <div><label>Repetir</label>
                 <select value={form.rep} onChange={(e) => setForm({ ...form, rep: Number(e.target.value) })}>
                   <option value={0}>No se repite</option>
                   <option value={1}>Cada día hábil</option>
                   <option value={7}>Cada semana</option>
                   <option value={14}>Cada 15 días (quincenal)</option>
                   <option value={28}>Cada 4 semanas</option>
-                </select></div>
+                </select></div>}
               {form.rep > 0 && <div><label>¿Cuántas veces?</label>
                 <select value={form.repN} onChange={(e) => setForm({ ...form, repN: Number(e.target.value) })}>
                   {[2, 3, 4, 5, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n} veces</option>)}
@@ -430,7 +440,7 @@ export default function Rooms() {
             </div>
             <label>Justificación <span className="req-pill">obligatoria</span></label>
             <textarea value={form.just} onChange={(e) => setForm({ ...form, just: e.target.value })} placeholder="¿Para qué necesitas la sala?" />
-            <div className="modal-actions"><button className="btn" onClick={() => setForm(null)}>Cancelar</button><button className="btn btn-primary" disabled={resBusy || slotTaken} onClick={submitReserve}>{resBusy ? 'Reservando…' : 'Reservar'}</button></div>
+            <div className="modal-actions"><button className="btn" onClick={() => setForm(null)}>Cancelar</button><button className="btn btn-primary" disabled={resBusy || slotTaken} onClick={submitReserve}>{resBusy ? 'Guardando…' : (form.reschedId ? 'Confirmar nuevo horario' : 'Reservar')}</button></div>
           </div>
         </div>
         )
@@ -467,6 +477,14 @@ export default function Rooms() {
                 <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Rechazar la reserva?', { title: 'Rechazar reserva', danger: true, okText: 'Rechazar' })) act('reject_reservation', openObj.id) }}>Rechazar</button>
               </>}
               <span className="res-sep" />
+              {(openObj.user_id === profile?.id || canApproveRooms) && new Date(openObj.ends_at).getTime() > Date.now() &&
+                <button className="btn" onClick={() => {
+                  // Reprogramar: se abre el formulario con los mismos datos; al confirmar se cancela la actual (y su cita 365) y se crea la nueva
+                  const d = sclDateOf(openObj.starts_at); const sl = daySlots(d)
+                  const st = new Date(openObj.starts_at); const idx = Math.max(0, sl.findIndex((t) => { const s0 = slotStart(d, t).getTime(); return st.getTime() >= s0 && st.getTime() < s0 + 1800000 }))
+                  setCalDay(d); setOpenRes(null); setExtAtt('')
+                  setForm({ reschedId: openObj.id, room: openObj.room_id, slotIdx: idx, dur: durSlots(openObj), maxDur: 6, title: openObj.title || 'Reunión', just: openObj.justification || '', att: (openObj.attendees || []).map((a) => ({ email: a.email, name: a.name || a.email })), rep: 0, repN: 4 })
+                }}>Reprogramar</button>}
               {openObj.user_id === profile?.id &&
                 <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Cancelar la reserva?', { title: 'Cancelar reserva', danger: true, okText: 'Cancelar reserva' })) act('cancel_reservation', openObj.id) }}>Cancelar reserva</button>}
             </div>

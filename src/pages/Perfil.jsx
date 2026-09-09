@@ -21,7 +21,7 @@ const OUT = 200    // tamaño final exportado (px)
 export default function Perfil() {
   const { profile, role, roleLabel, isAdmin, patchProfile, refreshProfile } = useAuth()
   const [equipos, setEquipos] = useState([])
-  const [form, setForm] = useState({ phone: '', em_pre: '+56', emergency_phone: '', work_mode: '', emergency_name: '', birth_day: '', birth_month: '', job_title: '', address: '', parking_spot: '' })
+  const [form, setForm] = useState({ phone: '', em_pre: '+56', emergency_phone: '', work_mode: '', emergency_name: '', birth_date: '', job_title: '', address: '', parking_spot: '' })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [avatarSaving, setAvatarSaving] = useState(false)
@@ -45,13 +45,12 @@ export default function Perfil() {
       emergency_phone: em.num,
       work_mode: profile?.work_mode || '',
       emergency_name: profile?.emergency_name || '',
-      birth_day: profile?.birth_day || '',
-      birth_month: profile?.birth_month || '',
+      birth_date: profile?.birth_date || '',
       job_title: profile?.job_title || '',
       address: profile?.address || '',
-      parking_spot: profile?.parking_spot || '',
+      parking_spot: profile?.parking_spot || 'No aplica',
     })
-  }, [profile?.phone, profile?.work_mode, profile?.emergency_name, profile?.emergency_phone, profile?.birth_day, profile?.birth_month, profile?.job_title, profile?.address, profile?.parking_spot, myPrefix])
+  }, [profile?.phone, profile?.work_mode, profile?.emergency_name, profile?.emergency_phone, profile?.birth_date, profile?.job_title, profile?.address, profile?.parking_spot, myPrefix])
   // Equipos asignados a MÍ. El dueño actual es el user_id; el correo asignado solo se usa
   // como respaldo cuando el equipo aún no tiene user_id. Así, si un equipo se reasigna a otra
   // persona (cambia el user_id), deja de aparecerle al dueño anterior aunque el correo viejo siga.
@@ -75,21 +74,20 @@ export default function Perfil() {
       work_mode: form.work_mode || '',
       emergency_name: (form.emergency_name || '').trim(),
       emergency_phone: emnum ? `${form.em_pre} ${emnum}` : '',
-      birth_day: form.birth_day ? Number(form.birth_day) : null,
-      birth_month: form.birth_month ? Number(form.birth_month) : null,
+      birth_date: form.birth_date || '',
       job_title: (form.job_title || '').trim(),
       address: (form.address || '').trim(),
-      parking_spot: (form.parking_spot || '').trim(),
+      parking_spot: (form.parking_spot || '').trim() || 'No aplica',
     }
     try {
       await api('save_my_profile', {
         p_phone: fields.phone, p_work_mode: fields.work_mode,
         p_emergency_name: fields.emergency_name, p_emergency_phone: fields.emergency_phone,
-        p_birth_day: fields.birth_day, p_birth_month: fields.birth_month,
+        p_birth_date: fields.birth_date,
         p_job_title: fields.job_title, p_address: fields.address, p_parking: fields.parking_spot,
       })
       // Actualización local instantánea (sin recargar roles/deptos)
-      patchProfile(fields)
+      patchProfile({ ...fields, birth_date: fields.birth_date || null, birth_day: fields.birth_date ? Number(fields.birth_date.slice(8, 10)) : null, birth_month: fields.birth_date ? Number(fields.birth_date.slice(5, 7)) : null })
       setSaved(true); setTimeout(() => setSaved(false), 3000)
     } catch (e) { alertDialog(e.message) } finally { setSaving(false) }
   }
@@ -178,10 +176,9 @@ export default function Perfil() {
   const composedPhone = (form.phone || '').trim() ? `${myPrefix} ${(form.phone || '').trim()}` : ''
   const composedEm = (form.emergency_phone || '').trim() ? `${form.em_pre} ${(form.emergency_phone || '').trim()}` : ''
   const dirty = composedPhone !== (profile?.phone || '') || composedEm !== (profile?.emergency_phone || '')
-    || ['work_mode', 'emergency_name', 'birth_day', 'birth_month', 'job_title', 'address', 'parking_spot']
+    || ['work_mode', 'emergency_name', 'birth_date', 'job_title', 'address', 'parking_spot']
       .some((k) => String(form[k] ?? '') !== String(profile?.[k] ?? ''))
   const avatar = profile?.avatar_url
-  const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
   const dispW = cropImg ? cropImg.width * scale : 0, dispH = cropImg ? cropImg.height * scale : 0
 
   return (
@@ -220,7 +217,8 @@ export default function Perfil() {
             <input value={form.address} onChange={(e) => setF('address', e.target.value)} placeholder="Calle, número, comuna" />
           </div>
           <div className="pf-field"><label>N° de estacionamiento</label>
-            <input value={form.parking_spot} onChange={(e) => setF('parking_spot', e.target.value)} placeholder="Ej: 12 (vacío si no usas)" />
+            <input value={form.parking_spot} onChange={(e) => setF('parking_spot', e.target.value)} placeholder="No aplica" onFocus={(e) => { if (e.target.value === 'No aplica') e.target.select() }} />
+            <span className="pf-help">Por defecto "No aplica"; escribe tu número si tienes estacionamiento.</span>
           </div>
           <div className="pf-field"><label>Modalidad de trabajo</label>
             <select value={form.work_mode} onChange={(e) => setF('work_mode', e.target.value)}>
@@ -230,17 +228,9 @@ export default function Perfil() {
               <option>Remoto</option>
             </select>
           </div>
-          <div className="pf-field"><label>Cumpleaños</label>
-            <div className="qc" style={{ gap: '.4rem' }}>
-              <select value={form.birth_day} onChange={(e) => setF('birth_day', e.target.value)} style={{ flex: '0 0 90px' }}>
-                <option value="">Día</option>
-                {Array.from({ length: 31 }).map((_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
-              </select>
-              <select value={form.birth_month} onChange={(e) => setF('birth_month', e.target.value)} style={{ flex: 1 }}>
-                <option value="">Mes</option>
-                {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-              </select>
-            </div>
+          <div className="pf-field"><label>Fecha de nacimiento</label>
+            <input type="date" value={form.birth_date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setF('birth_date', e.target.value)} />
+            <span className="pf-help">La semana de tu cumpleaños se avisa a todo el equipo.</span>
           </div>
           <div className="pf-field"><label>Contacto de emergencia · nombre</label>
             <input value={form.emergency_name} onChange={(e) => setF('emergency_name', e.target.value)} placeholder="Ej: María Pérez (madre)" />

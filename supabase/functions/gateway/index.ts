@@ -29,7 +29,7 @@ const RPC_ACTIONS: Record<string, string> = {
   tech_set_budget: 'tech_set_budget', tech_product_set_file: 'tech_product_set_file', touch_seen: 'touch_my_seen',
   create_tech_request: 'create_tech_request', request_attach_add: 'request_attach_add', request_attach_delete: 'request_attach_delete',
   expense_doc_add: 'expense_doc_add', expense_doc_delete: 'expense_doc_delete', expense_doc_set_estado: 'expense_doc_set_estado',
-  create_reservation: 'create_reservation', approve_reservation: 'approve_reservation', reject_reservation: 'reject_reservation', cancel_reservation: 'cancel_reservation',
+  create_reservation: 'create_reservation', approve_reservation: 'approve_reservation', reject_reservation: 'reject_reservation', cancel_reservation: 'cancel_reservation', reschedule_reservation: 'reschedule_reservation',
   post_message: 'post_message', create_ticket: 'create_ticket', set_ticket_status: 'set_ticket_status',
   set_user_role: 'set_user_role', set_inventory_access: 'set_inventory_access', set_stock: 'set_stock',
   inventory_upsert: 'inventory_upsert', inventory_delete: 'inventory_delete', room_upsert: 'room_upsert', room_delete: 'room_delete',
@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
     if (RPC_ACTIONS[action]) {
       // Antes de cancelar/rechazar/eliminar una reserva, se rescata su evento 365 (después la fila puede no existir)
       let calCancel: { event: string; organizer: string; resId: string } | null = null
-      if (['cancel_reservation', 'reject_reservation', 'reservation_delete'].includes(action) && payload?.p_id) {
+      if (['cancel_reservation', 'reject_reservation', 'reservation_delete', 'reschedule_reservation'].includes(action) && payload?.p_id) {
         try {
           const admin = createClient(URL, SERVICE)
           const { data: rr } = await admin.from('reservations')
@@ -103,8 +103,9 @@ Deno.serve(async (req) => {
       }
       const { data, error: e } = await asUser.rpc(RPC_ACTIONS[action], payload ?? {})
       if (e) return json(400, { error: friendly(e.message) })
-      if (action === 'create_reservation' || action === 'approve_reservation') {
-        const resId = action === 'create_reservation' ? data : payload?.p_id
+      if (action === 'create_reservation' || action === 'approve_reservation' || action === 'reschedule_reservation') {
+        // reschedule: se elimina el evento 365 de la reserva anterior (calCancel) y se sincroniza la nueva
+        const resId = action === 'approve_reservation' ? payload?.p_id : data
         try { (globalThis as any).EdgeRuntime?.waitUntil(syncCalendar(resId).catch(() => {})) } catch (_) { /* noop */ }
       }
       if (action === 'create_reservation_series' && data?.created) {

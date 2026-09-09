@@ -16,9 +16,11 @@ export default function ProfilePrompt() {
 
   const missing = []
   if (!profile.phone) missing.push('teléfono')
+  if (!profile.job_title) missing.push('cargo')
+  if (!profile.address) missing.push('dirección')
   if (!profile.work_mode) missing.push('modalidad de trabajo')
-  if (!profile.emergency_phone) missing.push('contacto de emergencia')
-  if (!profile.birth_month) missing.push('cumpleaños')
+  if (!profile.emergency_phone || !profile.emergency_name) missing.push('contacto de emergencia')
+  if (!profile.birth_date && !profile.birth_month) missing.push('fecha de nacimiento')
   if (!missing.length) return null
 
   const close = () => { try { sessionStorage.setItem('pf-prompt-dismiss', '1') } catch { /* noop */ } setDismissed(true) }
