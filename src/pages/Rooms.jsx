@@ -145,11 +145,21 @@ export default function Rooms() {
       }
     }
     try {
-      await api('create_reservation', {
-        p_room: form.room, p_starts: start.toISOString(), p_ends: end.toISOString(),
-        p_title: form.title || 'Reunión', p_just: form.just || '', p_attendees: attendees,
-      })
-      setForm(null); setExtAtt(''); load()
+      if (form.rep > 0) {
+        const r = await api('create_reservation_series', {
+          p_room: form.room, p_starts: start.toISOString(), p_ends: end.toISOString(),
+          p_title: form.title || 'Reunión', p_just: form.just || '', p_attendees: attendees,
+          p_every_days: form.rep, p_count: form.repN,
+        })
+        setForm(null); setExtAtt(''); load()
+        if (r?.skipped?.length) alertDialog(`Se reservaron ${r.created.length} fechas. Estas no se pudieron (ya ocupadas):\n• ${r.skipped.join('\n• ')}`)
+      } else {
+        await api('create_reservation', {
+          p_room: form.room, p_starts: start.toISOString(), p_ends: end.toISOString(),
+          p_title: form.title || 'Reunión', p_just: form.just || '', p_attendees: attendees,
+        })
+        setForm(null); setExtAtt(''); load()
+      }
     } catch (e) { alertDialog(e.message) }
     } finally { setResBusy(false) }
   }
@@ -281,7 +291,7 @@ export default function Rooms() {
                         })}
                         resAt={resAt} covered={covered} durSlots={durSlots} idx={idx} t={t} slotList={slots}
                         canManageRooms={canManageRooms} profile={profile}
-                        onReserve={(room) => { setExtAtt(''); setForm({ room: room.id, slotIdx: idx, dur: Math.min(2, maxDur(room.id, idx)) || 1, maxDur: maxDur(room.id, idx), title: 'Reunión', just: '', att: [] }) }}
+                        onReserve={(room) => { setExtAtt(''); setForm({ room: room.id, slotIdx: idx, dur: Math.min(2, maxDur(room.id, idx)) || 1, maxDur: maxDur(room.id, idx), title: 'Reunión', just: '', att: [], rep: 0, repN: 4 }) }}
                         onOpen={(id) => setOpenRes(id)}
                         onPendingInfo={(r) => {
                           const who = r.profiles?.full_name || r.profiles?.email || 'otra persona'
@@ -311,6 +321,18 @@ export default function Rooms() {
                 <select value={form.dur} onChange={(e) => setForm({ ...form, dur: Number(e.target.value) })}>
                   {Array.from({ length: form.maxDur }).map((_, i) => { const d = i + 1, mm = d * 30; return <option key={d} value={d}>{mm < 60 ? mm + ' min' : (mm / 60) + ' h'}</option> })}
                 </select></div>
+              <div><label>Repetir</label>
+                <select value={form.rep} onChange={(e) => setForm({ ...form, rep: Number(e.target.value) })}>
+                  <option value={0}>No se repite</option>
+                  <option value={1}>Cada día hábil</option>
+                  <option value={7}>Cada semana</option>
+                  <option value={14}>Cada 2 semanas</option>
+                  <option value={28}>Cada 4 semanas</option>
+                </select></div>
+              {form.rep > 0 && <div><label>¿Cuántas veces?</label>
+                <select value={form.repN} onChange={(e) => setForm({ ...form, repN: Number(e.target.value) })}>
+                  {[2, 3, 4, 5, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n} veces</option>)}
+                </select></div>}
             </div>
             <div className="mr-att">
               <div className="mr-att-h"><Icon n="users" /> Convocados <span className="muted">— se les crea la cita en su calendario 365</span></div>
@@ -416,7 +438,6 @@ export default function Rooms() {
               </>}
               {openObj.user_id === profile?.id &&
                 <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Cancelar la reserva?', { title: 'Cancelar reserva', danger: true, okText: 'Cancelar reserva' })) act('cancel_reservation', openObj.id) }}>Cancelar reserva</button>}
-              {isSuper && <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Eliminar la reserva por completo? No se puede deshacer.', { title: 'Eliminar reserva', danger: true, okText: 'Eliminar' })) act('reservation_delete', openObj.id) }}><Icon n="trash" /> Eliminar</button>}
               <button className="btn" onClick={() => setOpenRes(null)}>Cerrar</button>
             </div>
           </div>

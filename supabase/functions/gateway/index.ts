@@ -48,7 +48,7 @@ const RPC_ACTIONS: Record<string, string> = {
   mark_notification_read: 'mark_notification_read', mark_all_notifications_read: 'mark_all_notifications_read',
   audit_delete: 'audit_delete', activity_delete: 'activity_delete', admin_change_email: 'admin_change_email',
   request_delete: 'request_delete', reservation_delete: 'reservation_delete', ticket_delete: 'ticket_delete',
-  my_account_add: 'my_account_add',
+  my_account_add: 'my_account_add', create_reservation_series: 'create_reservation_series',
 }
 
 Deno.serve(async (req) => {
@@ -106,6 +106,11 @@ Deno.serve(async (req) => {
       if (action === 'create_reservation' || action === 'approve_reservation') {
         const resId = action === 'create_reservation' ? data : payload?.p_id
         try { (globalThis as any).EdgeRuntime?.waitUntil(syncCalendar(resId).catch(() => {})) } catch (_) { /* noop */ }
+      }
+      if (action === 'create_reservation_series' && data?.created) {
+        for (const rid of (data.created as string[]).slice(0, 12)) {
+          try { (globalThis as any).EdgeRuntime?.waitUntil(syncCalendar(rid).catch(() => {})) } catch (_) { /* noop */ }
+        }
       }
       if (calCancel) {
         try { (globalThis as any).EdgeRuntime?.waitUntil(cancelCalendarEvent(calCancel).catch(() => {})) } catch (_) { /* noop */ }

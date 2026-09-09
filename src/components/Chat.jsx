@@ -12,12 +12,19 @@ const isImgUrl = (s) => { const t = (s || '').trim(); return /^https?:\/\/\S+\.(
 const isSoportePath = (s) => /^soporte:.+/.test((s || '').trim())
 
 // Imagen del bucket privado: se resuelve con URL firmada temporal (solo usuarios con sesión)
+const signedCache = new Map() // path -> {url, exp}
 function SignedImg({ path }) {
-  const [url, setUrl] = useState('')
+  const cached = signedCache.get(path)
+  const [url, setUrl] = useState(cached && cached.exp > Date.now() ? cached.url : '')
   useEffect(() => {
+    const c = signedCache.get(path)
+    if (c && c.exp > Date.now()) { setUrl(c.url); return }
     let alive = true
     supabase.storage.from('soporte').createSignedUrl(path, 3600)
-      .then(({ data }) => { if (alive) setUrl(data?.signedUrl || '') })
+      .then(({ data }) => {
+        if (data?.signedUrl) signedCache.set(path, { url: data.signedUrl, exp: Date.now() + 50 * 60000 })
+        if (alive) setUrl(data?.signedUrl || '')
+      })
       .catch(() => {})
     return () => { alive = false }
   }, [path])
@@ -54,9 +61,33 @@ export default function Chat({ type, id, locked = false }) {
   // Al cambiar de hilo, descartar imágenes pendientes (y liberar las miniaturas)
   useEffect(() => () => { setImgs((cur) => { cur.forEach((im) => { try { URL.revokeObjectURL(im.preview) } catch { /* noop */ } }); return [] }) }, [type, id])
 
-  const addFiles = (files) => {
+  // Reduce la imagen antes de subir (máx. 1600px, WebP) para que el chat cargue rápido
+  const compress = (file) => new Promise((resolve) => {
+    if (!file.type.startsWith('image/') || file.type === 'image/gif') return resolve(file)
+    const img = new Image()
+    const u = URL.createObjectURL(file)
+    img.onload = () => {
+      try {
+        const MAX = 1600
+        const k = Math.min(1, MAX / Math.max(img.width, img.height))
+        const w = Math.round(img.width * k), h = Math.round(img.height * k)
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h
+        cv.getContext('2d').drawImage(img, 0, 0, w, h)
+        cv.toBlob((b) => {
+          URL.revokeObjectURL(u)
+          if (b && b.size < file.size) resolve(new File([b], (file.name || 'img').replace(/\.\w+$/, '') + '.webp', { type: 'image/webp' }))
+          else resolve(file)
+        }, 'image/webp', 0.82)
+      } catch { URL.revokeObjectURL(u); resolve(file) }
+    }
+    img.onerror = () => { URL.revokeObjectURL(u); resolve(file) }
+    img.src = u
+  })
+  const addFiles = async (files) => {
     const arr = Array.from(files || []).filter((f) => f.type && f.type.startsWith('image/'))
-    if (arr.length) setImgs((cur) => [...cur, ...arr.map((f) => ({ file: f, preview: URL.createObjectURL(f) }))])
+    if (!arr.length) return
+    const small = await Promise.all(arr.map(compress))
+    setImgs((cur) => [...cur, ...small.map((f) => ({ file: f, preview: URL.createObjectURL(f) }))])
   }
   // Ctrl+V con una imagen en el portapapeles: se agrega como adjunto pendiente
   const onPaste = (e) => {
