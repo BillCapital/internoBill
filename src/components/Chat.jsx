@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
-import { alertDialog } from '../lib/ui'
+import { alertDialog, viewImage } from '../lib/ui'
 import { Icon } from '../lib/icons'
 
 const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
@@ -22,7 +22,7 @@ function SignedImg({ path }) {
     return () => { alive = false }
   }, [path])
   if (!url) return <span className="muted">Cargando imagen…</span>
-  return <img className="chat-img" src={url} alt="imagen adjunta" loading="lazy" onClick={() => window.open(url, '_blank')} />
+  return <img className="chat-img" src={url} alt="imagen adjunta" loading="lazy" onClick={() => viewImage(url)} />
 }
 
 export default function Chat({ type, id, locked = false }) {
@@ -100,7 +100,7 @@ export default function Chat({ type, id, locked = false }) {
               {isSoportePath(m.body)
                 ? <SignedImg path={m.body.trim().slice('soporte:'.length)} />
                 : isImgUrl(m.body)
-                  ? <img className="chat-img" src={m.body.trim()} alt="imagen adjunta" loading="lazy" onClick={() => window.open(m.body.trim(), '_blank')} />
+                  ? <img className="chat-img" src={m.body.trim()} alt="imagen adjunta" loading="lazy" onClick={() => viewImage(m.body.trim())} />
                   : m.body}
             </div>
           )
