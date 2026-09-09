@@ -2855,7 +2855,7 @@ body.light .rq-mob.rq-tec{color:#5747ad}
 /* Listas de casillas: texto centrado verticalmente con su casilla y con separación */
 .perm-row{display:flex !important;align-items:center !important;gap:.5rem !important;line-height:1.25}
 .perm-row>input[type=checkbox]{margin:0 !important;flex:none;align-self:center}
-.perm-row>span{display:inline-flex;align-items:center;min-width:0}
+.perm-row>span{display:block;min-width:0;flex:1;line-height:1.35}
 
 /* Móvil: el input de stock realmente pequeño (gana a la regla de escritorio) */
 @media(max-width:760px){
@@ -3013,3 +3013,17 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .modal .chat{margin-top:.6rem}
 .modal .chat-in{margin-bottom:.3rem}
 .modal .reqsum{border-radius:12px}
+
+/* Modal de reserva: X para cerrar, acciones separadas (decidir a la izquierda, cancelar a la derecha) */
+.modal-x{position:absolute;top:.6rem;right:.6rem;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:9px;background:var(--soft);color:var(--muted);cursor:pointer}
+.modal-x:hover{color:var(--text);border-color:var(--muted)}
+.modal-x .licon{width:.9rem;height:.9rem}
+.res-actions{display:flex;width:100%;align-items:center}
+.res-sep{flex:1}
+/* Tarjeta de reserva de varias horas: pegada a los límites de sus filas, sin flotar */
+.cal td.spanned .slot{inset:1px;border-radius:8px;border-width:1px}
+
+/* Acciones rápidas (escritorio): icono y texto centrados en la tarjeta */
+@media(min-width:761px){
+  .act-grid.compact .act-card{justify-content:center;text-align:center}
+}

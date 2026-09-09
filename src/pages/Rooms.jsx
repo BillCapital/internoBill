@@ -326,7 +326,7 @@ export default function Rooms() {
                   <option value={0}>No se repite</option>
                   <option value={1}>Cada día hábil</option>
                   <option value={7}>Cada semana</option>
-                  <option value={14}>Cada 2 semanas</option>
+                  <option value={14}>Cada 15 días (quincenal)</option>
                   <option value={28}>Cada 4 semanas</option>
                 </select></div>
               {form.rep > 0 && <div><label>¿Cuántas veces?</label>
@@ -425,20 +425,21 @@ export default function Rooms() {
 
       {openObj && (
         <div className="backdrop open" onClick={() => { if (window.innerWidth > 760) setOpenRes(null) }}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
+            <button className="modal-x" title="Cerrar" onClick={() => setOpenRes(null)}><Icon n="close" /></button>
             <h3>Reserva de sala</h3>
             <div className="reqsum"><strong>{openObj.title}</strong> · {openObj.profiles?.full_name || openObj.profiles?.email}
               <span className={`badge ${openObj.status === 'approved' ? 's-approved' : 's-pending'}`} style={{ marginLeft: 6 }}>{openObj.status === 'approved' ? 'Aprobada' : 'Pendiente'}</span>
               <br /><span className="muted">Justificación: {openObj.justification}</span></div>
             <Chat type="reservation" id={openObj.id} />
-            <div className="modal-actions">
+            <div className="modal-actions res-actions">
               {canManageRooms && openObj.status === 'pending' && <>
                 <button className="btn btn-lime" onClick={async () => { if (await confirmDialog('¿Aceptar la reserva?', { title: 'Aceptar reserva', okText: 'Aceptar' })) act('approve_reservation', openObj.id) }}>Aceptar</button>
                 <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Rechazar la reserva?', { title: 'Rechazar reserva', danger: true, okText: 'Rechazar' })) act('reject_reservation', openObj.id) }}>Rechazar</button>
               </>}
+              <span className="res-sep" />
               {openObj.user_id === profile?.id &&
                 <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Cancelar la reserva?', { title: 'Cancelar reserva', danger: true, okText: 'Cancelar reserva' })) act('cancel_reservation', openObj.id) }}>Cancelar reserva</button>}
-              <button className="btn" onClick={() => setOpenRes(null)}>Cerrar</button>
             </div>
           </div>
         </div>
