@@ -2957,3 +2957,7 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 
 /* Convocados: tu propia opción destacada al inicio de la lista */
 .att-you{color:var(--lime-text);font-weight:700;font-size:.78em}
+
+/* Teléfono con prefijo de país fijo */
+.ph-row{display:flex;gap:.4rem;align-items:stretch}
+.ph-prefix{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;padding:0 .6rem;border:1.5px solid var(--line);border-radius:10px;background:var(--soft);color:var(--muted);font-weight:600;font-size:.9rem}

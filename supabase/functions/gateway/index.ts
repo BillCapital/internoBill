@@ -48,6 +48,7 @@ const RPC_ACTIONS: Record<string, string> = {
   mark_notification_read: 'mark_notification_read', mark_all_notifications_read: 'mark_all_notifications_read',
   audit_delete: 'audit_delete', activity_delete: 'activity_delete', admin_change_email: 'admin_change_email',
   request_delete: 'request_delete', reservation_delete: 'reservation_delete', ticket_delete: 'ticket_delete',
+  my_account_add: 'my_account_add',
 }
 
 Deno.serve(async (req) => {

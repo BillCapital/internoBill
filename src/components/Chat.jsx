@@ -40,6 +40,16 @@ export default function Chat({ type, id, locked = false }) {
     setMsgs(data ?? [])
   }, [type, id])
   useEffect(() => { load() }, [load])
+  // Mensajes en vivo: canal en tiempo real + sondeo de respaldo + refresco al volver a la pestaña
+  useEffect(() => {
+    const t = setInterval(load, 3000)
+    const onVis = () => { if (!document.hidden) load() }
+    document.addEventListener('visibilitychange', onVis)
+    const ch = supabase.channel(`msgs_${type}_${id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${id}` }, () => load())
+      .subscribe()
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis); supabase.removeChannel(ch) }
+  }, [load, type, id])
   useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight }, [msgs])
   // Al cambiar de hilo, descartar imágenes pendientes (y liberar las miniaturas)
   useEffect(() => () => { setImgs((cur) => { cur.forEach((im) => { try { URL.revokeObjectURL(im.preview) } catch { /* noop */ } }); return [] }) }, [type, id])
