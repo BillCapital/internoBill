@@ -3094,3 +3094,5 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
   .sal-right .cal td.spanned .slot{height:auto;max-height:none;white-space:normal}
   .sal-right .cal tr.lunch td{height:32px !important}
 }
+/* Tarjeta de reserva (varias filas): respeta el margen inferior (el height:100% en línea anulaba el bottom) */
+.sal-right .cal td.spanned .slot{height:auto !important;max-height:none !important;inset:.2rem .4rem !important}
