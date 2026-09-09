@@ -3103,3 +3103,9 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
   .res-wrap .att-list{left:calc(100% + 1.75rem) !important;right:auto !important;top:-2.6rem !important;width:320px;max-height:360px;box-shadow:var(--shadow-lg)}
   .res-wrap .att-list::before{content:"";position:absolute;left:-7px;top:2.9rem;width:12px;height:12px;background:var(--panel);border-left:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}
 }
+
+/* Selector de país (admin / gerente TI) en la barra superior */
+.country-sw{display:inline-flex;align-items:center;gap:.35rem;height:38px;padding:0 .55rem 0 .6rem;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);cursor:pointer}
+.country-sw .cs-ico svg{width:17px;height:17px;stroke:var(--lime);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
+.country-sw select{border:0;background:transparent;color:inherit;font:inherit;font-weight:600;font-size:.86rem;padding:0 .1rem;min-height:0;height:auto;cursor:pointer;outline:none}
+@media(max-width:600px){.country-sw{padding:0 .4rem}.country-sw select{font-size:.8rem;max-width:88px}}

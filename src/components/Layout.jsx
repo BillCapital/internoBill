@@ -35,6 +35,7 @@ const TOP_ICONS = {
   menu: <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" /></svg>,
   moon: <svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 7 7 0 1 0 20 14.5Z" /></svg>,
   sun: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>,
+  globe: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>,
   bell: <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>,
   megaphone: <svg viewBox="0 0 24 24"><path d="M5 21V4" /><path d="M5 4.5h12.5l-2.4 3.75L17.5 12H5" /></svg>,
 }
@@ -42,7 +43,7 @@ const ago = (iso) => { const s = (Date.now() - new Date(iso)) / 1000; if (s < 60
 
 export default function Layout() {
   const { user, profile, role, roleLabel, isAdmin, canManageOrders, canManageRooms, canManageSupplies, canManageInventory, canManageUsers,
-    canViewSupplies, canViewInventory, canViewUsers, canViewLists, canViewExpenses, signOut } = useAuth()
+    canViewSupplies, canViewInventory, canViewUsers, canViewLists, canViewExpenses, signOut, canSwitchCountry, activeCountry, setActiveCountry } = useAuth()
   const nav = useNavigate()
   // Barra lateral abierta por defecto en escritorio; colapsada en móvil.
   const [collapsed, setCollapsed] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 760 : false))
@@ -141,6 +142,17 @@ export default function Layout() {
           <img className="brand-logo" src="/logo.png" alt="BillCapital" width="34" height="34" /><span className="brand-name">Billcapital</span>
         </div>
         <div className="top-right">
+          {canSwitchCountry && (
+            <label className="country-sw" title="País / ambiente que estás viendo">
+              <span className="cs-ico">{TOP_ICONS.globe}</span>
+              <select value={activeCountry || '—'} onChange={(e) => setActiveCountry(e.target.value)}>
+                <option value="Chile">Chile</option>
+                <option value="Colombia">Colombia</option>
+                <option value="Perú">Perú</option>
+                <option value="—">Sin país</option>
+              </select>
+            </label>
+          )}
           <button className="iconbtn" title="Modo claro / oscuro" onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? TOP_ICONS.moon : TOP_ICONS.sun}</button>
           <div className="notif-wrap" ref={notifRef}>
             <button className="iconbtn" title="Notificaciones" onClick={() => { setAnnOpen(false); setNotifOpen((v) => !v); if (!notifOpen) loadNotifs() }}>
