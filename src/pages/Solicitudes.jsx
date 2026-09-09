@@ -348,11 +348,12 @@ export default function Solicitudes() {
         if (upErr) throw upErr
         fileUrl = path; fileName = f.file.name; fileMime = f.file.type || ''
       }
-      let img = null, price = null, currency = 'CLP'
+      let img = null, price = parseNum(f.precio), currency = 'CLP'
+      const qty = Math.max(1, Math.min(999, Number(f.qty) || 1))
       const url = (f.url || '').trim()
-      if (url) { try { const r = await fetchLinkPreview(/^https?:\/\//i.test(url) ? url : 'https://' + url); if (r && r.ok) { img = r.image || null; price = (r.price != null && r.price !== '') ? r.price : null; currency = r.currency || 'CLP' } } catch { /* sin preview */ } }
-      await api('tech_product_add', { p_request: reqId, p_name: name, p_url: url || null, p_image_url: img, p_price: price, p_currency: currency, p_quantity: 1, p_file_url: fileUrl, p_file_name: fileName, p_file_mime: fileMime })
-      setProdForm((s) => ({ ...s, [reqId]: { open: false, name: '', url: '', file: null, busy: false } }))
+      if (url) { try { const r = await fetchLinkPreview(/^https?:\/\//i.test(url) ? url : 'https://' + url); if (r && r.ok) { img = r.image || null; if (price == null && r.price != null && r.price !== '') price = r.price; currency = r.currency || 'CLP' } } catch { /* sin preview */ } }
+      await api('tech_product_add', { p_request: reqId, p_name: name, p_url: url || null, p_image_url: img, p_price: price, p_currency: currency, p_quantity: qty, p_file_url: fileUrl, p_file_name: fileName, p_file_mime: fileMime })
+      setProdForm((s) => ({ ...s, [reqId]: { open: false, name: '', url: '', file: null, precio: '', qty: 1, busy: false } }))
     } catch (e) { alertDialog(e.message || 'No se pudo agregar el producto.'); setProdForm((s) => ({ ...s, [reqId]: { ...f, busy: false } })) }
     finally { load() }
   }
@@ -763,7 +764,7 @@ export default function Solicitudes() {
                 <div className="rqa-box">
                   <div className="rqa-head"><span><Icon n="cart" /> Productos solicitados</span>
                     {canAdd && active && !pf.open && (
-                      <span className="rqa-add"><button className="btn-sm btn-lime" onClick={() => setProdForm((s) => ({ ...s, [t.id]: { open: true, name: '', url: '', file: null } }))}>＋ Agregar producto</button></span>
+                      <span className="rqa-add"><button className="btn-sm btn-lime" onClick={() => setProdForm((s) => ({ ...s, [t.id]: { open: true, name: '', url: '', file: null, precio: '', qty: 1 } }))}>＋ Agregar producto</button></span>
                     )}
                   </div>
 
@@ -802,7 +803,29 @@ export default function Solicitudes() {
                         <input value={pf.url || ''} placeholder="https://…" onChange={(e) => setProdForm((s) => ({ ...s, [t.id]: { ...pf, url: e.target.value } }))} /></div>
                       <div className="pf2-row"><label>Cotización / archivo <span className="muted">(opcional)</span></label>
                         <label className="pf2-file"><Icon n="file" /> {pf.file ? pf.file.name : 'Elegir archivo…'}
-                          <input type="file" accept=".pdf,image/*,application/pdf" hidden onChange={(e) => { const f = e.target.files?.[0]; setProdForm((s) => ({ ...s, [t.id]: { ...pf, file: f || null } })) }} /></label></div>
+                          <input type="file" accept=".pdf,image/*,application/pdf" hidden onChange={async (e) => {
+                            const f = e.target.files?.[0]
+                            setProdForm((s) => ({ ...s, [t.id]: { ...(s[t.id] || {}), file: f || null } }))
+                            e.target.value = ''
+                            // Lee el precio automáticamente de la cotización (PDF)
+                            if (f && (f.type || '').includes('pdf')) {
+                              setProdForm((s) => ({ ...s, [t.id]: { ...(s[t.id] || {}), reading: true } }))
+                              try {
+                                const path = `tmp/${Date.now()}_${(f.name || 'cot.pdf').replace(/[^\w.\-]+/g, '_')}`
+                                await supabase.storage.from('cotizaciones').upload(path, f, { contentType: f.type || undefined, upsert: false })
+                                const { data } = await supabase.functions.invoke('cotiz-parse', { body: { path, mime: f.type } })
+                                await supabase.storage.from('cotizaciones').remove([path])
+                                if (data?.ok && data.price) setProdForm((s) => ({ ...s, [t.id]: { ...(s[t.id] || {}), precio: String(data.price), reading: false, readOk: true } }))
+                                else setProdForm((s) => ({ ...s, [t.id]: { ...(s[t.id] || {}), reading: false, readOk: false } }))
+                              } catch { setProdForm((s) => ({ ...s, [t.id]: { ...(s[t.id] || {}), reading: false, readOk: false } })) }
+                            }
+                          }} /></label></div>
+                      <div className="pf2-grid2">
+                        <div className="pf2-row"><label>Precio unitario {pf.reading ? <span className="muted">· leyendo cotización…</span> : pf.readOk ? <span className="pf2-readok">· leído de la cotización</span> : <span className="muted">(CLP)</span>}</label>
+                          <input inputMode="numeric" value={pf.precio || ''} placeholder="Ej: 1.596.990" onChange={(e) => setProdForm((s) => ({ ...s, [t.id]: { ...pf, precio: e.target.value, readOk: false } }))} /></div>
+                        <div className="pf2-row"><label>Cantidad</label>
+                          <input type="number" min="1" max="999" value={pf.qty ?? 1} onChange={(e) => setProdForm((s) => ({ ...s, [t.id]: { ...pf, qty: e.target.value } }))} /></div>
+                      </div>
                       <div className="pf2-actions">
                         <button className="btn-sm" onClick={() => setProdForm((s) => ({ ...s, [t.id]: { open: false } }))} disabled={pf.busy}>Cancelar</button>
                         <button className="btn-sm btn-lime" onClick={() => addTecProduct(t.id)} disabled={pf.busy}>{pf.busy ? 'Agregando…' : 'Agregar producto'}</button>

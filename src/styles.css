@@ -3027,3 +3027,8 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 @media(min-width:761px){
   .act-grid.compact .act-card{justify-content:center;text-align:center}
 }
+
+/* Formulario de producto tecnológico: precio + cantidad en dos columnas */
+.pf2-grid2{display:grid;grid-template-columns:1fr 120px;gap:.6rem}
+.pf2-readok{color:var(--lime-text);font-weight:600;font-size:.9em}
+@media(max-width:520px){.pf2-grid2{grid-template-columns:1fr}}
