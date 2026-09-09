@@ -19,6 +19,11 @@ export default function Soporte() {
   const [rows, setRows] = useState([])
   const [status, setStatus] = useState(null)
   const [open, setOpen] = useState(null)
+  // Enlace directo desde una notificación: /soporte?chat=<id>
+  useEffect(() => {
+    const cid = new URLSearchParams(window.location.search).get('chat')
+    if (cid) setOpen(cid)
+  }, [])
   const [nt, setNt] = useState(null)   // nuevo ticket: { subject, desc, imgs:[{file,preview}], busy }
 
   const load = useCallback(async () => {

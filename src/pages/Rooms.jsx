@@ -59,6 +59,11 @@ export default function Rooms() {
   const [rooms, setRooms] = useState([])
   const [res, setRes] = useState([])
   const [openRes, setOpenRes] = useState(null)
+  // Enlace directo desde una notificación: /salas?chat=<id de reserva>
+  useEffect(() => {
+    const cid = new URLSearchParams(window.location.search).get('chat')
+    if (cid) setOpenRes(cid)
+  }, [])
   const [form, setForm] = useState(null) // {room, slotIdx}
   const [manageRooms, setManageRooms] = useState(false)
   const [roomEdit, setRoomEdit] = useState(null) // sala en edición/creación
@@ -210,6 +215,33 @@ export default function Rooms() {
           </div>
         </div>
       )}
+
+      {(() => {
+        const nowMs = Date.now()
+        const upcoming = res.filter((r) => new Date(r.ends_at).getTime() > nowMs)
+        const roomName = (id) => rooms.find((x) => x.id === id)?.name || 'Sala'
+        const mine = upcoming.filter((r) => r.user_id === profile?.id)
+        const pend = canManageRooms ? upcoming.filter((r) => r.status === 'pending') : []
+        const shownMap = new Map()
+        ;[...pend, ...mine].forEach((r) => shownMap.set(r.id, r))
+        const shown = [...shownMap.values()].sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
+        if (!shown.length) return null
+        return (
+          <div className="resq">
+            <div className="th-eyebrow" style={{ margin: '0 0 .4rem .1rem' }}>{canManageRooms ? 'Pendientes y tus reservas' : 'Tus reservas'}</div>
+            <div className="resq-list">
+              {shown.map((r) => (
+                <button key={r.id} className={`resq-item ${r.status}`} onClick={() => setOpenRes(r.id)}>
+                  <span className="resq-when">{sclDateOf(r.starts_at).slice(5).split('-').reverse().join('/')} · {hhmm(new Date(r.starts_at))}–{hhmm(new Date(r.ends_at))}</span>
+                  <span className="resq-t"><strong>{r.title}</strong> <span className="muted">· {roomName(r.room_id)}{canManageRooms && r.user_id !== profile?.id ? ` · ${r.profiles?.full_name || r.profiles?.email || ''}` : ''}</span></span>
+                  <span className={`badge ${r.status === 'approved' ? 's-approved' : 's-pending'}`}>{r.status === 'approved' ? 'Aprobada' : 'Pendiente'}</span>
+                  <span className="chev">›</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       <div className="sal-cols">
         <div className="sal-left">

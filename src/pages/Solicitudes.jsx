@@ -28,6 +28,11 @@ export default function Solicitudes() {
   const [status, setStatus] = useState(null)
   const [deptFilter, setDeptFilter] = useState('')   // filtrar por área que pide
   const [open, setOpen] = useState(null)
+  // Enlace directo desde una notificación: /solicitudes?chat=<id>
+  useEffect(() => {
+    const cid = new URLSearchParams(window.location.search).get('chat')
+    if (cid) setOpen(cid)
+  }, [])
   const [creating, setCreating] = useState(false)
   const [cart, setCart] = useState({})
   const [note, setNote] = useState('')
