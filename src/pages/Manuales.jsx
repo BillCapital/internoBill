@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import { askCountryForCreate } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { confirmDialog, alertDialog } from '../lib/ui'
 import { Icon } from '../lib/icons'
@@ -85,6 +86,7 @@ export default function Manuales() {
       const path = `${Date.now()}_${safeName(form.file.name)}`
       const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, form.file, { contentType: form.file.type || undefined, upsert: false })
       if (upErr) throw upErr
+      const cc = await askCountryForCreate('el manual'); if (cc === null) return
       const { error: insErr } = await supabase.from('manuals').insert({
         title: form.title.trim(), description: form.description.trim(),
         category: form.category.trim() || 'General', file_path: path,

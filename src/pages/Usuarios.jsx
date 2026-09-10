@@ -41,7 +41,9 @@ const genPwd = () => {
 }
 const MS_DOMAINS = ['billcapital.com', 'mic.billcapital.com']
 export default function Usuarios() {
-  const { user, refreshProfile, isSuper, isAdmin, canManageUsers, canViewLogs, canEdit } = useAuth()
+  const { user, refreshProfile, isSuper, isAdmin, canManageUsers, canViewLogs, canEdit, activeCountry } = useAuth()
+  // La sincronización con Microsoft 365 solo se hace desde la vista General (trae usuarios de TODOS los países)
+  const inGeneral = activeCountry === '*'
   const canResetPwd = canEdit('passwords')   // solo Administrador y Gerente TI
   const ro = !canManageUsers   // solo lectura: consulta el directorio pero no lo edita
   const nav = useNavigate()
@@ -519,8 +521,8 @@ export default function Usuarios() {
             { label: 'Computadores', value: (u) => compCount[u.id] || 0 },
             { label: 'Estado', value: (u) => u.active === false ? 'Deshabilitado' : 'Activo' },
           ], data)} title="Descarga la lista visible (respeta filtros) a Excel/CSV"><Icon n="download" /> Exportar</button>
-          {!ro && <button className="btn" disabled={syncBusy} onClick={syncM365} title="Trae de Microsoft 365 los usuarios que aún no están en la app">{syncBusy ? 'Sincronizando…' : <><Icon n="refresh" /> Sincronizar M365</>}</button>}
-          {!ro && <button className="btn btn-lime" onClick={() => setNewUser({ step: 1, firstName: '', lastName: '', displayName: '', nameEdited: false, upnLocal: '', domain: 'billcapital.com', upnEdited: false, autoPwd: true, password: genPwd(), showPwd: false, forceChange: false, jobTitle: '', department: '', phone: '', country: 'Chile', licSku: '', role: 'user', appAccess: true, busy: false, done: null })}>＋ Crear usuario (M365)</button>}
+          {!ro && inGeneral && <button className="btn" disabled={syncBusy} onClick={syncM365} title="Trae de Microsoft 365 los usuarios que aún no están en la app (solo desde la vista General)">{syncBusy ? 'Sincronizando…' : <><Icon n="refresh" /> Sincronizar M365</>}</button>}
+          {!ro && <button className="btn btn-lime" onClick={() => setNewUser({ step: 1, firstName: '', lastName: '', displayName: '', nameEdited: false, upnLocal: '', domain: 'billcapital.com', upnEdited: false, autoPwd: true, password: genPwd(), showPwd: false, forceChange: false, jobTitle: '', department: '', phone: '', country: (activeCountry && activeCountry !== '*' && activeCountry !== '—') ? activeCountry : 'Chile', licSku: '', role: 'user', appAccess: true, busy: false, done: null })}>＋ Crear usuario (M365)</button>}
         </div>
       </div></div>
 
@@ -992,7 +994,8 @@ export default function Usuarios() {
                   <div className="pf-fields"><div><label>Ubicación</label>
                     <select value={n.country} onChange={(e) => setNewUser({ ...n, country: e.target.value })}>
                       {COUNTRIES.map(([c, f]) => <option key={c} value={c}>{f} {c}</option>)}
-                    </select></div></div>
+                    </select>
+                    {inGeneral && <span className="pf-help">Estás en la vista General: este será el país (y ambiente) del usuario.</span>}</div></div>
                   {wizSkus === null && <p className="muted">Cargando licencias del tenant…</p>}
                   {wizSkus !== null && (
                     <div className="wiz-lics">

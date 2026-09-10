@@ -3135,3 +3135,35 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .country-sw.target{border-style:dashed}
 .country-sw .cs-lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
 @media(max-width:600px){.country-sw .cs-lbl{display:none}}
+
+/* Diálogo de elección (país de destino, etc.) */
+.dlg-choice{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.6rem 0 .2rem}
+.dlg-opt{display:flex;flex-direction:column;align-items:flex-start;gap:.1rem;padding:.6rem .75rem;border:1.5px solid var(--line);border-radius:11px;background:var(--panel);color:var(--text);cursor:pointer;text-align:left;font:inherit}
+.dlg-opt:hover{border-color:color-mix(in srgb,var(--lime) 60%,var(--line))}
+.dlg-opt.on{border-color:var(--lime);background:color-mix(in srgb,var(--lime) 14%,var(--panel))}
+.dlg-opt-l{font-weight:700;font-size:.92rem}
+.dlg-opt-h{font-size:.72rem;color:var(--muted)}
+@media(max-width:520px){.dlg-choice{grid-template-columns:1fr}}
+/* Usuarios (escritorio): tarjetas resumen con ancho suficiente y tabla que cabe sin cortar acciones */
+@media(min-width:761px){
+  .kpi-cats .kpi-grid.compact .kpi{width:118px;padding:.4rem .55rem}
+  .kpi-cats .kpi-grid.compact .kpi .lbl{font-size:.64rem;overflow-wrap:anywhere;height:auto;max-height:2.4em}
+  .kpi-cats .kpi-grid.compact .kpi .num{font-size:1rem}
+  .miss-block .kpi-grid.kpi-sm{display:flex;flex-wrap:wrap;gap:.45rem}
+  .miss-block .kpi-grid.kpi-sm .kpi{width:118px;flex:none;box-sizing:border-box}
+  .usr-cards th,.usr-cards td{padding:.5rem .45rem}
+  .usr-cards td.actions{white-space:nowrap}
+  .usr-cards td.actions .btn-sm{padding:.3rem .55rem;font-size:.76rem;margin-left:.25rem}
+  .usr-cards td.actions .btn-sm:first-child{margin-left:0}
+  .usr-cards .usr-mail{font-size:.78rem}
+  .table-wrap{overflow-x:auto;max-width:100%}
+}
+
+/* Zonas horarias en reservas */
+.mr-tz{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .7rem;margin:.4rem 0 .1rem;padding:.4rem .55rem;border-radius:9px;background:color-mix(in srgb,var(--lime) 10%,var(--soft));border:1px solid color-mix(in srgb,var(--lime) 35%,var(--line));font-size:.76rem}
+.mr-tz-h{display:inline-flex;align-items:center;gap:.3rem;font-weight:600}
+.mr-tz-h .licon{width:.85rem;height:.85rem;color:var(--lime-text)}
+.mr-tz-it b{font-weight:600;color:var(--lime-text)}
+.tz-note{display:inline-flex;align-items:center;gap:.35rem;font-size:.74rem;color:var(--muted);margin:0 0 .35rem;padding:.3rem .5rem;border:1px dashed var(--line);border-radius:8px}
+.tz-note .licon{width:.8rem;height:.8rem}
+.att-tz{display:inline-block;margin-left:.4rem;font-size:.66rem;font-weight:600;color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);border-radius:999px;padding:.02rem .4rem;vertical-align:.1em}

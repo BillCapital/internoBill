@@ -247,6 +247,7 @@ export default function Perfil() {
           </div>
           </div></div>
           <div className="pf-field"><label>Rol</label><div className="val">{roleLabel}</div></div>
+          <div className="pf-field"><label>País</label><div className="val">{profile?.country || '—'} <span className="lock"><Icon n="lock" /> lo asigna un administrador</span></div></div>
         </div>
         <div className="row" style={{ marginTop: '.9rem', justifyContent: 'flex-end' }}>
           <button className={`btn ${saved ? 'btn-ok' : 'btn-lime'}`} onClick={saveProfile}

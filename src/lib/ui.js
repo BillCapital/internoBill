@@ -9,6 +9,10 @@ export function confirmDialog(message, opts = {}) {
 export function promptDialog(message, opts = {}) {
   return handler ? handler({ type: 'prompt', message, ...opts }) : Promise.resolve(window.prompt(message, opts.defaultValue || ''))
 }
+// Elegir una opción: opts.options = [{ value, label, hint? }] → resuelve value o null si cancela
+export function chooseDialog(message, opts = {}) {
+  return handler ? handler({ type: 'choice', message, ...opts }) : Promise.resolve((opts.options || [])[0]?.value ?? null)
+}
 export function alertDialog(message, opts = {}) {
   return handler ? handler({ type: 'alert', message, ...opts }) : Promise.resolve(window.alert(message))
 }

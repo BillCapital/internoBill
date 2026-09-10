@@ -6,6 +6,7 @@ import Chat from '../components/Chat'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, alertDialog, promptDialog } from '../lib/ui'
 import { Icon } from '../lib/icons'
+import { tzOf, tzDiffHours, diffLabel, rangeTz } from '../lib/tz'
 
 const MORNING = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30']
 const AFTERNOON = ['15:30', '16:00', '16:30', '17:00', '17:30']
@@ -16,26 +17,29 @@ const pad = (n) => String(n).padStart(2, '0')
 const iso = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const isWknd = (ds) => { const d = new Date(ds + 'T12:00:00').getDay(); return d === 0 || d === 6 }
 // Instante real cuyo reloj de SANTIAGO marca ds+t, sin importar la zona horaria del navegador
-const sclOffsetMs = (utcGuess) => {
-  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(utcGuess)
+const SCL = 'America/Santiago'
+const sclOffsetMs = (utcGuess, tz = SCL) => {
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(utcGuess)
   const o = {}; p.forEach((x) => { o[x.type] = x.value })
   return Date.UTC(+o.year, +o.month - 1, +o.day, +o.hour % 24, +o.minute, +o.second) - utcGuess.getTime()
 }
-const slotStart = (ds, t) => {
+// Instante real cuyo reloj de la zona `tz` (país de la sala) marca ds+t. Respeta horario de verano:
+// el desfase se calcula para esa fecha concreta (doble pase por si el cambio de hora cae ese día).
+const slotStart = (ds, t, tz = SCL) => {
   const guess = new Date(`${ds}T${t}:00Z`)
-  const first = new Date(guess.getTime() - sclOffsetMs(guess))
-  return new Date(guess.getTime() - sclOffsetMs(first)) // 2º pase por cambios de hora (DST)
+  const first = new Date(guess.getTime() - sclOffsetMs(guess, tz))
+  return new Date(guess.getTime() - sclOffsetMs(first, tz))
 }
 // Fecha (YYYY-MM-DD) de un timestamp, vista desde Santiago
-const sclDateOf = (isoStr) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(isoStr))
+const sclDateOf = (isoStr, tz = SCL) => new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(isoStr))
 const addMin = (dt, m) => new Date(dt.getTime() + m * 60000)
-const hhmm = (dt) => new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: false }).format(dt)
+const hhmm = (dt, tz = SCL) => new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(dt)
 const monthName = (y, m) => new Date(y, m, 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
 const dayLong = (ds) => new Date(ds + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })
 const emptyRoom = { name: '', location: '', capacity: 4, description: '', is_active: true }
 // Fecha y hora ACTUAL en Santiago de Chile (independiente de la zona del navegador)
-const nowSCL = () => {
-  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date())
+const nowSCL = (tz = SCL) => {
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date())
   const o = {}; p.forEach((x) => { o[x.type] = x.value })
   const hh = o.hour === '24' ? 0 : Number(o.hour)
   return { date: `${o.year}-${o.month}-${o.day}`, min: hh * 60 + Number(o.minute) }
@@ -77,24 +81,26 @@ export default function Rooms() {
 
   const load = useCallback(async () => {
     const [{ data: rms }, { data: rs }, { data: us }] = await Promise.all([
-      supabase.from('rooms').select('id,name,location,capacity,description,is_active').eq('is_active', true).order('name'),
+      supabase.from('rooms').select('id,name,location,capacity,description,is_active,country').eq('is_active', true).order('name'),
       supabase.from('reservations').select('id,room_id,title,starts_at,ends_at,status,justification,attendees,user_id,profiles!reservations_user_id_fkey(full_name,email)').neq('status', 'cancelled').neq('status', 'rejected'),
-      supabase.from('profiles').select('id,full_name,email,app_access,active').order('full_name'),
+      supabase.from('profiles').select('id,full_name,email,app_access,active,country').order('full_name'),
     ])
     setRooms(rms ?? []); setRes(rs ?? []); setUsers((us ?? []).filter((u) => u.app_access !== false && u.active !== false))
   }, [])
   useEffect(() => { load() }, [load])
 
   // Al reprogramar, la reserva que se mueve no bloquea su propio bloque (permite correrla 30 min, etc.)
-  const dayRes = useMemo(() => res.filter((r) => calDay && sclDateOf(r.starts_at) === calDay && r.id !== form?.reschedId), [res, calDay, form?.reschedId])
+  // Zona horaria de cada sala (según su país): todo el horario de esa sala se calcula en su hora local
+  const tzFor = useCallback((roomId) => tzOf(rooms.find((r) => r.id === roomId)?.country || 'Chile'), [rooms])
+  const dayRes = useMemo(() => res.filter((r) => calDay && sclDateOf(r.starts_at, tzFor(r.room_id)) === calDay && r.id !== form?.reschedId), [res, calDay, form?.reschedId, tzFor])
   const slots = useMemo(() => daySlots(calDay), [calDay])
   // Ancla la reserva al bloque que CONTIENE su inicio (tolera datos históricos desalineados)
   const resAt = (roomId, t) => {
-    const s = slotStart(calDay, t).getTime()
+    const s = slotStart(calDay, t, tzFor(roomId)).getTime()
     return dayRes.find((r) => { if (r.room_id !== roomId) return false; const rs = new Date(r.starts_at).getTime(); return rs >= s && rs < s + 1800000 })
   }
   const covered = (roomId, t) => {
-    const s = slotStart(calDay, t).getTime()
+    const s = slotStart(calDay, t, tzFor(roomId)).getTime()
     return dayRes.some((r) => r.room_id === roomId && new Date(r.starts_at).getTime() <= s && s < new Date(r.ends_at).getTime())
   }
   const durSlots = (r) => Math.max(1, Math.round((new Date(r.ends_at) - new Date(r.starts_at)) / 1800000))
@@ -107,7 +113,7 @@ export default function Rooms() {
   }
 
   // Ventana horaria (ISO) de la reserva en edición
-  const resWindow = (f) => { const start = slotStart(calDay, slots[f.slotIdx]); const end = addMin(start, f.dur * 30); return { starts_at: start.toISOString(), ends_at: end.toISOString() } }
+  const resWindow = (f) => { const start = slotStart(calDay, slots[f.slotIdx], tzFor(f.room)); const end = addMin(start, f.dur * 30); return { starts_at: start.toISOString(), ends_at: end.toISOString() } }
   const durLabel = (f) => { const mm = f.dur * 30; return mm < 60 ? mm + ' min' : (mm / 60) + ' h' }
   // Consulta a 365 (Graph) qué correos ya tienen algo agendado en ese horario
   const checkBusy = async (emails, f) => {
@@ -140,12 +146,12 @@ export default function Rooms() {
     if (resBusy) return
     const t = slots[form.slotIdx]
     if (covered(form.room, t)) return alertDialog('Ese bloque ya está ocupado. Toca otro bloque disponible en el horario para cambiar la hora.')
-    const ns = nowSCL()
+    const ns = nowSCL(tzFor(form.room))
     if (calDay < ns.date || (calDay === ns.date && toMin(t) <= ns.min)) return alertDialog('Esa hora ya pasó (hora de Santiago). Elige un horario futuro.')
     if ((form.just || '').trim().length < 4) return alertDialog('La justificación es obligatoria. Cuéntanos brevemente para qué es la reunión.')
     setResBusy(true)
     try {
-    const start = slotStart(calDay, t)
+    const start = slotStart(calDay, t, tzFor(form.room))
     const end = addMin(start, form.dur * 30)
     const attendees = (form.att || []).map((a) => ({ email: a.email, name: a.name || '' }))
     // Aviso final: ¿algún convocado —o quien reserva— ya tiene reunión en ese horario?
@@ -215,8 +221,20 @@ export default function Rooms() {
   const shift = (n) => { let m = calM + n, y = calY; if (m < 0) { m = 11; y-- } if (m > 11) { m = 0; y++ } setCalM(m); setCalY(y) }
 
   const shownRooms = roomSel ? rooms.filter((r) => r.id === roomSel) : rooms
+  // Zonas horarias: el horario de la sala va en la hora de su país; se muestra la equivalencia para otros países
+  const myTz = tzOf(profile?.country)
+  const roomTz = (room) => tzOf(room?.country || 'Chile')
+  const roomCountry = (room) => room?.country || 'Chile'
+  // Filas "País: HH:MM–HH:MM" para todos los países involucrados distintos al de la sala
+  const tzRows = (room, start, end, attendeeEmails = []) => {
+    const base = roomTz(room)
+    const countries = new Set()
+    if (profile?.country && tzOf(profile.country) !== base) countries.add(profile.country)
+    attendeeEmails.forEach((em) => { const u = users.find((x) => x.email && x.email.toLowerCase() === String(em).toLowerCase()); if (u?.country && tzOf(u.country) !== base) countries.add(u.country) })
+    return [...countries].map((c) => ({ country: c, txt: rangeTz(start, end, tzOf(c), base), diff: diffLabel(tzDiffHours(base, tzOf(c), start)) }))
+  }
   const openObj = res.find((r) => r.id === openRes)
-  const scl = nowSCL()
+  const scl = nowSCL(tzOf(profile?.country))
 
   return (
     <div>
@@ -269,7 +287,7 @@ export default function Rooms() {
             <div className="resq-list">
               {shown.map((r) => (
                 <button key={r.id} className={`resq-item ${r.status}`} onClick={() => setOpenRes(r.id)}>
-                  <span className="resq-when">{sclDateOf(r.starts_at).slice(5).split('-').reverse().join('/')} · {hhmm(new Date(r.starts_at))}–{hhmm(new Date(r.ends_at))}</span>
+                  <span className="resq-when">{sclDateOf(r.starts_at, tzFor(r.room_id)).slice(5).split('-').reverse().join('/')} · {hhmm(new Date(r.starts_at), tzFor(r.room_id))}–{hhmm(new Date(r.ends_at), tzFor(r.room_id))}</span>
                   <span className="resq-t"><strong>{r.title}</strong> <span className="muted">· {roomName(r.room_id)}{canApproveRooms && r.user_id !== profile?.id ? ` · ${r.profiles?.full_name || r.profiles?.email || ''}` : ''}</span></span>
                   <span className={`badge ${r.status === 'approved' ? 's-approved' : 's-pending'}`}>{r.status === 'approved' ? 'Aprobada' : 'Pendiente'}</span>
                   <span className="chev">›</span>
@@ -304,6 +322,12 @@ export default function Rooms() {
                   {rooms.map((r) => <button key={r.id} className={`seg-btn${roomSel === r.id ? ' on' : ''}`} onClick={() => setRoomSel(r.id)}>{r.name}</button>)}
                 </div>
               )}
+              {(() => {
+                const rm = shownRooms[0]
+                if (!rm || tzOf(profile?.country) === roomTz(rm)) return null
+                const d = tzDiffHours(roomTz(rm), myTz, slotStart(calDay, slots[0], roomTz(rm)))
+                return <div className="tz-note"><Icon n="clock" /> Las horas están en hora de {roomCountry(rm)}. Tu hora ({profile?.country}): {diffLabel(d)}.</div>
+              })()}
               <div className="room-legend">
                 <span className="rl-item free"><span className="dot" />Disponible</span>
                 <span className="rl-item resv"><span className="dot" />Reservado</span>
@@ -313,8 +337,10 @@ export default function Rooms() {
               <div style={{ overflowX: 'auto' }}><table className="cal"><thead><tr><th>Bloque</th>{shownRooms.map((r) => <th key={r.id}>{r.name}</th>)}</tr></thead>
                 <tbody>
                   {slots.map((t, idx) => {
-                    const end = hhmm(addMin(slotStart(calDay, t), 30))
-                    const slotPast = calDay === scl.date && toMin(t) <= scl.min
+                    const tz0 = shownRooms[0] ? roomTz(shownRooms[0]) : SCL
+                    const end = hhmm(addMin(slotStart(calDay, t, tz0), 30), tz0)
+                    const nowR = nowSCL(tz0)
+                    const slotPast = calDay < nowR.date || (calDay === nowR.date && toMin(t) <= nowR.min)
                     return (
                       <ReservRow key={t} rooms={shownRooms} label={`${t}–${end}`} lunch={idx === LUNCH_AFTER} past={slotPast}
                         cells={shownRooms.map((r) => {
@@ -345,7 +371,8 @@ export default function Rooms() {
         const md = maxDur(form.room, form.slotIdx)
         const slotTaken = covered(form.room, t)
         const roomNm = rooms.find((x) => x.id === form.room)?.name || 'Sala'
-        const endT = hhmm(addMin(slotStart(calDay, t), form.dur * 30))
+        const ftz = tzFor(form.room)
+        const endT = hhmm(addMin(slotStart(calDay, t, ftz), form.dur * 30), ftz)
         return (
         <div className="res-wrap">
           <div className="modal modal-reserve">
@@ -355,6 +382,18 @@ export default function Rooms() {
               <div><h3>{form.reschedId ? 'Reprogramar reunión' : 'Reservar sala'}</h3>
                 <p className="mr-meta"><Icon n="clock" /> <span style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</span> · {roomNm} · {t}–{endT}</p></div>
             </div>
+            {(() => {
+              const rm = rooms.find((x) => x.id === form.room)
+              const st = slotStart(calDay, t, ftz), en = addMin(st, form.dur * 30)
+              const rows = tzRows(rm, st, en, (form.att || []).map((a) => a.email))
+              if (!rows.length) return null
+              return (
+                <div className="mr-tz">
+                  <span className="mr-tz-h"><Icon n="clock" /> Hora de la sala ({roomCountry(rm)}): {t}–{endT}</span>
+                  {rows.map((r) => <span key={r.country} className="mr-tz-it"><b>{r.country}</b> {r.txt} <span className="muted">({r.diff})</span></span>)}
+                </div>
+              )
+            })()}
             {slotTaken
               ? <div className="mr-hint warn">Ese bloque ya está ocupado este día. Toca otro bloque disponible en el horario para cambiar la hora.</div>
               : form.reschedId
@@ -413,7 +452,7 @@ export default function Rooms() {
                             }).catch(() => {})
                           }}>
                           <span className="att-av">{(u.full_name || u.email).charAt(0).toUpperCase()}</span>
-                          <span className="att-nm">{u.full_name || 'Sin nombre'}{u.id === profile?.id ? <span className="att-you"> (tú)</span> : null}<br /><span className="muted">{u.id === profile?.id ? 'Recibirás la invitación en tu Outlook' : u.email}</span></span>
+                          <span className="att-nm">{u.full_name || 'Sin nombre'}{u.id === profile?.id ? <span className="att-you"> (tú)</span> : null}{u.country && tzOf(u.country) !== roomTz(rooms.find((x) => x.id === form.room)) ? <span className="att-tz" title={`Zona horaria distinta: ${u.country}`}>{u.country} · {diffLabel(tzDiffHours(roomTz(rooms.find((x) => x.id === form.room)), tzOf(u.country), slotStart(calDay, slots[form.slotIdx], tzFor(form.room))))}</span> : null}<br /><span className="muted">{u.id === profile?.id ? 'Recibirás la invitación en tu Outlook' : u.email}</span></span>
                           <span className="att-plus"><Icon n="plus" /></span>
                         </button>
                       )
@@ -477,7 +516,18 @@ export default function Rooms() {
             <h3>Reserva de sala</h3>
             <div className="reqsum"><strong>{openObj.title}</strong> · {openObj.profiles?.full_name || openObj.profiles?.email}
               <span className={`badge ${openObj.status === 'approved' ? 's-approved' : 's-pending'}`} style={{ marginLeft: 6 }}>{openObj.status === 'approved' ? 'Aprobada' : 'Pendiente'}</span>
-              <br /><span className="muted">Justificación: {openObj.justification}</span></div>
+              <br /><span className="muted">Justificación: {openObj.justification}</span>
+              {(() => {
+                const rm = rooms.find((x) => x.id === openObj.room_id)
+                const st = new Date(openObj.starts_at), en = new Date(openObj.ends_at)
+                const rows = tzRows(rm, st, en, (openObj.attendees || []).map((a) => a.email))
+                return (
+                  <div className="mr-tz" style={{ marginTop: '.4rem' }}>
+                    <span className="mr-tz-h"><Icon n="clock" /> {roomCountry(rm)}: {rangeTz(st, en, roomTz(rm))}</span>
+                    {rows.map((r) => <span key={r.country} className="mr-tz-it"><b>{r.country}</b> {r.txt} <span className="muted">({r.diff})</span></span>)}
+                  </div>
+                )
+              })()}</div>
             <Chat type="reservation" id={openObj.id} />
             <div className="modal-actions res-actions">
               {canApproveRooms && openObj.status === 'pending' && <>
@@ -494,8 +544,9 @@ export default function Rooms() {
               {(openObj.user_id === profile?.id || canApproveRooms) && new Date(openObj.ends_at).getTime() > Date.now() &&
                 <button className="btn" onClick={() => {
                   // Reprogramar: se abre el formulario con los mismos datos; al confirmar se cancela la actual (y su cita 365) y se crea la nueva
-                  const d = sclDateOf(openObj.starts_at); const sl = daySlots(d)
-                  const st = new Date(openObj.starts_at); const idx = Math.max(0, sl.findIndex((t) => { const s0 = slotStart(d, t).getTime(); return st.getTime() >= s0 && st.getTime() < s0 + 1800000 }))
+                  const rtz = tzFor(openObj.room_id)
+                  const d = sclDateOf(openObj.starts_at, rtz); const sl = daySlots(d)
+                  const st = new Date(openObj.starts_at); const idx = Math.max(0, sl.findIndex((t) => { const s0 = slotStart(d, t, rtz).getTime(); return st.getTime() >= s0 && st.getTime() < s0 + 1800000 }))
                   setCalDay(d); setOpenRes(null); setExtAtt('')
                   setForm({ reschedId: openObj.id, room: openObj.room_id, slotIdx: idx, dur: durSlots(openObj), maxDur: 6, title: openObj.title || 'Reunión', just: openObj.justification || '', att: (openObj.attendees || []).map((a) => ({ email: a.email, name: a.name || a.email })), rep: 0, repN: 4 })
                 }}>Reprogramar</button>}

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { alertDialog } from '../lib/ui'
+import { _setGeneralView } from '../lib/api'
 
 const AuthContext = createContext(null)
 
@@ -70,6 +71,8 @@ export function AuthProvider({ children }) {
   // Gestionar incluye ver. full_admin incluye todo.
   const canEdit = (mod) => full || perms[`manage_${mod}`] === true
   const canView = (mod) => canEdit(mod) || perms[`view_${mod}`] === true
+  const _canSwitch = full || role === 'gerente_ti' || profile?.is_it_manager === true
+  _setGeneralView(_canSwitch && !profile?.active_country)
   const value = {
     session,
     user: session?.user ?? null,
