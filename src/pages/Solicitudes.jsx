@@ -132,7 +132,7 @@ export default function Solicitudes() {
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('requests')
-      .select('id, folio, status, kind, note, custom, department, needs_manager, l1_by, mgr_by, budget_min, budget_max, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock)), request_products(id,product_url,name,image_url,price,currency,quantity,status,reject_reason,file_url,file_name,file_mime), request_attachments(id,kind,url,name,mime,size,uploaded_by,created_at)')
+      .select('id, folio, status, kind, note, custom, department, needs_manager, l1_by, mgr_by, budget_min, budget_max, created_at, user_id, profiles!requests_user_id_fkey(full_name,email), request_items(quantity, inventory_items(name,stock)), request_products(id,product_url,name,image_url,price,currency,quantity,status,reject_reason,file_url,file_name,file_mime,product_code,snapshot_path,snapshot_at,quote_info), request_attachments(id,kind,url,name,mime,size,uploaded_by,created_at)')
       .order('created_at', { ascending: false })
     setRows(data ?? [])
     setLoading(false)
@@ -353,8 +353,10 @@ export default function Solicitudes() {
       const qty = Math.max(1, Math.min(999, Number(f.qty) || 1))
       const url = (f.url || '').trim()
       if (url) { try { const r = await fetchLinkPreview(/^https?:\/\//i.test(url) ? url : 'https://' + url); if (r && r.ok) { img = r.image || null; if (price == null && r.price != null && r.price !== '') price = r.price; currency = r.currency || 'CLP' } } catch { /* sin preview */ } }
-      await api('tech_product_add', { p_request: reqId, p_name: name, p_url: url || null, p_image_url: img, p_price: price, p_currency: currency, p_quantity: qty, p_file_url: fileUrl, p_file_name: fileName, p_file_mime: fileMime })
-      setProdForm((s) => ({ ...s, [reqId]: { open: false, name: '', url: '', file: null, precio: '', qty: 1, busy: false } }))
+      const newId = await api('tech_product_add', { p_request: reqId, p_name: name, p_url: url || null, p_image_url: img, p_price: price, p_currency: currency, p_quantity: qty, p_file_url: fileUrl, p_file_name: fileName, p_file_mime: fileMime, p_code: (f.code || '').trim() || null, p_info: f.info || null })
+      // Captura de la página del link (respaldo por si cambia): en segundo plano, y se refresca al terminar
+      if (url && newId) supabase.functions.invoke('link-snap', { body: { product_id: newId } }).then(() => load()).catch(() => {})
+      setProdForm((s) => ({ ...s, [reqId]: { open: false, name: '', url: '', file: null, precio: '', qty: 1, code: '', busy: false } }))
     } catch (e) { alertDialog(e.message || 'No se pudo agregar el producto.'); setProdForm((s) => ({ ...s, [reqId]: { ...f, busy: false } })) }
     finally { load() }
   }
@@ -387,6 +389,13 @@ export default function Solicitudes() {
       const { error: upErr } = await supabase.storage.from('cotizaciones').upload(path, file, { contentType: file.type || undefined, upsert: false })
       if (upErr) throw upErr
       await api('tech_product_set_file', { p_product: p.id, p_file_url: path, p_file_name: file.name, p_file_mime: file.type || '' })
+      // Lee la cotización recién subida: código, precio (si faltaba) y datos para quien aprueba
+      if ((file.type || '').includes('pdf')) {
+        try {
+          const { data } = await supabase.functions.invoke('cotiz-parse', { body: { path, mime: file.type } })
+          if (data && (data.info || data.code || data.price)) await api('tech_product_set_info', { p_product: p.id, p_info: data.info || null, p_code: data.code || null, p_price: data.price || null })
+        } catch { /* sin lectura */ }
+      }
     } catch (e) { alertDialog(e.message || 'No se pudo subir la cotización.') }
     finally { setUpBusy((s) => { const n = { ...s }; delete n[p.id]; return n }); load() }
   }
@@ -816,8 +825,9 @@ export default function Solicitudes() {
                                 await supabase.storage.from('cotizaciones').upload(path, f, { contentType: f.type || undefined, upsert: false })
                                 const { data } = await supabase.functions.invoke('cotiz-parse', { body: { path, mime: f.type } })
                                 await supabase.storage.from('cotizaciones').remove([path])
-                                if (data?.ok && data.price) setProdForm((s) => ({ ...s, [t.id]: { ...(s[t.id] || {}), precio: String(data.price), reading: false, readOk: true } }))
-                                else setProdForm((s) => ({ ...s, [t.id]: { ...(s[t.id] || {}), reading: false, readOk: false } }))
+                                const codeRead = { ...(data?.code ? { code: data.code, codeOk: true } : {}), info: data?.info || null }
+                                if (data?.ok && data.price) setProdForm((s) => ({ ...s, [t.id]: { ...(s[t.id] || {}), precio: String(data.price), reading: false, readOk: true, ...codeRead } }))
+                                else setProdForm((s) => ({ ...s, [t.id]: { ...(s[t.id] || {}), reading: false, readOk: false, ...codeRead } }))
                               } catch { setProdForm((s) => ({ ...s, [t.id]: { ...(s[t.id] || {}), reading: false, readOk: false } })) }
                             }
                           }} /></label></div>
@@ -827,6 +837,8 @@ export default function Solicitudes() {
                         <div className="pf2-row"><label>Cantidad</label>
                           <input type="number" min="1" max="999" value={pf.qty ?? 1} onChange={(e) => setProdForm((s) => ({ ...s, [t.id]: { ...pf, qty: e.target.value } }))} /></div>
                       </div>
+                      <div className="pf2-row"><label>Código del producto {pf.codeOk ? <span className="pf2-readok">· leído de la cotización</span> : <span className="muted">(SKU / código del proveedor, se toma de la cotización)</span>}</label>
+                        <input value={pf.code || ''} placeholder="Ej: 82XM00M4CL" onChange={(e) => setProdForm((s) => ({ ...s, [t.id]: { ...pf, code: e.target.value, codeOk: false } }))} /></div>
                       <div className="pf2-actions">
                         <button className="btn-sm" onClick={() => setProdForm((s) => ({ ...s, [t.id]: { open: false } }))} disabled={pf.busy}>Cancelar</button>
                         <button className="btn-sm btn-lime" onClick={() => addTecProduct(t.id)} disabled={pf.busy}>{pf.busy ? 'Agregando…' : 'Agregar producto'}</button>
@@ -845,10 +857,14 @@ export default function Solicitudes() {
                             <div className="rp2-head">
                               {p.image_url ? <img className="rp2-thumb" src={p.image_url} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} onClick={() => viewImage(p.image_url)} /> : <span className="rp2-thumb ph"><Icon n="box" /></span>}
                               <div className="rp2-info">
-                                <strong className="rp2-name">{p.quantity > 1 ? `${p.quantity} × ` : ''}{p.name}</strong>
+                                <strong className="rp2-name">{p.quantity > 1 ? `${p.quantity} × ` : ''}{p.name}{p.product_code ? <span className="rp2-code" title="Código del producto (de la cotización)">cód. {p.product_code}</span> : null}</strong>
                                 <div className="rp2-meta">
                                   {p.price != null ? <span className="rp2-price">{fmtMoney(p.price * Math.max(1, p.quantity || 1), p.currency)}{p.quantity > 1 ? <span className="muted"> total · {fmtMoney(p.price, p.currency)} c/u</span> : null}</span> : null}
-                                  {purl ? <a className="rp2-chip" href={purl} target="_blank" rel="noreferrer"><Icon n="link" /> Ver link</a> : null}
+                                  {purl && p.snapshot_path ? <button className="rp2-chip" title={`Captura de la página tomada al cotizar${p.snapshot_at ? ' (' + new Date(p.snapshot_at).toLocaleDateString('es-CL') + ')' : ''}. Muestra cómo estaba aunque después cambie.`} onClick={async () => {
+                                    const { data } = await supabase.storage.from('cotizaciones').createSignedUrl(p.snapshot_path, 3600)
+                                    if (data?.signedUrl) viewImage(data.signedUrl); else window.open(purl, '_blank')
+                                  }}><Icon n="camera" /> Captura</button> : null}
+                                  {purl ? <a className="rp2-chip" href={purl} target="_blank" rel="noreferrer" title="Abrir la página actual del producto"><Icon n="link" /> {p.snapshot_path ? 'Abrir página' : 'Ver link'}</a> : null}
                                   {p.file_url ? <button className={`rp2-chip ${pp.fileOpen ? 'on' : ''}`} onClick={() => toggleProdFile(p)}><Icon n="eye" /> Cotización</button> : null}
                                   {(() => { const o = prodOutOfRange(t, p); return o ? <span className={`rp2-oor ${o}`} title="El total de esta opción queda fuera del rango autorizado"><Icon n="ban" /> {o === 'high' ? 'Sobre el rango' : 'Bajo el rango'}</span> : null })()}
                                   {!p.file_url && canAdd && active ? (
@@ -864,6 +880,27 @@ export default function Solicitudes() {
                               {canAdd && active && p.status === 'pending' && <button className="rp2-del" title="Quitar" onClick={() => delTecProduct(p)}><Icon n="close" /></button>}
                             </div>
 
+                            {(() => {
+                              const qi = p.quote_info || {}
+                              const has = qi.valid_until || qi.valid_days || qi.delivery || qi.payment || qi.warranty || qi.provider || qi.quote_date || qi.quote_no
+                              if (!has) return null
+                              const fmtD = (iso) => iso ? iso.slice(0, 10).split('-').reverse().join('/') : null
+                              let daysLeft = null
+                              if (qi.valid_until) { const ms = new Date(qi.valid_until + 'T23:59:59') - new Date(); daysLeft = Math.ceil(ms / 86400000) }
+                              const vig = qi.valid_until
+                                ? (daysLeft < 0 ? { cls: 'bad', txt: `Vencida el ${fmtD(qi.valid_until)}` } : daysLeft <= 3 ? { cls: 'warn', txt: `Vence en ${daysLeft} día${daysLeft === 1 ? '' : 's'} (${fmtD(qi.valid_until)})` } : { cls: 'ok', txt: `${daysLeft} días restantes · hasta ${fmtD(qi.valid_until)}` })
+                                : qi.valid_days ? { cls: '', txt: `Validez ${qi.valid_days} días` } : null
+                              return (
+                                <div className="rp2-qi" title="Datos leídos de la cotización">
+                                  {vig && <span className={`rp2-qi-it ${vig.cls}`}><Icon n="clock" /> <b>Vigencia:</b> {vig.txt}</span>}
+                                  {qi.delivery && <span className="rp2-qi-it"><Icon n="box" /> <b>Entrega:</b> {qi.delivery}</span>}
+                                  {qi.payment && <span className="rp2-qi-it"><Icon n="cart" /> <b>Pago:</b> {qi.payment}</span>}
+                                  {qi.warranty && <span className="rp2-qi-it"><Icon n="check" /> <b>Garantía:</b> {qi.warranty}</span>}
+                                  {qi.provider && <span className="rp2-qi-it"><Icon n="building" /> <b>Proveedor:</b> {qi.provider}</span>}
+                                  {(qi.quote_date || qi.quote_no) && <span className="rp2-qi-it muted"><Icon n="calendar" /> Cotización{qi.quote_no ? ` N° ${qi.quote_no}` : ''}{qi.quote_date ? ` del ${fmtD(qi.quote_date)}` : ''}</span>}
+                                </div>
+                              )
+                            })()}
                             {pp.fileOpen && (
                               <div className="rqa-prev">
                                 {pp.fileLoading ? <div className="rqa-prev-load muted">Cargando…</div>

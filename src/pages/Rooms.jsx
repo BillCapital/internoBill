@@ -57,6 +57,7 @@ export default function Rooms() {
     }
   }, [calDay])
   const [rooms, setRooms] = useState([])
+  const [roomSel, setRoomSel] = useState('') // '' = todas las salas
   const [res, setRes] = useState([])
   const [openRes, setOpenRes] = useState(null)
   // Enlace directo desde una notificación: /salas?chat=<id de reserva>
@@ -213,6 +214,7 @@ export default function Rooms() {
   const daysInMonth = new Date(calY, calM + 1, 0).getDate()
   const shift = (n) => { let m = calM + n, y = calY; if (m < 0) { m = 11; y-- } if (m > 11) { m = 0; y++ } setCalM(m); setCalY(y) }
 
+  const shownRooms = roomSel ? rooms.filter((r) => r.id === roomSel) : rooms
   const openObj = res.find((r) => r.id === openRes)
   const scl = nowSCL()
 
@@ -296,20 +298,26 @@ export default function Rooms() {
           <div className="sal-right" ref={salRightRef}>
             <>
               <h3 className="sal-date">{dayLong(calDay)}</h3>
+              {rooms.length > 1 && (
+                <div className="seg room-seg">
+                  <button className={`seg-btn${!roomSel ? ' on' : ''}`} onClick={() => setRoomSel('')}>Todas</button>
+                  {rooms.map((r) => <button key={r.id} className={`seg-btn${roomSel === r.id ? ' on' : ''}`} onClick={() => setRoomSel(r.id)}>{r.name}</button>)}
+                </div>
+              )}
               <div className="room-legend">
                 <span className="rl-item free"><span className="dot" />Disponible</span>
                 <span className="rl-item resv"><span className="dot" />Reservado</span>
                 <span className="rl-item pend"><span className="dot" />Pendiente</span>
                 <span className="rl-item lunch"><span className="dot" />Colación</span>
               </div>
-              <div style={{ overflowX: 'auto' }}><table className="cal"><thead><tr><th>Bloque</th>{rooms.map((r) => <th key={r.id}>{r.name}</th>)}</tr></thead>
+              <div style={{ overflowX: 'auto' }}><table className="cal"><thead><tr><th>Bloque</th>{shownRooms.map((r) => <th key={r.id}>{r.name}</th>)}</tr></thead>
                 <tbody>
                   {slots.map((t, idx) => {
                     const end = hhmm(addMin(slotStart(calDay, t), 30))
                     const slotPast = calDay === scl.date && toMin(t) <= scl.min
                     return (
-                      <ReservRow key={t} rooms={rooms} label={`${t}–${end}`} lunch={idx === LUNCH_AFTER} past={slotPast}
-                        cells={rooms.map((r) => {
+                      <ReservRow key={t} rooms={shownRooms} label={`${t}–${end}`} lunch={idx === LUNCH_AFTER} past={slotPast}
+                        cells={shownRooms.map((r) => {
                           const b = resAt(r.id, t)
                           const isCov = covered(r.id, t)
                           const picked = form && form.room === r.id && idx >= form.slotIdx && idx < form.slotIdx + form.dur
