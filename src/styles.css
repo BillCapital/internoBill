@@ -3130,3 +3130,8 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .rp2-qi-it.warn{color:var(--warn)}.rp2-qi-it.warn .licon{color:inherit}
 .rp2-qi-it.bad{color:var(--danger,#d64545);font-weight:600}.rp2-qi-it.bad .licon{color:inherit}
 @media(max-width:600px){.rp2-qi{gap:.25rem .6rem;font-size:.72rem;padding:.4rem .5rem}}
+
+/* "Crear en" (solo en vista General) */
+.country-sw.target{border-style:dashed}
+.country-sw .cs-lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+@media(max-width:600px){.country-sw .cs-lbl{display:none}}

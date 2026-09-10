@@ -43,7 +43,7 @@ const ago = (iso) => { const s = (Date.now() - new Date(iso)) / 1000; if (s < 60
 
 export default function Layout() {
   const { user, profile, role, roleLabel, isAdmin, canManageOrders, canManageRooms, canManageSupplies, canManageInventory, canManageUsers,
-    canViewSupplies, canViewInventory, canViewUsers, canViewLists, canViewExpenses, signOut, canSwitchCountry, activeCountry, setActiveCountry } = useAuth()
+    canViewSupplies, canViewInventory, canViewUsers, canViewLists, canViewExpenses, signOut, canSwitchCountry, activeCountry, setActiveCountry, targetCountry, setTargetCountry } = useAuth()
   const nav = useNavigate()
   // Barra lateral abierta por defecto en escritorio; colapsada en móvil.
   const [collapsed, setCollapsed] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 760 : false))
@@ -145,11 +145,23 @@ export default function Layout() {
           {canSwitchCountry && (
             <label className="country-sw" title="País / ambiente que estás viendo">
               <span className="cs-ico">{TOP_ICONS.globe}</span>
-              <select value={activeCountry || '—'} onChange={(e) => setActiveCountry(e.target.value)}>
+              <select value={activeCountry || '*'} onChange={(e) => setActiveCountry(e.target.value)}>
+                <option value="*">General</option>
                 <option value="Chile">Chile</option>
                 <option value="Colombia">Colombia</option>
                 <option value="Perú">Perú</option>
                 <option value="—">Sin país</option>
+              </select>
+            </label>
+          )}
+          {canSwitchCountry && (activeCountry || '*') === '*' && (
+            <label className="country-sw target" title="Vista General: a qué país se envía lo que crees (salas, manuales, anuncios, insumos, equipos…)">
+              <span className="cs-lbl">Crear en</span>
+              <select value={targetCountry || '*'} onChange={(e) => setTargetCountry(e.target.value)}>
+                <option value="*">Todos</option>
+                <option value="Chile">Chile</option>
+                <option value="Colombia">Colombia</option>
+                <option value="Perú">Perú</option>
               </select>
             </label>
           )}
@@ -232,7 +244,8 @@ export default function Layout() {
         </aside>
         <main className="content">
           <Suspense fallback={<div className="content-loader"><span className="sk sk-line" style={{ width: '40%', height: '1.4rem' }} /><div style={{ marginTop: '1rem' }}><span className="sk sk-line" style={{ width: '70%' }} /></div></div>}>
-            <Outlet />
+            {/* key por país: al cambiar de ambiente la página se remonta y recarga solo sus datos (sin recargar todo el sitio) */}
+            <div key={activeCountry || '*'} style={{ display: 'contents' }}><Outlet /></div>
           </Suspense>
         </main>
       </div>

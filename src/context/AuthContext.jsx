@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
   const loadProfile = useCallback(async (uid) => {
     if (!uid) { setProfile(null); setPerms({}); setRoleLabel(''); setManagedDepts([]); return }
     const { data } = await supabase.from('profiles')
-      .select('id, role, full_name, email, department, phone, inventory_access, avatar_url, active, country, app_access, work_mode, emergency_name, emergency_phone, birth_day, birth_month, birth_date, job_title, address, parking_spot, active_country, is_it_manager').eq('id', uid).single()
+      .select('id, role, full_name, email, department, phone, inventory_access, avatar_url, active, country, app_access, work_mode, emergency_name, emergency_phone, birth_day, birth_month, birth_date, job_title, address, parking_spot, active_country, target_country, is_it_manager').eq('id', uid).single()
     // Cuenta deshabilitada: sin acceso (persona que ya no forma parte de la empresa)
     if (data && data.active === false) {
       setProfile(null); setPerms({}); setRoleLabel(''); setManagedDepts([])
@@ -110,11 +110,20 @@ export function AuthProvider({ children }) {
     // Espacios por país: cada usuario ve solo su país; admin y gerente TI cambian de ambiente
     country: profile?.country || null,
     canSwitchCountry: full || role === 'gerente_ti' || profile?.is_it_manager === true,
-    activeCountry: ((full || role === 'gerente_ti' || profile?.is_it_manager === true) && profile?.active_country) ? profile.active_country : (profile?.country || '—'),
-    setActiveCountry: async (c) => {
-      const { error } = await supabase.rpc('set_active_country', { p_country: c === '—' ? '—' : c })
+    // '*' = vista General (todos los países), ambiente por defecto de admin / gerente TI
+    activeCountry: (full || role === 'gerente_ti' || profile?.is_it_manager === true) ? (profile?.active_country || '*') : (profile?.country || '—'),
+    // En la vista General: país al que se "envía" lo que se crea ('*' = todos los países)
+    targetCountry: profile?.target_country || '*',
+    setTargetCountry: async (c) => {
+      const { error } = await supabase.rpc('set_target_country', { p_country: c })
       if (error) { alertDialog(error.message); return }
-      window.location.reload()
+      setProfile((p) => (p ? { ...p, target_country: c } : p))
+    },
+    setActiveCountry: async (c) => {
+      const { error } = await supabase.rpc('set_active_country', { p_country: c })
+      if (error) { alertDialog(error.message); return }
+      // Sin recargar la página: se actualiza el perfil en memoria y las pantallas se vuelven a montar (recargan sus datos)
+      setProfile((p) => (p ? { ...p, active_country: c } : p))
     },
     // Actualiza campos del perfil en memoria (sin recargar roles/deptos): guardado instantáneo
     patchProfile: (fields) => setProfile((p) => (p ? { ...p, ...fields } : p)),
