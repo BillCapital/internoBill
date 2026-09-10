@@ -15,6 +15,7 @@ export default function ProfilePrompt() {
   if (!profile || dismissed) return null
 
   const missing = []
+  if (!profile.country) missing.push('país')
   if (!profile.phone) missing.push('teléfono')
   if (!profile.job_title) missing.push('cargo')
   if (!profile.address) missing.push('dirección')

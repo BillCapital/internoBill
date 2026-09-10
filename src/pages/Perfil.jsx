@@ -7,8 +7,8 @@ import { Icon } from '../lib/icons'
 
 const initials = (n) => (n || '?').split(' ').slice(0, 2).map((x) => x[0]).join('').toUpperCase()
 // Prefijo telefónico por país del usuario
-const PREFIXES = { Chile: '+56', 'Perú': '+51', Peru: '+51', Colombia: '+57' }
-const ALL_PREFIXES = ['+56', '+51', '+57']
+const PREFIXES = { Chile: '+56', 'Perú': '+51', Peru: '+51', Colombia: '+57', 'España': '+34' }
+const ALL_PREFIXES = ['+56', '+51', '+57', '+34']
 // Separa un teléfono guardado en {prefijo, número local}
 const splitPhone = (v, defPrefix) => {
   const t = (v || '').trim()
@@ -49,6 +49,7 @@ export default function Perfil() {
       job_title: profile?.job_title || '',
       address: profile?.address || '',
       parking_spot: profile?.parking_spot || 'No aplica',
+      country: '',
     })
   }, [profile?.phone, profile?.work_mode, profile?.emergency_name, profile?.emergency_phone, profile?.birth_date, profile?.job_title, profile?.address, profile?.parking_spot, myPrefix])
   // Equipos asignados a MÍ. El dueño actual es el user_id; el correo asignado solo se usa
@@ -80,6 +81,12 @@ export default function Perfil() {
       parking_spot: (form.parking_spot || '').trim() || 'No aplica',
     }
     try {
+      // País: se define una sola vez (si aún no lo tiene)
+      if (!profile?.country && form.country) {
+        const { error: cErr } = await supabase.rpc('set_my_country', { p_country: form.country })
+        if (cErr) throw new Error(cErr.message)
+        fields.country = form.country
+      }
       await api('save_my_profile', {
         p_phone: fields.phone, p_work_mode: fields.work_mode,
         p_emergency_name: fields.emergency_name, p_emergency_phone: fields.emergency_phone,
@@ -176,6 +183,7 @@ export default function Perfil() {
   const composedPhone = (form.phone || '').trim() ? `${myPrefix} ${(form.phone || '').trim()}` : ''
   const composedEm = (form.emergency_phone || '').trim() ? `${form.em_pre} ${(form.emergency_phone || '').trim()}` : ''
   const dirty = composedPhone !== (profile?.phone || '') || composedEm !== (profile?.emergency_phone || '')
+    || (!profile?.country && !!form.country)
     || ['work_mode', 'emergency_name', 'birth_date', 'job_title', 'address', 'parking_spot']
       .some((k) => String(form[k] ?? '') !== String(profile?.[k] ?? ''))
   const avatar = profile?.avatar_url
@@ -247,7 +255,17 @@ export default function Perfil() {
           </div>
           </div></div>
           <div className="pf-field"><label>Rol</label><div className="val">{roleLabel}</div></div>
-          <div className="pf-field"><label>País</label><div className="val">{profile?.country || '—'} <span className="lock"><Icon n="lock" /> lo asigna un administrador</span></div></div>
+          <div className="pf-field"><label>País</label>
+            {profile?.country
+              ? <div className="val">{profile.country} <span className="lock"><Icon n="lock" /> solo un administrador lo cambia</span></div>
+              : <>
+                  <select value={form.country || ''} onChange={(e) => setF('country', e.target.value)}>
+                    <option value="">— Elige tu país</option>
+                    {['Chile', 'Colombia', 'Perú', 'España'].map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                  <span className="pf-help">Se elige una sola vez; después solo un administrador puede cambiarlo.</span>
+                </>}
+          </div>
         </div>
         <div className="row" style={{ marginTop: '.9rem', justifyContent: 'flex-end' }}>
           <button className={`btn ${saved ? 'btn-ok' : 'btn-lime'}`} onClick={saveProfile}

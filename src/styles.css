@@ -3167,3 +3167,14 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .tz-note{display:inline-flex;align-items:center;gap:.35rem;font-size:.74rem;color:var(--muted);margin:0 0 .35rem;padding:.3rem .5rem;border:1px dashed var(--line);border-radius:8px}
 .tz-note .licon{width:.8rem;height:.8rem}
 .att-tz{display:inline-block;margin-left:.4rem;font-size:.66rem;font-weight:600;color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);border-radius:999px;padding:.02rem .4rem;vertical-align:.1em}
+
+/* Tarjeta(s) de sala sobre el horario: que se vea QUÉ sala se reserva */
+.room-cards{display:flex;flex-wrap:wrap;gap:.45rem;margin:.15rem 0 .5rem}
+.room-card{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem .65rem;border:1.5px solid var(--line);border-radius:11px;background:var(--panel);color:var(--text);cursor:pointer;font:inherit;text-align:left}
+.room-card:hover{border-color:color-mix(in srgb,var(--lime) 55%,var(--line))}
+.room-card.on{border-color:var(--lime);background:color-mix(in srgb,var(--lime) 12%,var(--panel))}
+.room-card .rc-ico{display:flex;width:1.9rem;height:1.9rem;border-radius:8px;align-items:center;justify-content:center;background:color-mix(in srgb,var(--lime) 16%,transparent)}
+.room-card .rc-ico .licon{width:1rem;height:1rem;color:var(--lime-text)}
+.room-card .rc-txt{display:flex;flex-direction:column;line-height:1.2}
+.room-card .rc-txt strong{font-size:.86rem}
+.room-card .rc-txt .muted{font-size:.7rem}

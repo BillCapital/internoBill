@@ -154,6 +154,8 @@ export default function Gastos() {
     (!flt.estado || (flt.estado === 'pagada' ? d.estado === 'pagada' : d.estado !== 'pagada')) && (!flt.cat || d.categoria === flt.cat) && (!flt.dep || d.departamento === flt.dep)), [docs, flt])
 
   const startForm = () => setForm({ estado: 'pendiente', concepto: '', proveedor: '', categoria: 'Otros', departamento: '', monto: '', fecha: new Date().toISOString().slice(0, 10), file: null })
+  // Editar una factura existente: mismo formulario, precargado (el archivo solo cambia si subes otro)
+  const startEdit = (d) => setForm({ id: d.id, estado: d.estado || 'pendiente', concepto: d.concepto || '', proveedor: d.proveedor || '', categoria: d.categoria || 'Otros', departamento: d.departamento || '', monto: d.monto != null ? String(d.monto) : '', fecha: d.fecha || new Date().toISOString().slice(0, 10), file: null, hasFile: !!d.file_path })
   const submit = async () => {
     if (!form.concepto.trim()) return alertDialog('Ponle un concepto a la factura.')
     setBusy(true)
@@ -165,7 +167,8 @@ export default function Gastos() {
         if (upErr) throw upErr
         fname = form.file.name; mime = form.file.type || ''; size = form.file.size || 0
       }
-      await api('expense_doc_add', {
+      await api(form.id ? 'expense_doc_update' : 'expense_doc_add', {
+        ...(form.id ? { p_id: form.id } : {}),
         p_estado: form.estado, p_concepto: form.concepto.trim(), p_proveedor: form.proveedor.trim(),
         p_categoria: form.categoria, p_departamento: form.departamento, p_monto: num(form.monto),
         p_fecha: form.fecha, p_path: path, p_name: fname, p_mime: mime, p_size: size,
@@ -318,6 +321,7 @@ export default function Gastos() {
                           <td className="mny-cell"><Money value={Number(d.monto)} strong /></td>
                           <td className="actions nowrap">
                             {d.file_path ? <button className="btn-sm" onClick={() => openViewer(d)}><Icon n="eye" /> Ver</button> : null}
+                            {!ro && <button className="btn-sm" onClick={() => startEdit(d)}><Icon n="edit" /> Editar</button>}
                             {!ro && <button className="btn-sm btn-danger" onClick={() => del(d)}>Eliminar</button>}
                           </td>
                         </tr>
@@ -333,7 +337,7 @@ export default function Gastos() {
       {form && (
         <div className="backdrop open">
           <div className="modal">
-            <h3>Nueva factura</h3>
+            <h3>{form.id ? 'Editar factura' : 'Nueva factura'}</h3>
             <div className="pf-fields">
               <div><label>Estado de pago</label>
                 <select value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}><option value="pendiente">Pendiente</option><option value="pagada">Pagada</option></select></div>
@@ -345,7 +349,7 @@ export default function Gastos() {
                 <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>{CATS.map((c) => <option key={c}>{c}</option>)}</select></div>
               <div><label>Departamento</label>
                 <select value={form.departamento} onChange={(e) => setForm({ ...form, departamento: e.target.value })}><option value="">— General —</option>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>
-              <div style={{ gridColumn: '1 / -1' }}><label>Factura <span className="muted">(PDF o imagen · opcional)</span>{form.reading ? <span className="muted"> · leyendo factura…</span> : form.readOk ? <span style={{ color: 'var(--lime-text)', fontWeight: 600 }}> · datos leídos de la factura</span> : null}</label>
+              <div style={{ gridColumn: '1 / -1' }}><label>Factura <span className="muted">{form.id && form.hasFile ? '(ya tiene archivo; sube otro solo si quieres reemplazarlo)' : '(PDF o imagen · opcional)'}</span>{form.reading ? <span className="muted"> · leyendo factura…</span> : form.readOk ? <span style={{ color: 'var(--lime-text)', fontWeight: 600 }}> · datos leídos de la factura</span> : null}</label>
                 <input type="file" accept=".pdf,image/*,application/pdf" onChange={async (e) => {
                   const f = e.target.files?.[0] || null
                   setForm((s) => ({ ...s, file: f, readOk: false }))

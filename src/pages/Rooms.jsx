@@ -316,18 +316,20 @@ export default function Rooms() {
           <div className="sal-right" ref={salRightRef}>
             <>
               <h3 className="sal-date">{dayLong(calDay)}</h3>
-              {rooms.length > 1 && (
-                <div className="seg room-seg">
-                  <button className={`seg-btn${!roomSel ? ' on' : ''}`} onClick={() => setRoomSel('')}>Todas</button>
-                  {rooms.map((r) => <button key={r.id} className={`seg-btn${roomSel === r.id ? ' on' : ''}`} onClick={() => setRoomSel(r.id)}>{r.name}</button>)}
-                </div>
-              )}
               {(() => {
                 const rm = shownRooms[0]
                 if (!rm || tzOf(profile?.country) === roomTz(rm)) return null
                 const d = tzDiffHours(roomTz(rm), myTz, slotStart(calDay, slots[0], roomTz(rm)))
                 return <div className="tz-note"><Icon n="clock" /> Las horas están en hora de {roomCountry(rm)}. Tu hora ({profile?.country}): {diffLabel(d)}.</div>
               })()}
+              <div className="room-cards">
+                {rooms.map((r) => (
+                  <button key={r.id} type="button" className={`room-card${roomSel === r.id ? ' on' : ''}`} title={roomSel === r.id ? 'Mostrando solo esta sala — toca para ver todas' : 'Ver solo esta sala'} onClick={() => setRoomSel(roomSel === r.id ? '' : r.id)}>
+                    <span className="rc-ico"><Icon n="building" /></span>
+                    <span className="rc-txt"><strong>{r.name}</strong><span className="muted">{[r.location, r.capacity ? `${r.capacity} pers.` : null].filter(Boolean).join(' · ') || 'Sala de reuniones'}</span></span>
+                  </button>
+                ))}
+              </div>
               <div className="room-legend">
                 <span className="rl-item free"><span className="dot" />Disponible</span>
                 <span className="rl-item resv"><span className="dot" />Reservado</span>
@@ -380,7 +382,7 @@ export default function Rooms() {
             <div className="mr-head">
               <span className="mr-ico"><Icon n="calendar" /></span>
               <div><h3>{form.reschedId ? 'Reprogramar reunión' : 'Reservar sala'}</h3>
-                <p className="mr-meta"><Icon n="clock" /> <span style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</span> · {roomNm} · {t}–{endT}</p></div>
+                <p className="mr-meta"><Icon n="building" /> <strong>{roomNm}</strong> · <span style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</span> · {t}–{endT}</p></div>
             </div>
             {(() => {
               const rm = rooms.find((x) => x.id === form.room)

@@ -5,7 +5,7 @@ import { chooseDialog } from './ui'
 let generalView = false
 export function _setGeneralView(v) { generalView = !!v }
 export const COUNTRY_OPTIONS = [
-  { value: 'Chile', label: 'Chile' }, { value: 'Colombia', label: 'Colombia' }, { value: 'Perú', label: 'Perú' },
+  { value: 'Chile', label: 'Chile' }, { value: 'Colombia', label: 'Colombia' }, { value: 'Perú', label: 'Perú' }, { value: 'España', label: 'España' },
   { value: '*', label: 'Todos los países', hint: 'visible en todos los ambientes' },
 ]
 // Pregunta el país (solo en vista General) y lo deja fijado para lo que se cree a continuación.

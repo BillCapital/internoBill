@@ -73,12 +73,13 @@ Deno.serve(async (req) => {
     const { data: { user }, error } = await asUser.auth.getUser()
     if (error || !user) return json(401, { error: 'Sesion invalida' })
 
-    const { path, mime } = await req.json()
+    const { path, mime, bucket } = await req.json()
+    const bkt = bucket === 'facturas' ? 'facturas' : 'cotizaciones'
     if (!path || typeof path !== 'string') return json(400, { error: 'Falta path' })
     if (mime && !String(mime).includes('pdf')) return json(200, { ok: false, reason: 'no-pdf' })
 
     const admin = createClient(URL, SERVICE)
-    const { data: file, error: dlErr } = await admin.storage.from('cotizaciones').download(path)
+    const { data: file, error: dlErr } = await admin.storage.from(bkt).download(path)
     if (dlErr || !file) return json(200, { ok: false, reason: 'no-file' })
     const buf = new Uint8Array(await file.arrayBuffer())
 
@@ -122,7 +123,8 @@ Deno.serve(async (req) => {
     const cm = codeRe.exec(text)
     if (cm && !/^\d{1,3}$/.test(cm[1])) code = cm[1].replace(/[.:,]+$/, '')
 
-    return json(200, { ok: true, price: best, currency: 'CLP', code, info: quoteInfo(text) })
+    const info = quoteInfo(text)
+    return json(200, { ok: true, price: best, currency: 'CLP', code, info, provider: info.provider, date: info.quote_date })
   } catch (e) {
     return json(500, { error: 'Error interno', detail: String(e) })
   }

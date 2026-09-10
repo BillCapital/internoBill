@@ -150,6 +150,7 @@ export default function Layout() {
                 <option value="Chile">Chile</option>
                 <option value="Colombia">Colombia</option>
                 <option value="Perú">Perú</option>
+                <option value="España">España</option>
                 <option value="—">Sin país</option>
               </select>
             </label>

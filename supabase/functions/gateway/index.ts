@@ -28,7 +28,7 @@ const RPC_ACTIONS: Record<string, string> = {
   tech_product_add: 'tech_product_add', tech_product_decide: 'tech_product_decide', tech_product_delete: 'tech_product_delete',
   tech_set_budget: 'tech_set_budget', tech_product_set_file: 'tech_product_set_file', tech_product_set_info: 'tech_product_set_info', tech_product_set_code: 'tech_product_set_code', touch_seen: 'touch_my_seen',
   create_tech_request: 'create_tech_request', request_attach_add: 'request_attach_add', request_attach_delete: 'request_attach_delete',
-  expense_doc_add: 'expense_doc_add', expense_doc_delete: 'expense_doc_delete', expense_doc_set_estado: 'expense_doc_set_estado',
+  expense_doc_add: 'expense_doc_add', expense_doc_update: 'expense_doc_update', expense_doc_delete: 'expense_doc_delete', expense_doc_set_estado: 'expense_doc_set_estado',
   create_reservation: 'create_reservation', approve_reservation: 'approve_reservation', reject_reservation: 'reject_reservation', cancel_reservation: 'cancel_reservation', reschedule_reservation: 'reschedule_reservation', request_reschedule: 'request_reschedule',
   post_message: 'post_message', create_ticket: 'create_ticket', set_ticket_status: 'set_ticket_status',
   set_user_role: 'set_user_role', set_inventory_access: 'set_inventory_access', set_stock: 'set_stock',

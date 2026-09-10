@@ -17,7 +17,7 @@ const initials = (n) => (n || '?').split(' ').slice(0, 2).map((x) => x[0]).join(
 const fold = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 const fmt = (iso) => new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 const VIEW = 220, OUT = 200
-const COUNTRIES = [['Chile', 'CL'], ['Colombia', 'CO'], ['Perú', 'PE']]
+const COUNTRIES = [['Chile', 'CL'], ['Colombia', 'CO'], ['Perú', 'PE'], ['España', 'ES']]
 const flagOf = (c) => (COUNTRIES.find(([n]) => n === c) || [])[1] || ''
 // Dominio del correo (para agrupar por proveedor: @billcapital.com = Microsoft 365, etc.)
 const domainOf = (email) => ((email || '').split('@')[1] || 'sin dominio').toLowerCase()
@@ -387,7 +387,7 @@ export default function Usuarios() {
   }
 
   // ===== Licencias M365 =====
-  const usageOf = (country) => country === 'Colombia' ? 'CO' : country === 'Perú' ? 'PE' : 'CL'
+  const usageOf = (country) => country === 'Colombia' ? 'CO' : country === 'Perú' ? 'PE' : country === 'España' ? 'ES' : 'CL'
   const licSeq = useRef(0)
   const loadLicenses = useCallback(async (u) => {
     const seq = ++licSeq.current // descarta respuestas tardías de otra ficha

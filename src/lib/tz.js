@@ -1,5 +1,5 @@
 // Zonas horarias por país (para reuniones entre países)
-export const TZ_BY_COUNTRY = { Chile: 'America/Santiago', Colombia: 'America/Bogota', 'Perú': 'America/Lima', Peru: 'America/Lima' }
+export const TZ_BY_COUNTRY = { Chile: 'America/Santiago', Colombia: 'America/Bogota', 'Perú': 'America/Lima', Peru: 'America/Lima', 'España': 'Europe/Madrid' }
 export const DEFAULT_TZ = 'America/Santiago'
 export const tzOf = (country) => TZ_BY_COUNTRY[country] || DEFAULT_TZ
 export const countryOfTz = (tz) => Object.keys(TZ_BY_COUNTRY).find((c) => TZ_BY_COUNTRY[c] === tz) || 'Chile'
