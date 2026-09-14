@@ -3310,3 +3310,10 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 /* Tarjetas bajo el calendario (salas y Tu día en Outlook): misma sombra que el panel
    flotante de reservar sala, para que el bloque izquierdo se vea al mismo nivel */
 .left-cards .room-card, .left-cards .agenda-card{box-shadow:var(--shadow);border-radius:14px}
+/* Reserva de un solo bloque (30 min): no caben dos líneas en la fila, así que va todo
+   en una sola línea "Título · Persona · pendiente", centrado y con puntos suspensivos.
+   Las reservas largas (varias filas) mantienen título arriba y persona abajo, centrados. */
+.sal-right td.spanned .slot.busy, .sal-right td.spanned .slot.pending{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.sal-right td.spanned[rowspan="1"] .slot.busy, .sal-right td.spanned[rowspan="1"] .slot.pending{flex-direction:row;gap:.3rem;white-space:nowrap;min-width:0}
+.sal-right td.spanned[rowspan="1"] .slot.busy .muted, .sal-right td.spanned[rowspan="1"] .slot.pending .muted{display:inline-block;margin:0;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.sal-right td.spanned[rowspan="1"] .slot.busy .muted::before, .sal-right td.spanned[rowspan="1"] .slot.pending .muted::before{content:'· '}

@@ -17,6 +17,7 @@ export default function Home() {
   // Conteos del panel
   const [req, setReq] = useState({ pending: 0, manager_review: 0, approved: 0, rejected: 0, delivered: 0, total: 0 })
   const [resPend, setResPend] = useState(0)
+  const [resPendDay, setResPendDay] = useState('') // día de la primera reserva pendiente (para llevar directo)
   const [equip, setEquip] = useState({ mant: 0, sin: 0 })
   const [loading, setLoading] = useState(true)
 
@@ -41,8 +42,9 @@ export default function Home() {
       setReq(c)
     }).catch(() => {}))
     if (canManageRooms) {
-      tasks.push(supabase.from('reservations').select('id', { count: 'exact', head: true }).eq('status', 'pending')
-        .then(({ count }) => setResPend(count || 0)).catch(() => {}))
+      tasks.push(supabase.from('reservations').select('starts_at', { count: 'exact' }).eq('status', 'pending')
+        .gt('ends_at', new Date().toISOString()).order('starts_at').limit(1)
+        .then(({ count, data }) => { setResPend(count || 0); setResPendDay(data?.[0]?.starts_at ? data[0].starts_at.slice(0, 10) : '') }).catch(() => {}))
     }
     if (canManageInventory) {
       tasks.push(supabase.from('equipment').select('condition').then(({ data }) => {
@@ -86,7 +88,7 @@ export default function Home() {
   else if (isAreaManager && (req.reviewMine || 0) > 0) todos.push({ k: 'm', ico: 'key', n: req.reviewMine, txt: 'Compra(s) de tu área esperando tu autorización', sub: agoTxt(req.oldReviewMine), tone: 'warn', to: '/solicitudes' })
   else if (canManageOrders && req.manager_review > 0) todos.push({ k: 'm2', ico: 'key', n: req.manager_review, txt: 'Compra(s) esperando autorización', sub: agoTxt(req.oldReview), tone: 'info', to: '/solicitudes' })
   if (canManageOrders && req.approved > 0) todos.push({ k: 'a', ico: 'box', n: req.approved, txt: 'Aprobada(s) por entregar', sub: 'listas para coordinar entrega', tone: 'ok', to: '/solicitudes' })
-  if (canManageRooms && resPend > 0) todos.push({ k: 'r', ico: 'calendar', n: resPend, txt: 'Reserva(s) de sala por aceptar', sub: '', tone: 'info', to: '/salas' })
+  if (canManageRooms && resPend > 0) todos.push({ k: 'r', ico: 'calendar', n: resPend, txt: 'Reserva(s) de sala por aceptar', sub: '', tone: 'info', to: resPendDay ? `/salas?dia=${resPendDay}` : '/salas' })
   if (canManageInventory && equip.mant > 0) todos.push({ k: 'em', ico: 'wrench', n: equip.mant, txt: 'Equipo(s) en mantenimiento', sub: '', tone: '', to: '/inventario' })
   // Prioridad: lo que requiere tu acción (ámbar) primero, luego en curso (azul), luego listo (verde) y neutro
   const toneRank = { warn: 0, info: 1, ok: 2, '': 3 }
