@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     if (!token) return json(200, { ok: false, reason: 'sin-token' })
     const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(email)}/calendarView`
       + `?startDateTime=${new Date(s).toISOString()}&endDateTime=${new Date(e).toISOString()}`
-      + `&$select=subject,start,end,isAllDay,showAs,location,isCancelled&$orderby=start/dateTime&$top=25`
+      + `&$select=subject,start,end,isAllDay,showAs,location,isCancelled&$top=25`
     const r = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Prefer: 'outlook.timezone="UTC"' } })
     if (!r.ok) {
       const t = await r.text().catch(() => '')
@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
       show_as: ev.showAs || 'busy',
       location: ev.location?.displayName || '',
     }))
+    events.sort((a: any, b: any) => String(a.start).localeCompare(String(b.start)))
     return json(200, { ok: true, events })
   } catch (e) {
     return json(500, { error: 'Error interno', detail: String(e) })

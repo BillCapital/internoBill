@@ -349,7 +349,7 @@ export default function Rooms() {
                   <div className="agenda-card">
                     <div className="ag-h"><Icon n="calendar" /> Tu día en Outlook <span className="muted">· para coordinarte antes de reservar{profile?.country ? ` · hora de ${profile.country}` : ''}</span></div>
                     {!ag || ag.loading ? <div className="ag-empty muted">Cargando tu agenda…</div>
-                      : !ag.ok ? <div className="ag-empty muted">No se pudo leer tu calendario de Outlook.</div>
+                      : !ag.ok ? <div className="ag-empty muted">No se pudo leer tu calendario de Outlook{ag.reason ? ` (${ag.reason})` : ''}.</div>
                       : (ag.events || []).length === 0 ? <div className="ag-empty muted">Sin eventos en tu Outlook este día: tienes el día libre para agendar.</div>
                       : (
                         <div className="ag-list">
