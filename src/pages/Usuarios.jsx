@@ -668,7 +668,7 @@ export default function Usuarios() {
                 <tr key={u.id}>
                   <td><div className="row" style={{ justifyContent: 'flex-start', gap: '.5rem' }}>
                     {u.avatar_url ? <img className="avatar-img" src={u.avatar_url} alt="" loading="lazy" decoding="async" /> : <div className="avatar sm">{initials(u.full_name || u.email)}</div>}
-                    <div><strong>{u.full_name || '—'}</strong>{u.id === user?.id && <span className="badge" style={{ marginLeft: 6 }}>tú</span>}{u.active === false && <span className="badge s-rejected" style={{ marginLeft: 6 }}>Deshabilitado</span>}{u.app_access === false && <span className="badge" style={{ marginLeft: 6 }} title="Solo para organización · sin acceso a la app"><Icon n="ban" /> Sin acceso</span>}<br /><span className="muted">{u.email}</span></div>
+                    <div title={u.app_access === false ? 'Cuenta sin acceso a la app (solo organización)' : undefined}><strong>{u.full_name || '—'}</strong>{u.id === user?.id && <span className="badge" style={{ marginLeft: 6 }}>tú</span>}{u.active === false && <span className="badge s-rejected" style={{ marginLeft: 6 }}>Deshabilitado</span>}<br /><span className="muted">{u.email}</span></div>
                   </div></td>
                   <td>{u.department || <span className="muted">—</span>}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{u.country ? <span>{flagOf(u.country)} {u.country}</span> : <span className="muted">—</span>}</td>
