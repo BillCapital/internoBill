@@ -622,16 +622,16 @@ export default function Rooms() {
                   const reason = await promptDialog('Motivo (opcional) que verá quien creó la reserva:', { title: 'Pedir otro horario', okText: 'Enviar aviso' })
                   if (reason === null) return
                   try { await api('request_reschedule', { p_id: openObj.id, p_reason: reason || '' }); setOpenRes(null); alertDialog('Aviso enviado: se le pidió reprogramar la reunión.') } catch (e) { alertDialog(e.message) }
-                }}>Pedir otro horario</button>}
-              {(openObj.user_id === profile?.id || canApproveRooms || canManageRooms) && new Date(openObj.ends_at).getTime() > Date.now() &&
-                <button className="btn" onClick={() => {
+                }}><Icon n="bell" /> Solicitar reprogramación</button>}
+              {(openObj.user_id === profile?.id || canApproveRooms) && new Date(openObj.ends_at).getTime() > Date.now() &&
+                <button className="btn" title="Mueve la reunión a otro horario" onClick={() => {
                   // Reprogramar: se abre el formulario con los mismos datos; al confirmar se cancela la actual (y su cita 365) y se crea la nueva
                   const rtz = tzFor(openObj.room_id)
                   const d = sclDateOf(openObj.starts_at, rtz); const sl = daySlots(d)
                   const st = new Date(openObj.starts_at); const idx = Math.max(0, sl.findIndex((t) => { const s0 = slotStart(d, t, rtz).getTime(); return st.getTime() >= s0 && st.getTime() < s0 + 1800000 }))
                   setCalDay(d); setOpenRes(null); setExtAtt('')
                   setForm({ reschedId: openObj.id, room: openObj.room_id, slotIdx: idx, dur: durSlots(openObj), maxDur: 6, title: openObj.title || 'Reunión', just: openObj.justification || '', att: (openObj.attendees || []).map((a) => ({ email: a.email, name: a.name || a.email })), rep: 0, repN: 4 })
-                }}>Reprogramar</button>}
+                }}><Icon n="calendar" /> Reprogramar</button>}
               {openObj.user_id === profile?.id &&
                 <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Cancelar la reserva?', { title: 'Cancelar reserva', danger: true, okText: 'Cancelar reserva' })) act('cancel_reservation', openObj.id) }}>Cancelar reserva</button>}
             </div>
