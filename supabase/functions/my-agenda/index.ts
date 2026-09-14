@@ -10,7 +10,7 @@ const CSECRET = Deno.env.get('MS_CLIENT_SECRET') ?? ''
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 function json(s: number, b: unknown) {
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     if (!token) return json(200, { ok: false, reason: 'sin-token' })
     const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(email)}/calendarView`
       + `?startDateTime=${new Date(s).toISOString()}&endDateTime=${new Date(e).toISOString()}`
-      + `&$select=subject,start,end,isAllDay,showAs,location,isCancelled&$top=25`
+      + `&$select=subject,start,end,isAllDay,showAs,location,isCancelled,organizer,attendees,onlineMeeting,webLink&$top=25`
     const r = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Prefer: 'outlook.timezone="UTC"' } })
     if (!r.ok) {
       const t = await r.text().catch(() => '')
@@ -60,6 +60,9 @@ Deno.serve(async (req) => {
       all_day: !!ev.isAllDay,
       show_as: ev.showAs || 'busy',
       location: ev.location?.displayName || '',
+      organizer: ev.organizer?.emailAddress?.name || ev.organizer?.emailAddress?.address || '',
+      attendees: (ev.attendees || []).slice(0, 12).map((a: any) => a?.emailAddress?.name || a?.emailAddress?.address).filter(Boolean),
+      online: !!ev.onlineMeeting,
     }))
     events.sort((a: any, b: any) => String(a.start).localeCompare(String(b.start)))
     return json(200, { ok: true, events })

@@ -134,7 +134,7 @@ export default function Rooms() {
     setForm((f) => {
       const md = maxDur(room.id, idx)
       const base = f ? { ...f } : { title: 'Reunión', just: '', att: [], rep: 0, repN: 4 }
-      const nf = { ...base, room: room.id, slotIdx: idx, maxDur: md, dur: f ? Math.min(f.dur, md) || 1 : Math.min(2, md) || 1, att: (base.att || []).map((a) => ({ ...a, busy: false })) }
+      const nf = { ...base, room: room.id, slotIdx: idx, maxDur: md, dur: f ? Math.min(f.dur, md) || 1 : 1, att: (base.att || []).map((a) => ({ ...a, busy: false })) }
       const emails = nf.att.map((a) => a.email)
       if (emails.length) attChain.current = attChain.current.then(async () => {
         const busy = await checkBusy(emails, nf)
@@ -347,16 +347,26 @@ export default function Rooms() {
                 const ag = agenda[calDay]
                 return (
                   <div className="agenda-card">
-                    <div className="ag-h"><Icon n="calendar" /> Tu día en Outlook <span className="muted">· para coordinarte antes de reservar{profile?.country ? ` · hora de ${profile.country}` : ''}</span></div>
+                    <div className="ag-h"><span className="ag-t"><Icon n="calendar" /> Tu día en Outlook</span><span className="muted ag-sub">tu agenda personal · hora de {profile?.country || 'Chile'} · toca una reunión para ver el detalle</span></div>
                     {!ag || ag.loading ? <div className="ag-empty muted">Cargando tu agenda…</div>
                       : !ag.ok ? <div className="ag-empty muted">No se pudo leer tu calendario de Outlook{ag.reason ? ` (${ag.reason})` : ''}.</div>
                       : (ag.events || []).length === 0 ? <div className="ag-empty muted">Sin eventos en tu Outlook este día: tienes el día libre para agendar.</div>
                       : (
                         <div className="ag-list">
                           {ag.events.map((ev, i) => (
-                            <span key={i} className={`ag-ev ${ev.show_as === 'tentative' ? 'tent' : ''}`} title={ev.location || undefined}>
+                            <button key={i} type="button" className={`ag-ev ${ev.show_as === 'tentative' ? 'tent' : ''}`} title="Ver detalle"
+                              onClick={() => {
+                                const hor = ev.all_day ? 'Todo el día' : `${fmtTz(new Date(ev.start), agendaTz)}–${fmtTz(new Date(ev.end), agendaTz)} (hora de ${profile?.country || 'Chile'})`
+                                const L = [`Horario: ${hor}`]
+                                if (ev.organizer) L.push(`Organiza: ${ev.organizer}`)
+                                if (ev.location) L.push(`Lugar: ${ev.location}`)
+                                if (ev.online) L.push('Incluye reunión en línea (Teams)')
+                                if ((ev.attendees || []).length) L.push(`Convocados: ${ev.attendees.join(', ')}`)
+                                if (ev.show_as === 'tentative') L.push('Estado: tentativa (sin confirmar)')
+                                alertDialog(L.join('\n'), { title: ev.subject })
+                              }}>
                               <b>{ev.all_day ? 'Todo el día' : `${fmtTz(new Date(ev.start), agendaTz)}–${fmtTz(new Date(ev.end), agendaTz)}`}</b> {ev.subject}
-                            </span>
+                            </button>
                           ))}
                         </div>
                       )}
@@ -444,9 +454,11 @@ export default function Rooms() {
                 <select value={form.rep} onChange={(e) => setForm({ ...form, rep: Number(e.target.value) })}>
                   <option value={0}>No se repite</option>
                   <option value={1}>Cada día hábil</option>
+                  <option value={2}>Día por medio (hábiles)</option>
                   <option value={7}>Cada semana</option>
-                  <option value={14}>Cada 15 días (quincenal)</option>
-                  <option value={28}>Cada 4 semanas</option>
+                  <option value={14}>Cada 2 semanas (quincenal)</option>
+                  <option value={21}>Cada 3 semanas</option>
+                  <option value={28}>Cada 4 semanas (mensual)</option>
                 </select></div>}
               {form.rep > 0 && <div><label>¿Cuántas veces?</label>
                 <select value={form.repN} onChange={(e) => setForm({ ...form, repN: Number(e.target.value) })}>

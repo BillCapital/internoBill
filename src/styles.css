@@ -3231,3 +3231,20 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
   .usr-cards td:nth-child(5),.usr-cards td:nth-child(6){text-align:center !important;vertical-align:middle !important}
   .usr-cards td .muted:only-child{display:inline-block;font-size:.85rem;line-height:1;color:var(--muted)}
 }
+
+/* Tarjeta de agenda: título e indicación en UNA línea a la misma altura; chips clicables */
+.agenda-card .ag-h{flex-wrap:nowrap;gap:.5rem;min-width:0}
+.agenda-card .ag-t{display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap;flex:none}
+.agenda-card .ag-sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;text-align:right}
+.agenda-card button.ag-ev{cursor:pointer;font:inherit;color:var(--text);font-size:.74rem}
+.agenda-card button.ag-ev:hover{border-color:color-mix(in srgb,var(--lime) 55%,var(--line));background:color-mix(in srgb,var(--lime) 10%,var(--panel))}
+@media(max-width:600px){.agenda-card .ag-h{flex-wrap:wrap}.agenda-card .ag-sub{text-align:left;white-space:normal}}
+
+/* Panel "Reservar sala": ocupa el alto completo de la columna (hasta las 18:00 del horario) */
+@media(min-width:1101px){
+  .sal-cols.with-form{align-items:stretch}
+  .res-wrap{display:flex;flex-direction:column}
+  .res-wrap .modal{position:relative !important;top:auto;flex:1;max-height:none !important;display:flex;flex-direction:column}
+  .res-wrap .modal textarea{flex:1;min-height:70px}
+  .res-wrap .modal .modal-actions{margin-top:auto;padding-top:.7rem}
+}
