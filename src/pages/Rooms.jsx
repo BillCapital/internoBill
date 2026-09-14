@@ -623,7 +623,7 @@ export default function Rooms() {
                   if (reason === null) return
                   try { await api('request_reschedule', { p_id: openObj.id, p_reason: reason || '' }); setOpenRes(null); alertDialog('Aviso enviado: se le pidió reprogramar la reunión.') } catch (e) { alertDialog(e.message) }
                 }}><Icon n="bell" /> Solicitar reprogramación</button>}
-              {(openObj.user_id === profile?.id || canApproveRooms) && new Date(openObj.ends_at).getTime() > Date.now() &&
+              {openObj.user_id === profile?.id && new Date(openObj.ends_at).getTime() > Date.now() &&
                 <button className="btn" title="Mueve la reunión a otro horario" onClick={() => {
                   // Reprogramar: se abre el formulario con los mismos datos; al confirmar se cancela la actual (y su cita 365) y se crea la nueva
                   const rtz = tzFor(openObj.room_id)
