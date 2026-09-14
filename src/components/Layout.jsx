@@ -80,8 +80,8 @@ export default function Layout() {
     if (!user) return
     const [{ data: real }, { count: sol }, { count: sal }] = await Promise.all([
       supabase.from('notifications').select('id,title,body,link,kind,created_at').is('read_at', null).order('created_at', { ascending: false }).limit(40),
-      canManageOrders ? supabase.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'pending') : Promise.resolve({ count: 0 }),
-      canManageRooms ? supabase.from('reservations').select('id', { count: 'exact', head: true }).eq('status', 'pending') : Promise.resolve({ count: 0 }),
+      canManageOrders ? supabase.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'pending').gt('ends_at', new Date().toISOString()) : Promise.resolve({ count: 0 }),
+      canManageRooms ? supabase.from('reservations').select('id', { count: 'exact', head: true }).eq('status', 'pending').gt('ends_at', new Date().toISOString()) : Promise.resolve({ count: 0 }),
     ])
     // Pendientes por atender (gestora/admin) como aviso no descartable
     const pend = []
@@ -162,7 +162,7 @@ export default function Layout() {
             </button>
             {notifOpen && (
               <div className="notif-panel">
-                <div className="notif-head"><span>Notificaciones</span>{notifs.length > 0 && <button className="notif-all" onClick={markAll}>Marcar todas</button>}</div>
+                <div className="notif-head"><span>Notificaciones</span>{notifs.length > 0 && <button className="notif-all" onClick={markAll} title="Elimina todas las notificaciones">Marcar como visto</button>}</div>
                 {notifs.length === 0
                   ? <div className="notif-empty">Sin novedades por ahora.</div>
                   : notifs.map((n) => (
