@@ -3248,3 +3248,28 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
   .res-wrap .modal textarea{flex:1;min-height:70px}
   .res-wrap .modal .modal-actions{margin-top:auto;padding-top:.7rem}
 }
+
+/* Detalle de un evento de la agenda de Outlook */
+.agd-rows{display:flex;flex-direction:column;gap:.55rem;margin-top:.6rem}
+.agd-row{display:flex;align-items:flex-start;gap:.6rem}
+.agd-ico{flex:none;width:1.9rem;height:1.9rem;border-radius:8px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--lime) 14%,transparent)}
+.agd-ico .licon{width:.95rem;height:.95rem;color:var(--lime-text)}
+.agd-row > div{display:flex;flex-direction:column;min-width:0}
+.agd-l{font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+.agd-v{font-size:.88rem;color:var(--text);overflow-wrap:anywhere}
+
+/* Tarjetas de sala y agenda: a la izquierda, bajo el calendario mensual */
+.left-cards{margin-top:.8rem;display:flex;flex-direction:column;gap:.5rem;max-width:360px}
+.left-cards .room-cards{margin:0}
+.left-cards .agenda-card{margin:0}
+.left-cards .agenda-card .ag-h{flex-wrap:wrap}
+.left-cards .agenda-card .ag-sub{text-align:left;white-space:normal;flex:1 1 100%}
+@media(max-width:760px){.left-cards{max-width:100%}}
+
+/* Subtítulo de la agenda: siempre completo, en su propia línea */
+.agenda-card .ag-h{flex-wrap:wrap}
+.agenda-card .ag-sub{white-space:normal;overflow:visible;text-overflow:clip;text-align:left;flex:1 1 100%;font-size:.7rem}
+
+/* Meta del panel de reserva: texto corrido en una línea (con salto natural), sin columnas raras */
+.modal-reserve .mr-meta.mr-meta-flow{display:block;line-height:1.4}
+.modal-reserve .mr-meta.mr-meta-flow strong{color:var(--text);font-weight:700}

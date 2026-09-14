@@ -36,6 +36,8 @@ const addMin = (dt, m) => new Date(dt.getTime() + m * 60000)
 const hhmm = (dt, tz = SCL) => new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(dt)
 const monthName = (y, m) => new Date(y, m, 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
 const dayLong = (ds) => new Date(ds + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })
+// Solo la primera letra en mayúscula ("Lunes 14 de septiembre", no "Lunes, 14 De Septiembre")
+const capFirst = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t)
 const emptyRoom = { name: '', location: '', capacity: 4, description: '', is_active: true }
 // Fecha y hora ACTUAL en Santiago de Chile (independiente de la zona del navegador)
 const nowSCL = (tz = SCL) => {
@@ -64,6 +66,7 @@ export default function Rooms() {
   const [roomSel, setRoomSel] = useState('') // '' = todas las salas
   // Tu día en Outlook: la agenda propia del día elegido (para coordinar la reserva)
   const [agenda, setAgenda] = useState({})   // fecha -> { loading, ok, events, reason }
+  const [agEv, setAgEv] = useState(null)     // evento de la agenda abierto en detalle
   const agendaTz = tzOf(profile?.country)
   const [res, setRes] = useState([])
   const [openRes, setOpenRes] = useState(null)
@@ -323,6 +326,37 @@ export default function Rooms() {
               return <button className={cl.join(' ')} key={ds} disabled={wknd || past} onClick={() => { setCalDay(ds); setOpenRes(null) }}>{d}</button>
             })}
           </div>
+          {calDay && !isWknd(calDay) && (<div className="left-cards">
+              <div className="room-cards">
+            {rooms.map((r) => (
+              <button key={r.id} type="button" className={`room-card${roomSel === r.id ? ' on' : ''}`} title={roomSel === r.id ? 'Mostrando solo esta sala — toca para ver todas' : 'Ver solo esta sala'} onClick={() => setRoomSel(roomSel === r.id ? '' : r.id)}>
+                <span className="rc-ico"><Icon n="building" /></span>
+                <span className="rc-txt"><strong>{r.name}</strong><span className="muted">{[r.location, r.capacity ? `${r.capacity} pers.` : null].filter(Boolean).join(' · ') || 'Sala de reuniones'}</span></span>
+              </button>
+            ))}
+          </div>
+          {(() => {
+            const ag = agenda[calDay]
+            return (
+              <div className="agenda-card">
+                <div className="ag-h"><span className="ag-t"><Icon n="calendar" /> Tu día en Outlook</span><span className="muted ag-sub">Hora de {profile?.country || 'Chile'}. Toca una reunión para ver su detalle.</span></div>
+                {!ag || ag.loading ? <div className="ag-empty muted">Cargando tu agenda…</div>
+                  : !ag.ok ? <div className="ag-empty muted">No se pudo leer tu calendario de Outlook{ag.reason ? ` (${ag.reason})` : ''}.</div>
+                  : (ag.events || []).length === 0 ? <div className="ag-empty muted">Sin eventos en tu Outlook este día: tienes el día libre para agendar.</div>
+                  : (
+                    <div className="ag-list">
+                      {ag.events.map((ev, i) => (
+                        <button key={i} type="button" className={`ag-ev ${ev.show_as === 'tentative' ? 'tent' : ''}`} title="Ver detalle"
+                          onClick={() => setAgEv(ev)}>
+                          <b>{ev.all_day ? 'Todo el día' : `${fmtTz(new Date(ev.start), agendaTz)}–${fmtTz(new Date(ev.end), agendaTz)}`}</b> {ev.subject}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+              </div>
+            )
+          })()}
+          </div>)}
         </div>
 
         {calDay && !isWknd(calDay) && (
@@ -334,44 +368,6 @@ export default function Rooms() {
                 if (!rm || tzOf(profile?.country) === roomTz(rm)) return null
                 const d = tzDiffHours(roomTz(rm), myTz, slotStart(calDay, slots[0], roomTz(rm)))
                 return <div className="tz-note"><Icon n="clock" /> Las horas están en hora de {roomCountry(rm)}. Tu hora ({profile?.country}): {diffLabel(d)}.</div>
-              })()}
-              <div className="room-cards">
-                {rooms.map((r) => (
-                  <button key={r.id} type="button" className={`room-card${roomSel === r.id ? ' on' : ''}`} title={roomSel === r.id ? 'Mostrando solo esta sala — toca para ver todas' : 'Ver solo esta sala'} onClick={() => setRoomSel(roomSel === r.id ? '' : r.id)}>
-                    <span className="rc-ico"><Icon n="building" /></span>
-                    <span className="rc-txt"><strong>{r.name}</strong><span className="muted">{[r.location, r.capacity ? `${r.capacity} pers.` : null].filter(Boolean).join(' · ') || 'Sala de reuniones'}</span></span>
-                  </button>
-                ))}
-              </div>
-              {(() => {
-                const ag = agenda[calDay]
-                return (
-                  <div className="agenda-card">
-                    <div className="ag-h"><span className="ag-t"><Icon n="calendar" /> Tu día en Outlook</span><span className="muted ag-sub">tu agenda personal · hora de {profile?.country || 'Chile'} · toca una reunión para ver el detalle</span></div>
-                    {!ag || ag.loading ? <div className="ag-empty muted">Cargando tu agenda…</div>
-                      : !ag.ok ? <div className="ag-empty muted">No se pudo leer tu calendario de Outlook{ag.reason ? ` (${ag.reason})` : ''}.</div>
-                      : (ag.events || []).length === 0 ? <div className="ag-empty muted">Sin eventos en tu Outlook este día: tienes el día libre para agendar.</div>
-                      : (
-                        <div className="ag-list">
-                          {ag.events.map((ev, i) => (
-                            <button key={i} type="button" className={`ag-ev ${ev.show_as === 'tentative' ? 'tent' : ''}`} title="Ver detalle"
-                              onClick={() => {
-                                const hor = ev.all_day ? 'Todo el día' : `${fmtTz(new Date(ev.start), agendaTz)}–${fmtTz(new Date(ev.end), agendaTz)} (hora de ${profile?.country || 'Chile'})`
-                                const L = [`Horario: ${hor}`]
-                                if (ev.organizer) L.push(`Organiza: ${ev.organizer}`)
-                                if (ev.location) L.push(`Lugar: ${ev.location}`)
-                                if (ev.online) L.push('Incluye reunión en línea (Teams)')
-                                if ((ev.attendees || []).length) L.push(`Convocados: ${ev.attendees.join(', ')}`)
-                                if (ev.show_as === 'tentative') L.push('Estado: tentativa (sin confirmar)')
-                                alertDialog(L.join('\n'), { title: ev.subject })
-                              }}>
-                              <b>{ev.all_day ? 'Todo el día' : `${fmtTz(new Date(ev.start), agendaTz)}–${fmtTz(new Date(ev.end), agendaTz)}`}</b> {ev.subject}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                  </div>
-                )
               })()}
               <div className="room-legend">
                 <span className="rl-item free"><span className="dot" />Disponible</span>
@@ -425,7 +421,7 @@ export default function Rooms() {
             <div className="mr-head">
               <span className="mr-ico"><Icon n="calendar" /></span>
               <div><h3>{form.reschedId ? 'Reprogramar reunión' : 'Reservar sala'}</h3>
-                <p className="mr-meta"><Icon n="building" /> <strong>{roomNm}</strong> · <span style={{ textTransform: 'capitalize' }}>{dayLong(calDay)}</span> · {t}–{endT}</p></div>
+                <p className="mr-meta mr-meta-flow"><strong>{roomNm}</strong> · {capFirst(dayLong(calDay))} · {t}–{endT}</p></div>
             </div>
             {(() => {
               const rm = rooms.find((x) => x.id === form.room)
@@ -540,6 +536,25 @@ export default function Rooms() {
         )
       })()}
       </div>
+
+      {agEv && (
+        <div className="backdrop open" onClick={() => setAgEv(null)}>
+          <div className="modal modal-reserve" style={{ position: 'relative', maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+            <button className="modal-x" title="Cerrar" onClick={() => setAgEv(null)}><Icon n="close" /></button>
+            <div className="mr-head">
+              <span className="mr-ico"><Icon n="calendar" /></span>
+              <div><h3>{agEv.subject}</h3>
+                <p className="mr-meta"><Icon n="clock" /> {agEv.all_day ? 'Todo el día' : `${fmtTz(new Date(agEv.start), agendaTz)}–${fmtTz(new Date(agEv.end), agendaTz)}`} · hora de {profile?.country || 'Chile'}{agEv.show_as === 'tentative' ? ' · tentativa' : ''}</p></div>
+            </div>
+            <div className="agd-rows">
+              {agEv.organizer && <div className="agd-row"><span className="agd-ico"><Icon n="users" /></span><div><span className="agd-l">Organiza</span><span className="agd-v">{agEv.organizer}</span></div></div>}
+              {agEv.location && <div className="agd-row"><span className="agd-ico"><Icon n="building" /></span><div><span className="agd-l">Lugar</span><span className="agd-v">{agEv.location}</span></div></div>}
+              {agEv.online && <div className="agd-row"><span className="agd-ico"><Icon n="monitor" /></span><div><span className="agd-l">Modalidad</span><span className="agd-v">Incluye reunión en línea (Teams)</span></div></div>}
+              <div className="agd-row"><span className="agd-ico"><Icon n="users" /></span><div><span className="agd-l">Convocados{(agEv.attendees || []).length ? ` (${agEv.attendees.length})` : ''}</span><span className="agd-v">{(agEv.attendees || []).length ? agEv.attendees.join(', ') : 'Sin convocados (evento solo tuyo)'}</span></div></div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {roomEdit && (
         <div className="backdrop open">

@@ -18,7 +18,7 @@ export default function DialogHost() {
   const onCancel = () => done(isPrompt || isChoice ? null : false)
 
   return (
-    <div className="backdrop open" style={{ zIndex: 80 }} onMouseDown={(e) => { if (e.target === e.currentTarget && !isAlert) onCancel() }}>
+    <div className="backdrop open" style={{ zIndex: 80 }} onMouseDown={(e) => { if (e.target === e.currentTarget) (isAlert ? onOk() : onCancel()) }}>
       <div className="modal dlg" style={{ maxWidth: 430 }}>
         <h3>{d.title || (isAlert ? 'Aviso' : isPrompt ? 'Escribe un valor' : 'Confirmar acción')}</h3>
         {d.message && <p className="dlg-msg">{d.message}</p>}
