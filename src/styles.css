@@ -3208,3 +3208,26 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .usr-cards tr.grp-row .grp-count{margin-left:.45rem}
 /* País: en una línea con recorte */
 @media(min-width:761px){.usr-cards td:nth-child(3){overflow:hidden;text-overflow:ellipsis}}
+
+/* Tu día en Outlook (Salas) */
+.agenda-card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:.55rem .7rem;margin:0 0 .55rem}
+.agenda-card .ag-h{display:flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:700;color:var(--text)}
+.agenda-card .ag-h .licon{width:.9rem;height:.9rem;color:var(--lime-text)}
+.agenda-card .ag-h .muted{font-weight:400;font-size:.72rem}
+.agenda-card .ag-empty{font-size:.76rem;margin-top:.25rem}
+.agenda-card .ag-list{display:flex;flex-wrap:wrap;gap:.3rem .45rem;margin-top:.35rem}
+.agenda-card .ag-ev{display:inline-flex;align-items:center;gap:.3rem;font-size:.74rem;line-height:1.25;border:1px solid var(--line);border-radius:8px;padding:.22rem .5rem;background:color-mix(in srgb,var(--soft) 60%,transparent);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agenda-card .ag-ev b{font-weight:700;color:var(--lime-text);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.7rem}
+.agenda-card .ag-ev.tent{border-style:dashed;opacity:.8}
+@media(max-width:600px){.agenda-card .ag-ev{white-space:normal}}
+/* Usuarios: "Último ingreso" y computadores con letra menor para que quepan en una línea */
+@media(min-width:761px){
+  .usr-cards td:nth-child(5),.usr-cards td:nth-child(6){font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .usr-cards td:nth-child(6){color:var(--muted)}
+}
+/* Los "—" de celdas vacías: mismo tamaño, color y centrado exacto en todas las filas */
+@media(min-width:761px){
+  .usr-cards td:nth-child(2),.usr-cards td:nth-child(3),.usr-cards td:nth-child(4),
+  .usr-cards td:nth-child(5),.usr-cards td:nth-child(6){text-align:center !important;vertical-align:middle !important}
+  .usr-cards td .muted:only-child{display:inline-block;font-size:.85rem;line-height:1;color:var(--muted)}
+}

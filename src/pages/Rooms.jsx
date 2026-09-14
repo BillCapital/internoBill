@@ -6,7 +6,7 @@ import Chat from '../components/Chat'
 import ActivityLog from '../components/ActivityLog'
 import { confirmDialog, alertDialog, promptDialog } from '../lib/ui'
 import { Icon } from '../lib/icons'
-import { tzOf, tzDiffHours, diffLabel, rangeTz } from '../lib/tz'
+import { tzOf, tzDiffHours, diffLabel, rangeTz, fmtTz } from '../lib/tz'
 
 const MORNING = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30']
 const AFTERNOON = ['15:30', '16:00', '16:30', '17:00', '17:30']
@@ -62,6 +62,9 @@ export default function Rooms() {
   }, [calDay])
   const [rooms, setRooms] = useState([])
   const [roomSel, setRoomSel] = useState('') // '' = todas las salas
+  // Tu día en Outlook: la agenda propia del día elegido (para coordinar la reserva)
+  const [agenda, setAgenda] = useState({})   // fecha -> { loading, ok, events, reason }
+  const agendaTz = tzOf(profile?.country)
   const [res, setRes] = useState([])
   const [openRes, setOpenRes] = useState(null)
   // Enlace directo desde una notificación: /salas?chat=<id de reserva>
@@ -221,6 +224,16 @@ export default function Rooms() {
   const shift = (n) => { let m = calM + n, y = calY; if (m < 0) { m = 11; y-- } if (m > 11) { m = 0; y++ } setCalM(m); setCalY(y) }
 
   const shownRooms = roomSel ? rooms.filter((r) => r.id === roomSel) : rooms
+  // Carga la agenda del día elegido (una vez por día; el rango se calcula en la zona del usuario)
+  useEffect(() => {
+    if (!calDay || isWknd(calDay) || agenda[calDay]) return
+    setAgenda((m) => ({ ...m, [calDay]: { loading: true } }))
+    const dayStart = slotStart(calDay, '00:00', agendaTz)
+    const dayEnd = addMin(dayStart, 24 * 60)
+    supabase.functions.invoke('my-agenda', { body: { start: dayStart.toISOString(), end: dayEnd.toISOString() } })
+      .then(({ data, error }) => setAgenda((m) => ({ ...m, [calDay]: error ? { ok: false, reason: 'error' } : (data || { ok: false }) })))
+      .catch(() => setAgenda((m) => ({ ...m, [calDay]: { ok: false, reason: 'error' } })))
+  }, [calDay]) // eslint-disable-line react-hooks/exhaustive-deps
   // Zonas horarias: el horario de la sala va en la hora de su país; se muestra la equivalencia para otros países
   const myTz = tzOf(profile?.country)
   const roomTz = (room) => tzOf(room?.country || 'Chile')
@@ -330,6 +343,26 @@ export default function Rooms() {
                   </button>
                 ))}
               </div>
+              {(() => {
+                const ag = agenda[calDay]
+                return (
+                  <div className="agenda-card">
+                    <div className="ag-h"><Icon n="calendar" /> Tu día en Outlook <span className="muted">· para coordinarte antes de reservar{profile?.country ? ` · hora de ${profile.country}` : ''}</span></div>
+                    {!ag || ag.loading ? <div className="ag-empty muted">Cargando tu agenda…</div>
+                      : !ag.ok ? <div className="ag-empty muted">No se pudo leer tu calendario de Outlook.</div>
+                      : (ag.events || []).length === 0 ? <div className="ag-empty muted">Sin eventos en tu Outlook este día: tienes el día libre para agendar.</div>
+                      : (
+                        <div className="ag-list">
+                          {ag.events.map((ev, i) => (
+                            <span key={i} className={`ag-ev ${ev.show_as === 'tentative' ? 'tent' : ''}`} title={ev.location || undefined}>
+                              <b>{ev.all_day ? 'Todo el día' : `${fmtTz(new Date(ev.start), agendaTz)}–${fmtTz(new Date(ev.end), agendaTz)}`}</b> {ev.subject}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                  </div>
+                )
+              })()}
               <div className="room-legend">
                 <span className="rl-item free"><span className="dot" />Disponible</span>
                 <span className="rl-item resv"><span className="dot" />Reservado</span>
