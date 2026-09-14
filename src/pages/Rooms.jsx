@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
@@ -56,13 +57,14 @@ export default function Rooms() {
   const [calDay, setCalDay] = useState('') // sin día elegido: la sección de horas no se muestra hasta seleccionar
   const salRightRef = useRef(null)
   // Llegada desde una notificación (/salas?dia=YYYY-MM-DD): abre el calendario en ese día
+  const location = useLocation()
   useEffect(() => {
-    const d = new URLSearchParams(window.location.search).get('dia')
+    const d = new URLSearchParams(location.search).get('dia')
     if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
       setCalY(+d.slice(0, 4)); setCalM(+d.slice(5, 7) - 1)
       if (!isWknd(d)) setCalDay(d)
     }
-  }, [window.location.search]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [location.search])
   // En móvil, al elegir un día, desplaza a la sección de horas para agendar
   useEffect(() => {
     if (calDay && !isWknd(calDay) && window.innerWidth <= 760) {
@@ -357,7 +359,7 @@ export default function Rooms() {
             const ag = agenda[calDay]
             return (
               <div className="agenda-card">
-                <div className="ag-h"><span className="ag-t"><Icon n="calendar" /> Tu día en Outlook</span><button type="button" className="ag-refresh" title="Actualizar desde Outlook" onClick={() => loadAgenda(calDay, true)}><Icon n="refresh" /></button><span className="muted ag-sub">Hora de {profile?.country || 'Chile'}. Toca una reunión para ver su detalle.</span></div>
+                <div className="ag-h"><span className="ag-t"><Icon n="calendar" /> Tu día en Outlook</span><span className="muted ag-sub">Hora de {profile?.country || 'Chile'}. Toca una reunión para ver su detalle.</span></div>
                 {!ag || ag.loading ? <div className="ag-empty muted">Cargando tu agenda…</div>
                   : !ag.ok ? <div className="ag-empty muted">No se pudo leer tu calendario de Outlook{ag.reason ? ` (${ag.reason})` : ''}.</div>
                   : (ag.events || []).length === 0 ? <div className="ag-empty muted">Sin eventos en tu Outlook este día: tienes el día libre para agendar.</div>
