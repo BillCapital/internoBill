@@ -615,13 +615,13 @@ export default function Rooms() {
                 <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Rechazar la reserva?', { title: 'Rechazar reserva', danger: true, okText: 'Rechazar' })) act('reject_reservation', openObj.id) }}>Rechazar</button>
               </>}
               <span className="res-sep" />
-              {canApproveRooms && openObj.user_id !== profile?.id && new Date(openObj.ends_at).getTime() > Date.now() &&
+              {(canApproveRooms || canManageRooms) && openObj.user_id !== profile?.id && new Date(openObj.ends_at).getTime() > Date.now() &&
                 <button className="btn" title="Avisar a quien la creó para que elija otro horario" onClick={async () => {
                   const reason = await promptDialog('Motivo (opcional) que verá quien creó la reserva:', { title: 'Pedir otro horario', okText: 'Enviar aviso' })
                   if (reason === null) return
                   try { await api('request_reschedule', { p_id: openObj.id, p_reason: reason || '' }); setOpenRes(null); alertDialog('Aviso enviado: se le pidió reprogramar la reunión.') } catch (e) { alertDialog(e.message) }
                 }}>Pedir otro horario</button>}
-              {(openObj.user_id === profile?.id || canApproveRooms) && new Date(openObj.ends_at).getTime() > Date.now() &&
+              {(openObj.user_id === profile?.id || canApproveRooms || canManageRooms) && new Date(openObj.ends_at).getTime() > Date.now() &&
                 <button className="btn" onClick={() => {
                   // Reprogramar: se abre el formulario con los mismos datos; al confirmar se cancela la actual (y su cita 365) y se crea la nueva
                   const rtz = tzFor(openObj.room_id)
