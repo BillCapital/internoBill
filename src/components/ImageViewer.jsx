@@ -12,7 +12,7 @@ export default function ImageViewer() {
     if (!url) return
     const onKey = (e) => {
       if (e.key === 'Escape') setUrl(null)
-      if (e.key === '+' || e.key === '=') setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))
+      if (e.key === '+' || e.key === '=') setZoom((z) => Math.min(1.25, +(z + 0.25).toFixed(2)))
       if (e.key === '-') setZoom((z) => Math.max(1, +(z - 0.25).toFixed(2)))
     }
     document.addEventListener('keydown', onKey)
@@ -20,7 +20,7 @@ export default function ImageViewer() {
   }, [url])
 
   if (!url) return null
-  const zin = () => setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))
+  const zin = () => setZoom((z) => Math.min(1.25, +(z + 0.25).toFixed(2)))
   const zout = () => setZoom((z) => Math.max(1, +(z - 0.25).toFixed(2)))
   return (
     <div className="img-viewer">
@@ -30,7 +30,7 @@ export default function ImageViewer() {
       <div className="iv-zoom">
         <button onClick={zout} disabled={zoom <= 1} title="Alejar">−</button>
         <button className="iv-pct" onClick={() => setZoom(1)} title="Tamaño original (ajustada a la pantalla)">{Math.round(zoom * 100)}%</button>
-        <button onClick={zin} disabled={zoom >= 4} title="Acercar">＋</button>
+        <button onClick={zin} disabled={zoom >= 1.25} title="Acercar">＋</button>
       </div>
       <button className="img-viewer-x" onClick={() => setUrl(null)} title="Cerrar"><Icon n="close" /></button>
     </div>

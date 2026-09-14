@@ -3328,3 +3328,7 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .iv-zoom button:hover{background:rgba(255,255,255,.26)}
 .iv-zoom button:disabled{opacity:.35;cursor:default}
 .iv-zoom .iv-pct{min-width:58px;font-size:.78rem;font-weight:600;padding:0 .5rem}
+/* X del visor: siempre visible sobre cualquier fondo (círculo oscuro con borde) y glifo centrado */
+.img-viewer-x{background:rgba(10,14,22,.82);border:1.5px solid rgba(255,255,255,.35);box-shadow:0 4px 14px rgba(0,0,0,.45)}
+.img-viewer-x:hover{background:rgba(10,14,22,.95);border-color:rgba(255,255,255,.6)}
+.img-viewer-x .licon{display:block;width:1.05rem;height:1.05rem}
