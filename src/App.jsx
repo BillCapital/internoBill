@@ -24,7 +24,12 @@ function Protected({ children, need }) {
   const auth = useAuth()
   const { user, loading } = auth
   if (loading) return <div className="page-loader">Cargando…</div>
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) {
+    // Enlace profundo sin sesión (ej. desde un correo): se guarda el destino y se
+    // retoma después de entrar con Microsoft (el OAuth siempre vuelve al inicio).
+    try { const dest = window.location.pathname + window.location.search; if (dest !== '/' && !dest.startsWith('/login')) sessionStorage.setItem('bc-return-to', dest) } catch { /* noop */ }
+    return <Navigate to="/login" replace />
+  }
   // `need` es el módulo: basta con poder VERLO para entrar. Dentro de cada
   // página, canEdit(módulo) decide si además puede actuar. «roles» es del admin.
   if (need === 'roles' ? !auth.isAdmin : (need && !auth.canView(need))) return <Navigate to="/" replace />

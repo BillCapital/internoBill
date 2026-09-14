@@ -6,7 +6,9 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 // tope por destinatario/hora, dedupe en la cola y máximo 3 intentos por correo.
 const SB_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const MAILER_KEY = Deno.env.get('MAILER_KEY') ?? ''
+// La clave viene del Vault de la base (rpc mailer_key, solo legible con service role);
+// si algún día se define el secret MAILER_KEY en el dashboard, ese manda.
+const MAILER_KEY_ENV = Deno.env.get('MAILER_KEY') ?? ''
 const TENANT = Deno.env.get('MS_TENANT_ID') ?? ''
 const CID = Deno.env.get('MS_CLIENT_ID') ?? ''
 const CSECRET = Deno.env.get('MS_CLIENT_SECRET') ?? ''
@@ -25,8 +27,10 @@ async function graphToken(): Promise<string | null> {
 }
 
 Deno.serve(async (req) => {
-  if (!MAILER_KEY || req.headers.get('x-internal-key') !== MAILER_KEY) return json(401, { error: 'forbidden' })
   const admin = createClient(SB_URL, SERVICE)
+  let key = MAILER_KEY_ENV
+  if (!key) { const { data } = await admin.rpc('mailer_key'); key = data || '' }
+  if (!key || req.headers.get('x-internal-key') !== key) return json(401, { error: 'forbidden' })
   const { data: cfg } = await admin.from('mail_config').select('*').eq('id', 1).single()
   if (!cfg?.enabled) return json(200, { ok: true, skipped: 'deshabilitado' })
 

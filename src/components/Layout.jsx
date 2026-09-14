@@ -74,6 +74,13 @@ export default function Layout() {
   }
 
   useEffect(() => { document.body.classList.toggle('light', theme === 'light'); try { localStorage.setItem('bc-theme', theme) } catch { /* noop */ } }, [theme])
+  // Retoma el destino guardado de un enlace profundo (correo) tras iniciar sesión
+  useEffect(() => {
+    try {
+      const dest = sessionStorage.getItem('bc-return-to')
+      if (dest) { sessionStorage.removeItem('bc-return-to'); if (window.location.pathname === '/' && dest !== '/') nav(dest, { replace: true }) }
+    } catch { /* noop */ }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { document.body.classList.toggle('sb-collapsed', collapsed); return () => document.body.classList.remove('sb-collapsed') }, [collapsed])
 
   const loadNotifs = useCallback(async () => {
