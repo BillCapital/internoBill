@@ -136,7 +136,7 @@ export default function Rooms() {
   const pickSlot = (room, idx) => {
     setForm((f) => {
       const md = maxDur(room.id, idx)
-      const base = f ? { ...f } : { title: 'Reunión', just: '', att: [], rep: 0, repN: 4 }
+      const base = f ? { ...f } : { title: '', just: '', att: [], rep: 0, repN: 4 }
       const nf = { ...base, room: room.id, slotIdx: idx, maxDur: md, dur: f ? Math.min(f.dur, md) || 1 : 1, att: (base.att || []).map((a) => ({ ...a, busy: false })) }
       const emails = nf.att.map((a) => a.email)
       if (emails.length) attChain.current = attChain.current.then(async () => {
@@ -154,6 +154,7 @@ export default function Rooms() {
     if (covered(form.room, t)) return alertDialog('Ese bloque ya está ocupado. Toca otro bloque disponible en el horario para cambiar la hora.')
     const ns = nowSCL(tzFor(form.room))
     if (calDay < ns.date || (calDay === ns.date && toMin(t) <= ns.min)) return alertDialog('Esa hora ya pasó (hora de Santiago). Elige un horario futuro.')
+    if ((form.title || '').trim().length < 3) return alertDialog('Ponle un título a la reunión.')
     if ((form.just || '').trim().length < 4) return alertDialog('La justificación es obligatoria. Cuéntanos brevemente para qué es la reunión.')
     setResBusy(true)
     try {
@@ -241,6 +242,11 @@ export default function Rooms() {
       .catch(() => setAgenda((m) => ({ ...m, [day]: { ok: false, reason: 'error', at: Date.now() } })))
   }, [agenda, agendaTz]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { loadAgenda(calDay) }, [calDay]) // eslint-disable-line react-hooks/exhaustive-deps
+  // La agenda del día abierto se refresca sola cada minuto (solo con la pestaña visible)
+  useEffect(() => {
+    const t = setInterval(() => { if (!document.hidden) loadAgenda(calDay) }, 60000)
+    return () => clearInterval(t)
+  }, [calDay, loadAgenda])
   // Zonas horarias: el horario de la sala va en la hora de su país; se muestra la equivalencia para otros países
   const myTz = tzOf(profile?.country)
   const roomTz = (room) => tzOf(room?.country || 'Chile')
@@ -443,9 +449,9 @@ export default function Rooms() {
               ? <div className="mr-hint warn">Ese bloque ya está ocupado este día. Toca otro bloque disponible en el horario para cambiar la hora.</div>
               : form.reschedId
                 ? <div className="mr-hint warn">Elige el nuevo día y bloque en el horario. Al confirmar, la reunión actual se cancela y se elimina de los calendarios; la nueva se envía cuando la acepten.</div>
-                : <div className={`mr-hint${form.pickAnother ? ' warn' : ''}`}>{form.pickAnother ? 'Hay un cruce de agenda: ' : ''}Toca otro bloque del horario para cambiar la hora o la sala sin perder lo escrito.</div>}
+                : <div className={`mr-hint${form.pickAnother ? ' warn' : ''}`}>{form.pickAnother ? 'Hay un cruce de agenda: ' : ''}Toca otro bloque para cambiar la hora sin perder lo escrito.</div>}
             <div className="mr-grid">
-              <div style={{ gridColumn: '1 / -1' }}><label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ej: Comité de riesgo" /></div>
+              <div style={{ gridColumn: '1 / -1' }}><label>Título <span className="req-pill">obligatorio</span></label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ej: Comité de riesgo" /></div>
               <div><label>Duración</label>
                 <select value={form.dur} onChange={(e) => setForm({ ...form, dur: Number(e.target.value) })}>
                   {Array.from({ length: Math.max(1, md) }).map((_, i) => { const d = i + 1, mm = d * 30; return <option key={d} value={d}>{mm < 60 ? mm + ' min' : (mm / 60) + ' h'}</option> })}

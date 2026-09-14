@@ -3292,3 +3292,9 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
   .sal-cols.with-form .sal-right .cal tbody tr{height:auto !important}
   .sal-cols.with-form .sal-right .cal tbody tr:not(.lunch) td{height:auto !important}
 }
+
+/* Con el horario estirado: los bloques llenan su fila (sin cajas chicas flotando en celdas altas) */
+@media(min-width:1101px){
+  .sal-cols.with-form .sal-right .cal td .slot{height:calc(100% - 2px) !important;max-height:none !important;min-height:26px;display:flex;align-items:center;justify-content:center}
+  .sal-cols.with-form .sal-right .cal td{vertical-align:middle}
+}
