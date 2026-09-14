@@ -189,13 +189,33 @@ export default function Gastos() {
       await api('expense_doc_delete', { p_id: d.id }); loadDocs()
     } catch (e) { alertDialog(e.message) }
   }
+  // ---- Proveedores (datos de transferencia) ----
+  const [provs, setProvs] = useState([])
+  const [provEdit, setProvEdit] = useState(null)
+  const loadProvs = useCallback(async () => { const { data } = await supabase.from('providers').select('*').order('nombre'); setProvs(data ?? []) }, [])
+  useEffect(() => { loadProvs() }, [loadProvs])
+  const saveProv = async () => {
+    if (!(provEdit.nombre || '').trim()) return alertDialog('Ponle nombre al proveedor.')
+    const row = { ...provEdit, nombre: provEdit.nombre.trim(), updated_at: new Date().toISOString() }
+    if (!row.id) delete row.id
+    const { error } = await supabase.from('providers').upsert(row)
+    if (error) return alertDialog(error.message)
+    setProvEdit(null); loadProvs()
+  }
+  const delProv = async (pr) => {
+    if (!(await confirmDialog(`¿Eliminar el proveedor "${pr.nombre}" y sus datos de transferencia?`, { title: 'Eliminar proveedor', danger: true, okText: 'Eliminar' }))) return
+    const { error } = await supabase.from('providers').delete().eq('id', pr.id)
+    if (error) return alertDialog(error.message)
+    loadProvs()
+  }
+
   const openViewer = async (d) => {
     if (!d.file_path) return
     const { data } = await supabase.storage.from(BUCKET).createSignedUrl(d.file_path, 3600)
     setViewer({ ...d, url: data?.signedUrl })
   }
 
-  const TABS = [['resumen', 'Resumen', 'grid'], ['telefonia', 'Telefonía', 'phone'], ['licencias', 'Licencias', 'shield'], ['facturas', 'Facturas', 'file']]
+  const TABS = [['resumen', 'Resumen', 'grid'], ['telefonia', 'Telefonía', 'phone'], ['licencias', 'Licencias', 'shield'], ['facturas', 'Facturas', 'file'], ['proveedores', 'Proveedores', 'building']]
 
   return (
     <div>
@@ -294,6 +314,36 @@ export default function Gastos() {
           </>
         )}
 
+        {tab === 'proveedores' && (
+          <div className="conv gz-card">
+            <div className="row" style={{ marginBottom: '.6rem' }}>
+              <div><strong>Datos de transferencia por proveedor</strong><br /><span className="muted" style={{ fontSize: '.8rem' }}>Se muestran junto a cada producto cotizado de ese proveedor (botón "Transferencia").</span></div>
+              {!ro && <button className="btn btn-lime btn-sm" onClick={() => setProvEdit({ nombre: '', rut: '', banco: '', tipo_cuenta: 'Cuenta corriente', cuenta: '', correo: '', dominio: '', notas: '' })}>＋ Nuevo proveedor</button>}
+            </div>
+            {provs.length === 0
+              ? <div className="empty">Aún no hay proveedores. Agrega Tecnomas, PC Factory, MyShop… con sus datos bancarios.</div>
+              : <div className="table-wrap"><table className="tbl-compact">
+                  <thead><tr><th>Proveedor</th><th>RUT</th><th>Banco</th><th>Cuenta</th><th>Correo</th><th>Sitio</th><th></th></tr></thead>
+                  <tbody>
+                    {provs.map((pr) => (
+                      <tr key={pr.id}>
+                        <td><strong>{pr.nombre}</strong>{pr.notas ? <><br /><span className="muted" style={{ fontSize: '.74rem' }}>{pr.notas}</span></> : null}</td>
+                        <td className="nowrap">{pr.rut || <span className="muted">—</span>}</td>
+                        <td>{pr.banco || <span className="muted">—</span>}</td>
+                        <td className="nowrap">{pr.cuenta ? <>{pr.tipo_cuenta ? `${pr.tipo_cuenta} ` : ''}{pr.cuenta}</> : <span className="muted">—</span>}</td>
+                        <td>{pr.correo || <span className="muted">—</span>}</td>
+                        <td>{pr.dominio || <span className="muted">—</span>}</td>
+                        <td className="actions nowrap">
+                          {!ro && <button className="btn-sm" onClick={() => setProvEdit(pr)}>Editar</button>}{' '}
+                          {!ro && <button className="btn-sm btn-danger" onClick={() => delProv(pr)}>Eliminar</button>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table></div>}
+          </div>
+        )}
+
         {tab === 'facturas' && (
           <>
             <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem' }}>
@@ -332,6 +382,32 @@ export default function Gastos() {
           </>
         )}
       </>}
+
+      {/* Proveedor: alta / edición */}
+      {provEdit && (
+        <div className="backdrop open">
+          <div className="modal">
+            <h3>{provEdit.id ? 'Editar proveedor' : 'Nuevo proveedor'}</h3>
+            <div className="pf-fields">
+              <div><label>Nombre</label><input value={provEdit.nombre} onChange={(e) => setProvEdit({ ...provEdit, nombre: e.target.value })} placeholder="Ej: Tecnomas" autoFocus /></div>
+              <div><label>RUT</label><input value={provEdit.rut} onChange={(e) => setProvEdit({ ...provEdit, rut: e.target.value })} placeholder="76.123.456-7" /></div>
+              <div><label>Banco</label><input value={provEdit.banco} onChange={(e) => setProvEdit({ ...provEdit, banco: e.target.value })} placeholder="Banco de Chile" /></div>
+              <div><label>Tipo de cuenta</label>
+                <select value={provEdit.tipo_cuenta} onChange={(e) => setProvEdit({ ...provEdit, tipo_cuenta: e.target.value })}>
+                  <option>Cuenta corriente</option><option>Cuenta vista</option><option>Cuenta de ahorro</option>
+                </select></div>
+              <div><label>N° de cuenta</label><input value={provEdit.cuenta} onChange={(e) => setProvEdit({ ...provEdit, cuenta: e.target.value })} placeholder="00-123-45678-90" inputMode="numeric" /></div>
+              <div><label>Correo (comprobantes)</label><input value={provEdit.correo} onChange={(e) => setProvEdit({ ...provEdit, correo: e.target.value })} placeholder="pagos@proveedor.cl" /></div>
+              <div><label>Sitio web <span className="muted">(para asociar links)</span></label><input value={provEdit.dominio} onChange={(e) => setProvEdit({ ...provEdit, dominio: e.target.value })} placeholder="tecnomas.cl" /></div>
+              <div><label>Notas</label><input value={provEdit.notas} onChange={(e) => setProvEdit({ ...provEdit, notas: e.target.value })} placeholder="Ej: enviar OC antes de pagar" /></div>
+            </div>
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setProvEdit(null)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={saveProv}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Formulario de nueva factura */}
       {form && (

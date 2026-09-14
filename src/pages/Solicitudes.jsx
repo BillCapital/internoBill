@@ -52,7 +52,29 @@ export default function Solicitudes() {
   const [prodPrev, setProdPrev] = useState({})     // vista previa por producto (link y archivo): { [prodId]: {linkOpen,fileOpen,fileUrl,...} }
   const [budgetForm, setBudgetForm] = useState({}) // editor de rango de precio por solicitud: { [reqId]: {min, max, busy} }
   const [upBusy, setUpBusy] = useState({})
-  const [snapBusy, setSnapBusy] = useState({})   // captura de página en curso, por producto         // subiendo cotización a un producto existente: { [prodId]: true }
+  const [snapBusy, setSnapBusy] = useState({})   // captura de página en curso, por producto
+  const [provDir, setProvDir] = useState([])     // directorio de proveedores (datos de transferencia)
+  useEffect(() => { supabase.from('providers').select('*').then(({ data }) => setProvDir(data ?? [])) }, [])
+  // Proveedor del directorio que calza con el producto (por nombre leído de la cotización o dominio del link)
+  const provFor = (p) => {
+    const norm = (x) => (x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+    const prov = norm(p.quote_info?.provider)
+    let host = ''
+    try { host = new URL(/^https?:\/\//i.test(p.product_url || '') ? p.product_url : 'https://' + (p.product_url || '')).hostname.toLowerCase() } catch { /* sin link */ }
+    return provDir.find((d) => (d.dominio && host && host.includes(d.dominio.toLowerCase().replace(/^www\./, '')))
+      || (prov && norm(d.nombre) && (prov.includes(norm(d.nombre)) || norm(d.nombre).includes(prov)))) || null
+  }
+  const showTransfer = (d, extra) => {
+    const L = []
+    if (d.nombre) L.push(`Proveedor: ${d.nombre}`)
+    if (d.rut) L.push(`RUT: ${d.rut}`)
+    if (d.banco) L.push(`Banco: ${d.banco}`)
+    if (d.tipo_cuenta) L.push(`Tipo de cuenta: ${d.tipo_cuenta}`)
+    if (d.cuenta) L.push(`N° de cuenta: ${d.cuenta}`)
+    if (d.correo) L.push(`Correo: ${d.correo}`)
+    if (d.notas) L.push(`Notas: ${d.notas}`)
+    alertDialog(L.join('\n') + (extra ? `\n\n${extra}` : ''), { title: 'Datos de transferencia' })
+  }         // subiendo cotización a un producto existente: { [prodId]: true }
   const [changeVote, setChangeVote] = useState({}) // firmante quiere cambiar su voto de un producto: { [prodId]: true }
   const [glossOpen, setGlossOpen] = useState(false)
   const [availOpen, setAvailOpen] = useState({}) // carpetas de disponibilidad abiertas
@@ -872,6 +894,14 @@ export default function Solicitudes() {
                                     finally { setSnapBusy((m) => { const n = { ...m }; delete n[p.id]; return n }); load() }
                                   }}><Icon n="camera" /> {snapBusy[p.id] ? 'Capturando…' : 'Generar captura'}</button> : null}
                                   {p.file_url ? <button className={`rp2-chip ${pp.fileOpen ? 'on' : ''}`} onClick={() => toggleProdFile(p)}><Icon n="eye" /> Cotización</button> : null}
+                                  {(() => {
+                                    const dirP = provFor(p); const tq = p.quote_info?.transfer
+                                    if (!dirP && !tq) return null
+                                    return <button className="rp2-chip" title="Datos bancarios para pagar esta compra" onClick={() => dirP
+                                      ? showTransfer(dirP, tq ? 'La cotización además indica: ' + [tq.rut && `RUT ${tq.rut}`, tq.banco, tq.cuenta && `cta. ${tq.cuenta}`].filter(Boolean).join(' · ') : '')
+                                      : showTransfer({ nombre: p.quote_info?.provider || '', ...tq })
+                                    }><Icon n="cart" /> Transferencia</button>
+                                  })()}
                                   {(() => { const o = prodOutOfRange(t, p); return o ? <span className={`rp2-oor ${o}`} title="El total de esta opción queda fuera del rango autorizado"><Icon n="ban" /> {o === 'high' ? 'Sobre el rango' : 'Bajo el rango'}</span> : null })()}
                                   {!p.file_url && canAdd && active ? (
                                     <label className={`rp2-chip rp2-up ${upBusy[p.id] ? 'busy' : ''}`}>
@@ -888,7 +918,7 @@ export default function Solicitudes() {
 
                             {(() => {
                               const qi = p.quote_info || {}
-                              const has = qi.valid_until || qi.valid_days || qi.delivery || qi.payment || qi.warranty || qi.provider || qi.quote_date || qi.quote_no
+                              const has = qi.valid_until || qi.valid_days || qi.delivery || qi.payment || qi.warranty || qi.provider || qi.quote_date || qi.quote_no || qi.transfer
                               if (!has) return null
                               const fmtD = (iso) => iso ? iso.slice(0, 10).split('-').reverse().join('/') : null
                               let daysLeft = null
@@ -904,6 +934,7 @@ export default function Solicitudes() {
                                   {qi.warranty && <span className="rp2-qi-it"><Icon n="check" /> <b>Garantía:</b> {qi.warranty}</span>}
                                   {qi.provider && <span className="rp2-qi-it"><Icon n="building" /> <b>Proveedor:</b> {qi.provider}</span>}
                                   {(qi.quote_date || qi.quote_no) && <span className="rp2-qi-it muted"><Icon n="calendar" /> Cotización{qi.quote_no ? ` N° ${qi.quote_no}` : ''}{qi.quote_date ? ` del ${fmtD(qi.quote_date)}` : ''}</span>}
+                                  {qi.transfer && (qi.transfer.banco || qi.transfer.cuenta) && <span className="rp2-qi-it"><Icon n="key" /> <b>Transferencia:</b> {[qi.transfer.banco, qi.transfer.tipo_cuenta, qi.transfer.cuenta && `N° ${qi.transfer.cuenta}`, qi.transfer.rut && `RUT ${qi.transfer.rut}`].filter(Boolean).join(' · ')}</span>}
                                 </div>
                               )
                             })()}

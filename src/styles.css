@@ -3178,3 +3178,22 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .room-card .rc-txt{display:flex;flex-direction:column;line-height:1.2}
 .room-card .rc-txt strong{font-size:.86rem}
 .room-card .rc-txt .muted{font-size:.7rem}
+/* Usuarios (escritorio): TODAS las filas con la misma altura y columnas de ancho fijo */
+@media(min-width:761px){
+  .usr-cards{table-layout:fixed;width:100%}
+  .usr-cards th:nth-child(1),.usr-cards td:nth-child(1){width:24%}
+  .usr-cards th:nth-child(2),.usr-cards td:nth-child(2){width:13%}
+  .usr-cards th:nth-child(3),.usr-cards td:nth-child(3){width:7%}
+  .usr-cards th:nth-child(4),.usr-cards td:nth-child(4){width:13%}
+  .usr-cards th:nth-child(5),.usr-cards td:nth-child(5){width:9%}
+  .usr-cards th:nth-child(6),.usr-cards td:nth-child(6){width:10%}
+  .usr-cards th:nth-child(7),.usr-cards td:nth-child(7){width:24%}
+  .usr-cards td:nth-child(7){text-align:right}
+  .usr-cards td:nth-child(7) .btn-sm{padding:.28rem .5rem;font-size:.74rem}
+  .usr-cards tbody tr:not(.grp-row) td{height:66px !important;padding-top:.3rem !important;padding-bottom:.3rem !important;overflow:hidden}
+  /* textos largos (departamento, rol) se recortan a 2 líneas en vez de estirar la fila */
+  .usr-cards td:nth-child(2),.usr-cards td:nth-child(4){line-height:1.25;font-size:.84rem}
+  .usr-cards td .ro-badge{margin-top:.15rem}
+  .usr-cards td:nth-child(1) span,.usr-cards td:nth-child(1) strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+  .usr-cards tr.grp-row td{height:40px !important}
+}

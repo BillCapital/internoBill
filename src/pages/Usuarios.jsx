@@ -671,7 +671,7 @@ export default function Usuarios() {
                   </div></td>
                   <td>{u.department || <span className="muted">—</span>}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{u.country ? <span>{flagOf(u.country)} {u.country}</span> : <span className="muted">—</span>}</td>
-                  <td><span className="badge">{roleLabel[u.role] || (isSuper ? u.role : 'Administrador')}</span>{roleReadOnly[u.role] && <span className="badge ro-badge" title="Este rol solo puede ver: no crea ni modifica"><Icon n="eye" /> Solo lectura</span>}</td>
+                  <td><span className="badge" title={roleReadOnly[u.role] ? 'Rol de solo lectura: puede ver, no modificar' : undefined}>{roleLabel[u.role] || (isSuper ? u.role : 'Administrador')}</span></td>
                   <td>{compCount[u.id] ? <span className="badge comp-badge"><span className="emo"><Icon n="monitor" /></span><span className="comp-n">{compCount[u.id]}</span></span> : <span className="muted comp-badge"><span className="emo"><Icon n="monitor" /></span><span className="comp-n">0</span></span>}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{u.last_sign_in_at ? fmt(u.last_sign_in_at) : <span className="muted">Nunca</span>}</td>
                   <td className="actions">{ro ? <span className="muted">—</span> : (roleLabel[u.role] || isSuper) ? <>

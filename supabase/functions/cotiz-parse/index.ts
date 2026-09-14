@@ -61,7 +61,14 @@ function quoteInfo(text: string) {
   const warranty = grab(/garant[ií]a\s*[:.]?\s*([^\n]{3,50})/i)
   const provider = grab(/(?:proveedor|raz[oó]n\s+social|empresa|vendedor)\s*[:.]?\s*([^\n]{3,60})/i)
   const quoteNo = grab(/(?:cotizaci[oó]n|presupuesto|oferta)\s*(?:n[°ºo.]*|#|nro\.?|no\.?)\s*[:.]?\s*([A-Z0-9][A-Z0-9\-\/]{1,20})/i)
-  return { quote_date: quoteDate, valid_days: validDays, valid_until: validUntil, delivery, payment, warranty, provider, quote_no: quoteNo }
+  // Datos de transferencia (para quien paga): RUT, banco, tipo y número de cuenta, correo
+  const rut = grab(/r\.?u\.?t\.?\s*[:.]?\s*(\d{1,2}\.?\d{3}\.?\d{3}\s*-\s*[\dkK])/i)
+  const banco = grab(/banco\s*[:.]?\s*([A-Za-zÁÉÍÓÚÑáéíóúñ ]{3,30})/i) || (/(banco\s+(?:de\s+chile|estado|bci|santander|ita[uú]|scotiabank|falabella|security|bice))/i.exec(text)?.[1] ?? null)
+  const cuenta = grab(/(?:cuenta\s*(?:corriente|vista|n[°ºo.]*)?|cta\.?\s*(?:cte\.?)?)\s*(?:n[°ºo.]*|#)?\s*[:.]?\s*([\d\-]{6,20})/i)
+  const tipoCta = /cuenta\s+vista/i.test(text) ? 'Cuenta vista' : /cuenta\s+corriente|cta\.?\s*cte/i.test(text) ? 'Cuenta corriente' : null
+  const mailPago = (/(?:transferencias?|pagos?|env[ií]a\s+(?:el|tu)\s+comprobante)[^\n]{0,60}?([\w.+-]+@[\w-]+\.[\w.]{2,})/i.exec(text)?.[1]) || (/([\w.+-]+@[\w-]+\.[\w.]{2,})/.exec(text)?.[1] ?? null)
+  return { quote_date: quoteDate, valid_days: validDays, valid_until: validUntil, delivery, payment, warranty, provider, quote_no: quoteNo,
+           transfer: (rut || cuenta || banco) ? { rut, banco: clean(banco || undefined), tipo_cuenta: tipoCta, cuenta, correo: mailPago } : null }
 }
 
 Deno.serve(async (req) => {
