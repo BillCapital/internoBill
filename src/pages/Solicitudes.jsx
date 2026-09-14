@@ -57,7 +57,7 @@ export default function Solicitudes() {
   // Cotizaciones antiguas (subidas antes de la lectura automática): se leen solas al abrir la página
   const backfilled = useRef(new Set())
   useEffect(() => {
-    const pend = rows.flatMap((r) => r.request_products || []).filter((p) => p.file_url && (p.file_mime || '').includes('pdf') && !p.quote_info && !backfilled.current.has(p.id)).slice(0, 3)
+    const pend = rows.flatMap((r) => r.request_products || []).filter((p) => p.file_url && (p.file_mime || '').includes('pdf') && (!p.quote_info || p.quote_info.v !== 2) && !backfilled.current.has(p.id)).slice(0, 3)
     if (!pend.length) return
     pend.forEach((p) => backfilled.current.add(p.id))
     ;(async () => {
@@ -909,21 +909,22 @@ export default function Solicitudes() {
                                     if (data?.signedUrl) viewImage(data.signedUrl); else window.open(purl, '_blank', 'noopener')
                                   }}><Icon n="camera" /> Captura</button> : null}
                                   {purl ? <a className="rp2-chip" href={purl} target="_blank" rel="noreferrer" title="Abrir la página actual del producto"><Icon n="link" /> {p.snapshot_path ? 'Abrir página' : 'Ver link'}</a> : null}
-                                  {purl && !p.snapshot_path && canAdd ? <button className={`rp2-chip ${snapBusy[p.id] ? 'busy' : ''}`} disabled={!!snapBusy[p.id]} title="Toma una captura de la página del link y la guarda como respaldo" onClick={async () => {
+                                  {purl && canAdd ? <button className={`rp2-chip ${snapBusy[p.id] ? 'busy' : ''}`} disabled={!!snapBusy[p.id]} title={p.snapshot_path ? 'Vuelve a capturar la página y reemplaza la imagen guardada' : 'Toma una captura de la página del link y la guarda como respaldo'} onClick={async () => {
                                     setSnapBusy((m) => ({ ...m, [p.id]: true }))
                                     try {
+                                      const prevAt = p.snapshot_at || null
                                       const { data, error } = await supabase.functions.invoke('link-snap', { body: { product_id: p.id } })
                                       if (error || !data?.ok) { alertDialog('No se pudo iniciar la captura' + (data?.reason ? `: ${data.reason}` : '') + '.'); setSnapBusy((m) => { const n = { ...m }; delete n[p.id]; return n }); return }
-                                      // La captura corre en segundo plano: se consulta hasta que aparezca (máx ~2 min)
+                                      // La captura corre en segundo plano: se consulta hasta que aparezca una nueva (máx ~2 min)
                                       for (let i = 0; i < 24; i++) {
                                         await new Promise((res) => setTimeout(res, 5000))
-                                        const { data: row } = await supabase.from('request_products').select('snapshot_path').eq('id', p.id).single()
-                                        if (row?.snapshot_path) { setSnapBusy((m) => { const n = { ...m }; delete n[p.id]; return n }); load(); return }
+                                        const { data: row } = await supabase.from('request_products').select('snapshot_path, snapshot_at').eq('id', p.id).single()
+                                        if (row?.snapshot_path && row.snapshot_at !== prevAt) { setSnapBusy((m) => { const n = { ...m }; delete n[p.id]; return n }); load(); return }
                                       }
                                       alertDialog('La página está tardando en renderizarse. La captura puede aparecer sola en unos minutos; si no, vuelve a intentar.')
                                     } catch { alertDialog('No se pudo iniciar la captura.') }
                                     finally { setSnapBusy((m) => { const n = { ...m }; delete n[p.id]; return n }) }
-                                  }}><Icon n="camera" /> {snapBusy[p.id] ? 'Capturando…' : 'Generar captura'}</button> : null}
+                                  }}><Icon n="camera" /> {snapBusy[p.id] ? 'Capturando…' : p.snapshot_path ? 'Rehacer captura' : 'Generar captura'}</button> : null}
                                   {p.file_url ? <button className={`rp2-chip ${pp.fileOpen ? 'on' : ''}`} onClick={() => toggleProdFile(p)}><Icon n="eye" /> Cotización</button> : null}
                                   {(() => {
                                     const dirP = provFor(p); const tq = p.quote_info?.transfer
@@ -953,9 +954,9 @@ export default function Solicitudes() {
                               if (!has) return null
                               const fmtD = (iso) => iso ? iso.slice(0, 10).split('-').reverse().join('/') : null
                               let daysLeft = null
-                              if (qi.valid_until) { const ms = new Date(qi.valid_until + 'T23:59:59') - new Date(); daysLeft = Math.ceil(ms / 86400000) }
+                              if (qi.valid_until) { const hoy = new Date(); hoy.setHours(0, 0, 0, 0); daysLeft = Math.round((new Date(qi.valid_until + 'T00:00:00') - hoy) / 86400000) }
                               const vig = qi.valid_until
-                                ? (daysLeft < 0 ? { cls: 'bad', txt: `Vencida el ${fmtD(qi.valid_until)}` } : daysLeft <= 3 ? { cls: 'warn', txt: `Vence en ${daysLeft} día${daysLeft === 1 ? '' : 's'} (${fmtD(qi.valid_until)})` } : { cls: 'ok', txt: `${daysLeft} días restantes · hasta ${fmtD(qi.valid_until)}` })
+                                ? (daysLeft < 0 ? { cls: 'bad', txt: `Vencida el ${fmtD(qi.valid_until)}` } : daysLeft === 0 ? { cls: 'bad', txt: `Vence hoy (${fmtD(qi.valid_until)})` } : daysLeft <= 3 ? { cls: 'warn', txt: `Vence en ${daysLeft} día${daysLeft === 1 ? '' : 's'} (${fmtD(qi.valid_until)})` } : { cls: 'ok', txt: `${daysLeft} días restantes · hasta ${fmtD(qi.valid_until)}` })
                                 : qi.valid_days ? { cls: '', txt: `Validez ${qi.valid_days} días` } : null
                               return (
                                 <div className="rp2-qi" title="Datos leídos de la cotización">

@@ -85,15 +85,17 @@ export default function Layout() {
 
   const loadNotifs = useCallback(async () => {
     if (!user) return
-    const [{ data: real }, { count: sol }, { count: sal }] = await Promise.all([
+    const [{ data: real }, { count: sol }, { count: sal, data: salRow }] = await Promise.all([
       supabase.from('notifications').select('id,title,body,link,kind,created_at').is('read_at', null).order('created_at', { ascending: false }).limit(40),
-      canManageOrders ? supabase.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'pending').gt('ends_at', new Date().toISOString()) : Promise.resolve({ count: 0 }),
-      canManageRooms ? supabase.from('reservations').select('id', { count: 'exact', head: true }).eq('status', 'pending').gt('ends_at', new Date().toISOString()) : Promise.resolve({ count: 0 }),
+      canManageOrders ? supabase.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'pending') : Promise.resolve({ count: 0 }),
+      canManageRooms ? supabase.from('reservations').select('starts_at', { count: 'exact' }).eq('status', 'pending').gt('ends_at', new Date().toISOString()).order('starts_at').limit(1) : Promise.resolve({ count: 0, data: null }),
     ])
     // Pendientes por atender (gestora/admin) como aviso no descartable
     const pend = []
     if (canManageOrders && sol) pend.push({ id: 'c-sol', computed: true, kind: 'info', title: `${sol} solicitud(es) por revisar`, body: '', link: '/solicitudes' })
-    if (canManageRooms && sal) pend.push({ id: 'c-sal', computed: true, kind: 'info', title: `${sal} reserva(s) por aceptar`, body: '', link: '/salas' })
+    // El aviso de reservas lleva directo al día de la primera pendiente
+    const salDay = salRow?.[0]?.starts_at ? salRow[0].starts_at.slice(0, 10) : ''
+    if (canManageRooms && sal) pend.push({ id: 'c-sal', computed: true, kind: 'info', title: `${sal} reserva(s) por aceptar`, body: '', link: salDay ? `/salas?dia=${salDay}` : '/salas' })
     setNotifs([...pend, ...(real ?? [])])
     setCounts({ sol: sol ?? 0, sal: sal ?? 0 })
   }, [user, canManageOrders, canManageRooms])

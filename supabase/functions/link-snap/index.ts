@@ -28,7 +28,8 @@ async function fetchShot(shotUrl: string): Promise<{ bytes: Uint8Array; ct: stri
 }
 
 async function capture(productId: string, url: string) {
-  const mshots = `https://s0.wp.com/mshots/v1/${encodeURIComponent(url)}?w=1200&h=1000`
+  // Página COMPLETA (no solo el primer pantallazo): viewport alto en mShots; thum.io /fullpage de respaldo
+  const mshots = `https://s0.wp.com/mshots/v1/${encodeURIComponent(url)}?w=1200&h=4000&vpw=1200&vph=4000`
   let bytes: Uint8Array | null = null
   for (let i = 0; i < 14 && !bytes; i++) {
     const r = await fetchShot(mshots)
@@ -37,7 +38,7 @@ async function capture(productId: string, url: string) {
     else await new Promise((res) => setTimeout(res, 5000))
   }
   if (!bytes) {
-    const r = await fetchShot(`https://image.thum.io/get/width/1200/crop/1000/noanimate/${url}`)
+    const r = await fetchShot(`https://image.thum.io/get/fullpage/width/1200/noanimate/${url}`)
     if (r && r.bytes.length > 8000) bytes = r.bytes
   }
   if (!bytes) return

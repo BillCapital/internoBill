@@ -3298,3 +3298,12 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
   .sal-cols.with-form .sal-right .cal td .slot{height:calc(100% - 2px) !important;max-height:none !important;min-height:26px;display:flex;align-items:center;justify-content:center}
   .sal-cols.with-form .sal-right .cal td{vertical-align:middle}
 }
+
+/* Flechas del calendario mensual de Salas: el glifo va centrado (una regla del calendario
+   de mantenimientos — .cal-nav con space-between — las estaba descuadrando) */
+.cal-head .cal-nav{display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1;font-size:1.05rem}
+/* Tarjetas de reserva dentro del horario: letra más pequeña y ordenada (título arriba,
+   persona/estado abajo con puntos suspensivos si no cabe) */
+.sal-right .slot.busy, .sal-right .slot.pending{font-size:.68rem;line-height:1.3;padding:.2rem .35rem;overflow:hidden;text-align:center}
+.sal-right .slot.busy br, .sal-right .slot.pending br{display:none}
+.sal-right .slot.busy .muted, .sal-right .slot.pending .muted{display:block;font-size:.62rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}

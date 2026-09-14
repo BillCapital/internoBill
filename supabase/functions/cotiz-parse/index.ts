@@ -43,9 +43,16 @@ function clean(v: string | undefined): string | null {
   const t = v.replace(/\s+/g, ' ').replace(/[|•·]+/g, ' ').trim().replace(/[.,;:]+$/, '')
   return t.length >= 2 ? t.slice(0, 80) : null
 }
+// El texto de un PDF suele venir todo seguido: se corta el valor donde empieza la SIGUIENTE etiqueta
+const LBL = /(direcci[oó]n|m[eé]todo|forma\s+de\s+pago|condici[oó]n(?:es)?\s+de|entrega|despacho|pago|garant[ií]a|garantiza|proveedor|vigencia|validez|r\.?u\.?t\b|giro|fecha|cotizaci[oó]n|tel[eé]fono|fono|correo|e-?mail|cliente|se[nñ]or(?:es)?|atenci[oó]n|contacto|subtotal|total|iva|neto|observaci|banco|cuenta)/i
+function cut(v: string | null): string | null {
+  if (!v) return null
+  const m = LBL.exec(v.slice(2)) // sin cortar si la palabra abre el valor
+  return clean(m ? v.slice(0, m.index + 2) : v)
+}
 // Datos útiles para quien aprueba: fecha, validez, entrega, pago, garantía, proveedor
 function quoteInfo(text: string) {
-  const grab = (re: RegExp) => { const m = re.exec(text); return m ? clean(m[1]) : null }
+  const grab = (re: RegExp) => { const m = re.exec(text); return m ? cut(clean(m[1])) : null }
   const dateLine = grab(/fecha(?:\s+de\s+(?:emisi[oó]n|cotizaci[oó]n))?\s*[:.]?\s*([^\n]{4,40})/i)
   let quoteDate = parseDate(dateLine || '')
   if (!quoteDate) { const any = /(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}|\d{1,2}\s+de\s+[a-záé]+\s+(?:de\s+)?\d{4})/i.exec(text); quoteDate = parseDate(any ? any[1] : '') }
@@ -56,19 +63,22 @@ function quoteInfo(text: string) {
     const du = parseDate(v[1]); if (du) validUntil = du
   }
   if (!validUntil && validDays && quoteDate) { const d = new Date(quoteDate + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + validDays); validUntil = d.toISOString().slice(0, 10) }
-  const delivery = grab(/(?:plazo\s+de\s+entrega|tiempo\s+de\s+entrega|entrega\s+estimada|fecha\s+de\s+entrega|despacho|disponibilidad|entrega)\s*[:.]?\s*([^\n]{3,60})/i)
-  const payment = grab(/(?:condici[oó]n(?:es)?\s+de\s+pago|forma\s+de\s+pago|t[eé]rminos\s+de\s+pago|pago)\s*[:.]?\s*([^\n]{3,50})/i)
+  // "Dirección de entrega/despacho" es la dirección del COMPRADOR, no el plazo: no se toma
+  const delivery = grab(/(?:plazo\s+de\s+entrega|tiempo\s+de\s+entrega|entrega\s+estimada|fecha\s+de\s+entrega|disponibilidad|(?<!direcci[oó]n\s+de\s+)entrega)\s*[:.]?\s*([^\n]{3,60})/i)
+  const payment = grab(/(?:condici[oó]n(?:es)?\s+de\s+pago|forma\s+de\s+pago|t[eé]rminos\s+de\s+pago|(?<!de\s)pago)\s*[:.]?\s*([^\n]{3,50})/i)
   const warranty = grab(/garant[ií]a\s*[:.]?\s*([^\n]{3,50})/i)
-  const provider = grab(/(?:proveedor|raz[oó]n\s+social|empresa|vendedor)\s*[:.]?\s*([^\n]{3,60})/i)
-  const quoteNo = grab(/(?:cotizaci[oó]n|presupuesto|oferta)\s*(?:n[°ºo.]*|#|nro\.?|no\.?)\s*[:.]?\s*([A-Z0-9][A-Z0-9\-\/]{1,20})/i)
+  let provider = grab(/(?:proveedor|raz[oó]n\s+social|vendedor)\s*[:.]?\s*([^\n]{3,60})/i)
+  if (provider && /bill\s*capital/i.test(provider)) provider = null // ese es el cliente, no el proveedor
+  let quoteNo = grab(/(?:cotizaci[oó]n|presupuesto|oferta)\s*(?:n[°ºo.]*|#|nro\.?|no\.?)\s*[:.]?\s*([A-Z0-9][A-Z0-9\-\/]{1,20})\b/i)
+  if (quoteNo && !/\d/.test(quoteNo)) quoteNo = null // un número de cotización siempre trae dígitos
   // Datos de transferencia (para quien paga): RUT, banco, tipo y número de cuenta, correo
   const rut = grab(/r\.?u\.?t\.?\s*[:.]?\s*(\d{1,2}\.?\d{3}\.?\d{3}\s*-\s*[\dkK])/i)
   const banco = grab(/banco\s*[:.]?\s*([A-Za-zÁÉÍÓÚÑáéíóúñ ]{3,30})/i) || (/(banco\s+(?:de\s+chile|estado|bci|santander|ita[uú]|scotiabank|falabella|security|bice))/i.exec(text)?.[1] ?? null)
   const cuenta = grab(/(?:cuenta\s*(?:corriente|vista|n[°ºo.]*)?|cta\.?\s*(?:cte\.?)?)\s*(?:n[°ºo.]*|#)?\s*[:.]?\s*([\d\-]{6,20})/i)
   const tipoCta = /cuenta\s+vista/i.test(text) ? 'Cuenta vista' : /cuenta\s+corriente|cta\.?\s*cte/i.test(text) ? 'Cuenta corriente' : null
   const mailPago = (/(?:transferencias?|pagos?|env[ií]a\s+(?:el|tu)\s+comprobante)[^\n]{0,60}?([\w.+-]+@[\w-]+\.[\w.]{2,})/i.exec(text)?.[1]) || (/([\w.+-]+@[\w-]+\.[\w.]{2,})/.exec(text)?.[1] ?? null)
-  return { quote_date: quoteDate, valid_days: validDays, valid_until: validUntil, delivery, payment, warranty, provider, quote_no: quoteNo,
-           transfer: (rut || cuenta || banco) ? { rut, banco: clean(banco || undefined), tipo_cuenta: tipoCta, cuenta, correo: mailPago } : null }
+  return { v: 2, quote_date: quoteDate, valid_days: validDays, valid_until: validUntil, delivery, payment, warranty, provider, quote_no: quoteNo,
+           transfer: (rut || cuenta || banco) ? { rut, banco: cut(clean(banco || undefined)), tipo_cuenta: tipoCta, cuenta, correo: mailPago } : null }
 }
 
 Deno.serve(async (req) => {

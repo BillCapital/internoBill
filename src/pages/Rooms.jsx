@@ -55,6 +55,14 @@ export default function Rooms() {
   const [calM, setCalM] = useState(now.getMonth())
   const [calDay, setCalDay] = useState('') // sin día elegido: la sección de horas no se muestra hasta seleccionar
   const salRightRef = useRef(null)
+  // Llegada desde una notificación (/salas?dia=YYYY-MM-DD): abre el calendario en ese día
+  useEffect(() => {
+    const d = new URLSearchParams(window.location.search).get('dia')
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      setCalY(+d.slice(0, 4)); setCalM(+d.slice(5, 7) - 1)
+      if (!isWknd(d)) setCalDay(d)
+    }
+  }, [window.location.search]) // eslint-disable-line react-hooks/exhaustive-deps
   // En móvil, al elegir un día, desplaza a la sección de horas para agendar
   useEffect(() => {
     if (calDay && !isWknd(calDay) && window.innerWidth <= 760) {
