@@ -3273,3 +3273,22 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 /* Meta del panel de reserva: texto corrido en una línea (con salto natural), sin columnas raras */
 .modal-reserve .mr-meta.mr-meta-flow{display:block;line-height:1.4}
 .modal-reserve .mr-meta.mr-meta-flow strong{color:var(--text);font-weight:700}
+
+/* Panel de reserva: Título a lo ancho; Duración y Repetir en dos columnas parejas */
+.res-wrap .mr-grid{grid-template-columns:1fr 1fr;gap:.55rem .6rem}
+.res-wrap .mr-grid label{margin-top:.45rem}
+.res-wrap .mr-grid input,.res-wrap .mr-grid select{width:100%;box-sizing:border-box;min-width:0}
+
+/* Botón de actualizar la agenda de Outlook */
+.agenda-card .ag-refresh{margin-left:auto;flex:none;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--muted);cursor:pointer}
+.agenda-card .ag-refresh:hover{color:var(--lime-text);border-color:color-mix(in srgb,var(--lime) 55%,var(--line))}
+.agenda-card .ag-refresh .licon{width:.85rem;height:.85rem}
+/* Con el panel de reserva abierto: el horario se estira para terminar a la MISMA altura que el panel
+   (el alto extra se reparte entre las filas, así ambos bordes inferiores quedan alineados) */
+@media(min-width:1101px){
+  .sal-cols.with-form .sal-right{display:flex;flex-direction:column}
+  .sal-cols.with-form .sal-right > div:last-child{flex:1;display:flex;flex-direction:column}
+  .sal-cols.with-form .sal-right table.cal{height:100%;flex:1}
+  .sal-cols.with-form .sal-right .cal tbody tr{height:auto !important}
+  .sal-cols.with-form .sal-right .cal tbody tr:not(.lunch) td{height:auto !important}
+}

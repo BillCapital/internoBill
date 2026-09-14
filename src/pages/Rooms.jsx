@@ -115,7 +115,7 @@ export default function Rooms() {
     const blockEnd = idx < LUNCH_AFTER ? LUNCH_AFTER : slots.length
     let firstBusy = blockEnd
     for (let j = idx + 1; j < blockEnd; j++) { if (covered(roomId, slots[j])) { firstBusy = j; break } }
-    return Math.min(6, blockEnd - idx, firstBusy - idx)
+    return Math.min(blockEnd - idx, firstBusy - idx)
   }
 
   // Ventana horaria (ISO) de la reserva en edición
@@ -228,15 +228,19 @@ export default function Rooms() {
 
   const shownRooms = roomSel ? rooms.filter((r) => r.id === roomSel) : rooms
   // Carga la agenda del día elegido (una vez por día; el rango se calcula en la zona del usuario)
-  useEffect(() => {
-    if (!calDay || isWknd(calDay) || agenda[calDay]) return
-    setAgenda((m) => ({ ...m, [calDay]: { loading: true } }))
-    const dayStart = slotStart(calDay, '00:00', agendaTz)
+  const loadAgenda = useCallback((day, force = false) => {
+    if (!day || isWknd(day)) return
+    const cur = agenda[day]
+    // Se vuelve a consultar si nunca se cargó, si se fuerza (botón actualizar) o si lo cargado tiene más de 1 minuto
+    if (!force && cur && (cur.loading || (cur.at && Date.now() - cur.at < 60000))) return
+    setAgenda((m) => ({ ...m, [day]: { loading: true } }))
+    const dayStart = slotStart(day, '00:00', agendaTz)
     const dayEnd = addMin(dayStart, 24 * 60)
     supabase.functions.invoke('my-agenda', { body: { start: dayStart.toISOString(), end: dayEnd.toISOString() } })
-      .then(({ data, error }) => setAgenda((m) => ({ ...m, [calDay]: error ? { ok: false, reason: 'error' } : (data || { ok: false }) })))
-      .catch(() => setAgenda((m) => ({ ...m, [calDay]: { ok: false, reason: 'error' } })))
-  }, [calDay]) // eslint-disable-line react-hooks/exhaustive-deps
+      .then(({ data, error }) => setAgenda((m) => ({ ...m, [day]: error ? { ok: false, reason: 'error', at: Date.now() } : { ...(data || { ok: false }), at: Date.now() } })))
+      .catch(() => setAgenda((m) => ({ ...m, [day]: { ok: false, reason: 'error', at: Date.now() } })))
+  }, [agenda, agendaTz]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadAgenda(calDay) }, [calDay]) // eslint-disable-line react-hooks/exhaustive-deps
   // Zonas horarias: el horario de la sala va en la hora de su país; se muestra la equivalencia para otros países
   const myTz = tzOf(profile?.country)
   const roomTz = (room) => tzOf(room?.country || 'Chile')
@@ -256,7 +260,7 @@ export default function Rooms() {
     <div>
       <div className="page-head"><div className="row">
         <div><h2>Reserva de salas</h2>
-          <p className="muted">Reservable 09:00–13:00 y 15:30–18:00 · fines de semana no operativos. {canApproveRooms ? 'Aceptas las solicitudes de reserva.' : 'Tu reserva queda pendiente hasta que la acepten.'}</p></div>
+          <p className="muted">Reservable 09:00–13:00 y 15:30–18:00. Fines de semana no operativos. {canApproveRooms ? 'Aceptas las solicitudes de reserva.' : 'Tu reserva queda pendiente hasta que la acepten.'}</p></div>
         {canManageRooms && <button className="btn btn-lime" onClick={() => setManageRooms((v) => !v)}>Gestionar salas</button>}
       </div></div>
 
@@ -339,7 +343,7 @@ export default function Rooms() {
             const ag = agenda[calDay]
             return (
               <div className="agenda-card">
-                <div className="ag-h"><span className="ag-t"><Icon n="calendar" /> Tu día en Outlook</span><span className="muted ag-sub">Hora de {profile?.country || 'Chile'}. Toca una reunión para ver su detalle.</span></div>
+                <div className="ag-h"><span className="ag-t"><Icon n="calendar" /> Tu día en Outlook</span><button type="button" className="ag-refresh" title="Actualizar desde Outlook" onClick={() => loadAgenda(calDay, true)}><Icon n="refresh" /></button><span className="muted ag-sub">Hora de {profile?.country || 'Chile'}. Toca una reunión para ver su detalle.</span></div>
                 {!ag || ag.loading ? <div className="ag-empty muted">Cargando tu agenda…</div>
                   : !ag.ok ? <div className="ag-empty muted">No se pudo leer tu calendario de Outlook{ag.reason ? ` (${ag.reason})` : ''}.</div>
                   : (ag.events || []).length === 0 ? <div className="ag-empty muted">Sin eventos en tu Outlook este día: tienes el día libre para agendar.</div>
@@ -441,7 +445,7 @@ export default function Rooms() {
                 ? <div className="mr-hint warn">Elige el nuevo día y bloque en el horario. Al confirmar, la reunión actual se cancela y se elimina de los calendarios; la nueva se envía cuando la acepten.</div>
                 : <div className={`mr-hint${form.pickAnother ? ' warn' : ''}`}>{form.pickAnother ? 'Hay un cruce de agenda: ' : ''}Toca otro bloque del horario para cambiar la hora o la sala sin perder lo escrito.</div>}
             <div className="mr-grid">
-              <div><label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+              <div style={{ gridColumn: '1 / -1' }}><label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ej: Comité de riesgo" /></div>
               <div><label>Duración</label>
                 <select value={form.dur} onChange={(e) => setForm({ ...form, dur: Number(e.target.value) })}>
                   {Array.from({ length: Math.max(1, md) }).map((_, i) => { const d = i + 1, mm = d * 30; return <option key={d} value={d}>{mm < 60 ? mm + ' min' : (mm / 60) + ' h'}</option> })}
@@ -450,11 +454,11 @@ export default function Rooms() {
                 <select value={form.rep} onChange={(e) => setForm({ ...form, rep: Number(e.target.value) })}>
                   <option value={0}>No se repite</option>
                   <option value={1}>Cada día hábil</option>
-                  <option value={2}>Día por medio (hábiles)</option>
+                  <option value={2}>Día por medio</option>
                   <option value={7}>Cada semana</option>
-                  <option value={14}>Cada 2 semanas (quincenal)</option>
+                  <option value={14}>Cada 2 semanas</option>
                   <option value={21}>Cada 3 semanas</option>
-                  <option value={28}>Cada 4 semanas (mensual)</option>
+                  <option value={28}>Cada 4 semanas</option>
                 </select></div>}
               {form.rep > 0 && <div><label>¿Cuántas veces?</label>
                 <select value={form.repN} onChange={(e) => setForm({ ...form, repN: Number(e.target.value) })}>
@@ -505,7 +509,7 @@ export default function Rooms() {
               })()}
             </div>
               <div className="mr-ext">
-                <input placeholder="correo externo…" value={extAtt}
+                <input placeholder="Correo externo…" value={extAtt}
                   onChange={(e) => setExtAtt(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('add-ext-att')?.click() } }} />
                 <button id="add-ext-att" className="btn-sm" type="button" onClick={() => {
