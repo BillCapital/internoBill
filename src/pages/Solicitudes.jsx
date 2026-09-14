@@ -51,7 +51,8 @@ export default function Solicitudes() {
   const [prodForm, setProdForm] = useState({})     // formulario "agregar producto" por solicitud: { [reqId]: {open,name,url,file,busy} }
   const [prodPrev, setProdPrev] = useState({})     // vista previa por producto (link y archivo): { [prodId]: {linkOpen,fileOpen,fileUrl,...} }
   const [budgetForm, setBudgetForm] = useState({}) // editor de rango de precio por solicitud: { [reqId]: {min, max, busy} }
-  const [upBusy, setUpBusy] = useState({})         // subiendo cotización a un producto existente: { [prodId]: true }
+  const [upBusy, setUpBusy] = useState({})
+  const [snapBusy, setSnapBusy] = useState({})   // captura de página en curso, por producto         // subiendo cotización a un producto existente: { [prodId]: true }
   const [changeVote, setChangeVote] = useState({}) // firmante quiere cambiar su voto de un producto: { [prodId]: true }
   const [glossOpen, setGlossOpen] = useState(false)
   const [availOpen, setAvailOpen] = useState({}) // carpetas de disponibilidad abiertas
@@ -311,9 +312,9 @@ export default function Solicitudes() {
     } catch (e) { alertDialog(e.message || 'No se pudo subir el archivo.') } finally { setAttBusy(false); load() }
   }
   const openAttach = async (a) => {
-    if (a.kind === 'link') { window.open(/^https?:\/\//i.test(a.url) ? a.url : 'https://' + a.url, '_blank'); return }
+    if (a.kind === 'link') { window.open(/^https?:\/\//i.test(a.url) ? a.url : 'https://' + a.url, '_blank', 'noopener'); return }
     const { data } = await supabase.storage.from('cotizaciones').createSignedUrl(a.url, 3600)
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener')
   }
   // Alterna la vista previa embebida de un adjunto (PDF/imagen del bucket o preview del link)
   const toggleAttPreview = async (a) => {
@@ -421,7 +422,7 @@ export default function Solicitudes() {
       setProdPrev((s) => ({ ...s, [p.id]: { ...(s[p.id] || {}), fileOpen: true, fileLoading: false, fileUrl: data?.signedUrl || '', fileIsImg: isImg } }))
     } catch { setProdPrev((s) => ({ ...s, [p.id]: { ...(s[p.id] || {}), fileOpen: true, fileLoading: false, fileErr: true } })) }
   }
-  const openProdFile = async (p) => { const { data } = await supabase.storage.from('cotizaciones').createSignedUrl(p.file_url, 3600); if (data?.signedUrl) window.open(data.signedUrl, '_blank') }
+  const openProdFile = async (p) => { const { data } = await supabase.storage.from('cotizaciones').createSignedUrl(p.file_url, 3600); if (data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener') }
   const delAttach = async (a) => {
     if (!(await confirmDialog(`¿Quitar "${a.name}"?`, { title: 'Quitar adjunto', danger: true, okText: 'Quitar' }))) return
     try { if (a.kind === 'file' && a.url) await supabase.storage.from('cotizaciones').remove([a.url]); await api('request_attach_delete', { p_id: a.id }) } catch (e) { alertDialog(e.message) } finally { load() }
@@ -862,9 +863,14 @@ export default function Solicitudes() {
                                   {p.price != null ? <span className="rp2-price">{fmtMoney(p.price * Math.max(1, p.quantity || 1), p.currency)}{p.quantity > 1 ? <span className="muted"> total · {fmtMoney(p.price, p.currency)} c/u</span> : null}</span> : null}
                                   {purl && p.snapshot_path ? <button className="rp2-chip" title={`Captura de la página tomada al cotizar${p.snapshot_at ? ' (' + new Date(p.snapshot_at).toLocaleDateString('es-CL') + ')' : ''}. Muestra cómo estaba aunque después cambie.`} onClick={async () => {
                                     const { data } = await supabase.storage.from('cotizaciones').createSignedUrl(p.snapshot_path, 3600)
-                                    if (data?.signedUrl) viewImage(data.signedUrl); else window.open(purl, '_blank')
+                                    if (data?.signedUrl) viewImage(data.signedUrl); else window.open(purl, '_blank', 'noopener')
                                   }}><Icon n="camera" /> Captura</button> : null}
                                   {purl ? <a className="rp2-chip" href={purl} target="_blank" rel="noreferrer" title="Abrir la página actual del producto"><Icon n="link" /> {p.snapshot_path ? 'Abrir página' : 'Ver link'}</a> : null}
+                                  {purl && !p.snapshot_path && canAdd ? <button className={`rp2-chip ${snapBusy[p.id] ? 'busy' : ''}`} disabled={!!snapBusy[p.id]} title="Toma una captura de la página del link y la guarda como respaldo" onClick={async () => {
+                                    setSnapBusy((m) => ({ ...m, [p.id]: true }))
+                                    try { const { data } = await supabase.functions.invoke('link-snap', { body: { product_id: p.id } }); if (!data?.ok) alertDialog('No se pudo capturar la página' + (data?.reason ? ` (${data.reason})` : '') + '. Intenta de nuevo en un momento.') } catch { alertDialog('No se pudo capturar la página.') }
+                                    finally { setSnapBusy((m) => { const n = { ...m }; delete n[p.id]; return n }); load() }
+                                  }}><Icon n="camera" /> {snapBusy[p.id] ? 'Capturando…' : 'Generar captura'}</button> : null}
                                   {p.file_url ? <button className={`rp2-chip ${pp.fileOpen ? 'on' : ''}`} onClick={() => toggleProdFile(p)}><Icon n="eye" /> Cotización</button> : null}
                                   {(() => { const o = prodOutOfRange(t, p); return o ? <span className={`rp2-oor ${o}`} title="El total de esta opción queda fuera del rango autorizado"><Icon n="ban" /> {o === 'high' ? 'Sobre el rango' : 'Bajo el rango'}</span> : null })()}
                                   {!p.file_url && canAdd && active ? (

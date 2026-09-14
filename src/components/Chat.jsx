@@ -49,7 +49,7 @@ export default function Chat({ type, id, locked = false }) {
   useEffect(() => { load() }, [load])
   // Mensajes en vivo: canal en tiempo real + sondeo de respaldo + refresco al volver a la pestaña
   useEffect(() => {
-    const t = setInterval(load, 3000)
+    const t = setInterval(() => { if (!document.hidden) load() }, 3000) // sin sondeo con la pestaña oculta
     const onVis = () => { if (!document.hidden) load() }
     document.addEventListener('visibilitychange', onVis)
     const ch = supabase.channel(`msgs_${type}_${id}`)

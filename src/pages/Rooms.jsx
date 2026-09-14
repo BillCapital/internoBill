@@ -82,7 +82,7 @@ export default function Rooms() {
   const load = useCallback(async () => {
     const [{ data: rms }, { data: rs }, { data: us }] = await Promise.all([
       supabase.from('rooms').select('id,name,location,capacity,description,is_active,country').eq('is_active', true).order('name'),
-      supabase.from('reservations').select('id,room_id,title,starts_at,ends_at,status,justification,attendees,user_id,profiles!reservations_user_id_fkey(full_name,email)').neq('status', 'cancelled').neq('status', 'rejected'),
+      supabase.from('reservations').select('id,room_id,title,starts_at,ends_at,status,justification,attendees,user_id,profiles!reservations_user_id_fkey(full_name,email)').neq('status', 'cancelled').neq('status', 'rejected').gte('ends_at', new Date(Date.now() - 62 * 86400000).toISOString()),
       supabase.from('profiles').select('id,full_name,email,app_access,active,country').order('full_name'),
     ])
     setRooms(rms ?? []); setRes(rs ?? []); setUsers((us ?? []).filter((u) => u.app_access !== false && u.active !== false))
