@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 
 // Nombres amigables de licencias M365 (skuPartNumber → nombre)
+export const M365_SUBS_URL = 'https://admin.microsoft.com/Adminportal/Home#/subscriptions'
 export const SKU_NAMES = {
   O365_BUSINESS_ESSENTIALS: 'Microsoft 365 Empresa Básico', O365_BUSINESS_PREMIUM: 'Microsoft 365 Empresa Estándar',
   O365_BUSINESS: 'Microsoft 365 Aplicaciones para Empresas', SPB: 'Microsoft 365 Empresa Premium',

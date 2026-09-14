@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { alertDialog } from '../lib/ui'
 import { Icon } from '../lib/icons'
-import { skuName, buyUrl, msUsers } from '../lib/m365'
+import { skuName, buyUrl, msUsers, M365_SUBS_URL } from '../lib/m365'
 
 // Licencias Microsoft 365: asientos comprados, en uso y disponibles, con compra guiada.
 // Vive en Inventario (pestaña Licencias). La asignación por persona sigue en la ficha de cada usuario.
@@ -9,7 +9,6 @@ export default function LicensesPanel({ defaultOpen = true }) {
   const [licPanelOpen, setLicPanelOpen] = useState(defaultOpen)
   const [panelSkus, setPanelSkus] = useState(null)
   const [panelBusy, setPanelBusy] = useState(false)
-  const M365_SUBS_URL = 'https://admin.microsoft.com/Adminportal/Home#/subscriptions'
   const loadPanelSkus = async () => {
     if (panelSkus || panelBusy) return
     setPanelBusy(true)

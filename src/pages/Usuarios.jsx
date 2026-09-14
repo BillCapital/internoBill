@@ -10,7 +10,7 @@ import FilterControl from '../components/FilterControl'
 import { Icon } from '../lib/icons'
 import { SkeletonKpis, SkeletonTableRows } from '../components/Skeleton'
 import { exportCsv } from '../lib/export'
-import { skuName, buyUrl, msUsers } from '../lib/m365'
+import { skuName, buyUrl, msUsers, M365_SUBS_URL } from '../lib/m365'
 
 const initials = (n) => (n || '?').split(' ').slice(0, 2).map((x) => x[0]).join('').toUpperCase()
 // Búsqueda sin distinguir acentos ni mayúsculas ("maria" encuentra "María")
@@ -559,8 +559,9 @@ export default function Usuarios() {
             ))}
           </div>
         </div>
-        {/* Por país */}
-        <div className="kpi-cat">
+        {/* Por país: solo en la vista General (en un ambiente de país no se ven los demás países;
+            convocar a reuniones entre países sigue disponible en Salas) */}
+        {inGeneral && <div className="kpi-cat">
           <div className="kpi-cat-t">Por país</div>
           <div className="kpi-grid compact kpi-sm">
             {COUNTRIES.map(([name]) => (
@@ -570,7 +571,7 @@ export default function Usuarios() {
               </button>
             ))}
           </div>
-        </div>
+        </div>}
         {/* Por dominio */}
         <div className="kpi-cat">
           <div className="kpi-cat-t">Por dominio de correo</div>

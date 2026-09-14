@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
@@ -54,6 +54,23 @@ export default function Solicitudes() {
   const [upBusy, setUpBusy] = useState({})
   const [snapBusy, setSnapBusy] = useState({})   // captura de página en curso, por producto
   const [provDir, setProvDir] = useState([])     // directorio de proveedores (datos de transferencia)
+  // Cotizaciones antiguas (subidas antes de la lectura automática): se leen solas al abrir la página
+  const backfilled = useRef(new Set())
+  useEffect(() => {
+    const pend = rows.flatMap((r) => r.request_products || []).filter((p) => p.file_url && (p.file_mime || '').includes('pdf') && !p.quote_info && !backfilled.current.has(p.id)).slice(0, 3)
+    if (!pend.length) return
+    pend.forEach((p) => backfilled.current.add(p.id))
+    ;(async () => {
+      let changed = false
+      for (const p of pend) {
+        try {
+          const { data } = await supabase.functions.invoke('cotiz-parse', { body: { path: p.file_url, mime: 'application/pdf' } })
+          if (data && (data.info || data.code)) { await api('tech_product_set_info', { p_product: p.id, p_info: data.info || null, p_code: data.code || null, p_price: null }); changed = true }
+        } catch { /* se reintenta en la próxima visita */ }
+      }
+      if (changed) load()
+    })()
+  }, [rows])
   useEffect(() => { supabase.from('providers').select('*').then(({ data }) => setProvDir(data ?? [])) }, [])
   // Proveedor del directorio que calza con el producto (por nombre leído de la cotización o dominio del link)
   const provFor = (p) => {
@@ -385,6 +402,10 @@ export default function Solicitudes() {
   }
   const decideTecProduct = async (p, approve) => {
     let reason = ''
+    if (approve) {
+      const tot = p.price != null ? fmtMoney(p.price * Math.max(1, p.quantity || 1), p.currency) : 'sin precio'
+      if (!(await confirmDialog(`¿Aprobar "${p.name}" (${tot})? Tu llave queda registrada y no se puede deshacer.`, { title: 'Aprobar producto', okText: 'Sí, aprobar' }))) return
+    }
     if (!approve) { const r = await promptDialog('Motivo del rechazo de este producto', { title: 'Rechazar producto', placeholder: 'Explica por qué…' }); if (r === null) return; reason = r || '' }
     setProdApprovals((prev) => { const rest = prev.filter((x) => !(x.product_id === p.id && x.approver_id === profile?.id)); return [...rest, { product_id: p.id, approver_id: profile?.id, decision: approve ? 'approve' : 'reject', reason }] })
     try { await api('tech_product_decide', { p_product: p.id, p_approve: approve, p_reason: reason }) } catch (e) { alertDialog(e.message) } finally { load(); loadMgr() }
@@ -890,8 +911,18 @@ export default function Solicitudes() {
                                   {purl ? <a className="rp2-chip" href={purl} target="_blank" rel="noreferrer" title="Abrir la página actual del producto"><Icon n="link" /> {p.snapshot_path ? 'Abrir página' : 'Ver link'}</a> : null}
                                   {purl && !p.snapshot_path && canAdd ? <button className={`rp2-chip ${snapBusy[p.id] ? 'busy' : ''}`} disabled={!!snapBusy[p.id]} title="Toma una captura de la página del link y la guarda como respaldo" onClick={async () => {
                                     setSnapBusy((m) => ({ ...m, [p.id]: true }))
-                                    try { const { data } = await supabase.functions.invoke('link-snap', { body: { product_id: p.id } }); if (!data?.ok) alertDialog('No se pudo capturar la página' + (data?.reason ? ` (${data.reason})` : '') + '. Intenta de nuevo en un momento.') } catch { alertDialog('No se pudo capturar la página.') }
-                                    finally { setSnapBusy((m) => { const n = { ...m }; delete n[p.id]; return n }); load() }
+                                    try {
+                                      const { data, error } = await supabase.functions.invoke('link-snap', { body: { product_id: p.id } })
+                                      if (error || !data?.ok) { alertDialog('No se pudo iniciar la captura' + (data?.reason ? `: ${data.reason}` : '') + '.'); setSnapBusy((m) => { const n = { ...m }; delete n[p.id]; return n }); return }
+                                      // La captura corre en segundo plano: se consulta hasta que aparezca (máx ~2 min)
+                                      for (let i = 0; i < 24; i++) {
+                                        await new Promise((res) => setTimeout(res, 5000))
+                                        const { data: row } = await supabase.from('request_products').select('snapshot_path').eq('id', p.id).single()
+                                        if (row?.snapshot_path) { setSnapBusy((m) => { const n = { ...m }; delete n[p.id]; return n }); load(); return }
+                                      }
+                                      alertDialog('La página está tardando en renderizarse. La captura puede aparecer sola en unos minutos; si no, vuelve a intentar.')
+                                    } catch { alertDialog('No se pudo iniciar la captura.') }
+                                    finally { setSnapBusy((m) => { const n = { ...m }; delete n[p.id]; return n }) }
                                   }}><Icon n="camera" /> {snapBusy[p.id] ? 'Capturando…' : 'Generar captura'}</button> : null}
                                   {p.file_url ? <button className={`rp2-chip ${pp.fileOpen ? 'on' : ''}`} onClick={() => toggleProdFile(p)}><Icon n="eye" /> Cotización</button> : null}
                                   {(() => {
