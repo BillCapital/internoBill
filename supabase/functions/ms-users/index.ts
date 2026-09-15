@@ -104,14 +104,30 @@ Deno.serve(async (req) => {
           appUserId = byEmail?.id ?? null
         }
         if (appUserId) {
-          await admin.rpc('admin_update_user', {
-            p_user: appUserId, p_full_name: displayName, p_department: p.department || '',
-            p_role: p.role || 'user', p_inventory: false, p_phone: p.mobilePhone || null, p_avatar: null,
-            p_notes: null, p_country: p.country || 'Chile',
-          })
-          await admin.from('profiles').update({ app_access: p.appAccess !== false }).eq('id', appUserId)
+          // Directo sobre profiles: la RPC de administración exige un admin con sesión y aquí no la hay
+          const { error: upErr } = await admin.from('profiles').update({
+            full_name: displayName,
+            department: p.department || '',
+            role: p.role || 'user',
+            phone: p.mobilePhone || null,
+            country: p.country || 'Chile',
+            app_access: p.appAccess !== false,
+          }).eq('id', appUserId)
+          if (upErr) console.error('ms-users: perfil', upErr.message)
         }
       } catch (e) { console.error('ms-users: sync app', String(e)) }
+      // Ficha en "Correos y cuentas" (registro de accesos), sin contraseña: se completa a mano
+      try {
+        const { data: sec } = await admin.from('equipment_sections').select('id').eq('name', 'Correos y cuentas').maybeSingle()
+        if (sec?.id) {
+          const { data: dup } = await admin.from('equipment').select('id').eq('section_id', sec.id).eq('assigned_to_email', String(userPrincipalName).toLowerCase()).is('returned_at', null).maybeSingle()
+          if (!dup) await admin.from('equipment').insert({
+            name: 'Cuenta · ' + displayName, section_id: sec.id, condition: 'Bueno',
+            assigned_to_name: displayName, assigned_to_email: String(userPrincipalName).toLowerCase(),
+            attributes: { usuario: String(userPrincipalName).toLowerCase() },
+          })
+        }
+      } catch (e) { console.error('ms-users: ficha correos', String(e)) }
       return json(200, { ok: true, id: g.data.id, appUserId })
     }
 
@@ -127,12 +143,18 @@ Deno.serve(async (req) => {
       try {
         const email = await emailFromGraph(token, id)
         if (email) {
-          const { data: pr } = await admin.from('profiles').select('id,role,inventory_access').eq('email', email).maybeSingle()
-          if (pr) await admin.rpc('admin_update_user', {
-            p_user: pr.id, p_full_name: p.displayName ?? null, p_department: p.department ?? '',
-            p_role: pr.role || 'user', p_inventory: pr.inventory_access === true, p_phone: p.mobilePhone ?? null,
-            p_avatar: null, p_notes: null, p_country: p.country ?? null,
-          })
+          const { data: pr } = await admin.from('profiles').select('id').eq('email', email).maybeSingle()
+          if (pr) {
+            const patch2: Record<string, unknown> = {}
+            if (p.displayName !== undefined) patch2.full_name = p.displayName
+            if (p.department !== undefined) patch2.department = p.department || ''
+            if (p.mobilePhone !== undefined) patch2.phone = p.mobilePhone || null
+            if (p.country !== undefined && p.country !== null) patch2.country = p.country
+            if (Object.keys(patch2).length) {
+              const { error: upErr2 } = await admin.from('profiles').update(patch2).eq('id', pr.id)
+              if (upErr2) console.error('ms-users: perfil update', upErr2.message)
+            }
+          }
         }
       } catch (e) { console.error('ms-users: update sync', String(e)) }
       return json(200, { ok: true })
@@ -184,13 +206,29 @@ Deno.serve(async (req) => {
     if (op === 'assignLicense') {
       const { id, skuId } = p
       if (!id || !skuId) return json(400, { error: 'Falta el id del usuario o de la licencia.' })
-      const gu = await graph(token, 'GET', `/users/${encodeURIComponent(id)}?$select=usageLocation`)
-      if (gu.ok && !gu.data?.usageLocation) {
-        await graph(token, 'PATCH', `/users/${encodeURIComponent(id)}`, { usageLocation: p.usageLocation || DEFAULT_USAGE })
+      // Una cuenta recién creada tarda unos segundos en propagarse en Graph ("does not exist"):
+      // se reintenta hasta ~25 s antes de rendirse.
+      const enc = encodeURIComponent(id)
+      const notReady = (st: number, d: unknown) => st === 404 || String((d as any)?.error?.message || '').includes('does not exist')
+      let last: { status: number; data: unknown } | null = null
+      for (let i = 0; i < 7; i++) {
+        const gu = await graph(token, 'GET', `/users/${enc}?$select=usageLocation`)
+        if (gu.ok) {
+          if (!gu.data?.usageLocation) {
+            await graph(token, 'PATCH', `/users/${enc}`, { usageLocation: p.usageLocation || DEFAULT_USAGE })
+          }
+          const g = await graph(token, 'POST', `/users/${enc}/assignLicense`, { addLicenses: [{ skuId, disabledPlans: [] }], removeLicenses: [] })
+          if (g.ok) return json(200, { ok: true, tries: i + 1 })
+          last = g
+          if (!notReady(g.status, g.data)) break
+        } else {
+          last = gu
+          if (!notReady(gu.status, gu.data)) break
+        }
+        await new Promise((res) => setTimeout(res, 4000))
       }
-      const g = await graph(token, 'POST', `/users/${encodeURIComponent(id)}/assignLicense`, { addLicenses: [{ skuId, disabledPlans: [] }], removeLicenses: [] })
-      if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al asignar la licencia', detail: g.data })
-      return json(200, { ok: true })
+      const msg = (last as any)?.data?.error?.message ?? 'Error al asignar la licencia'
+      return json((last as any)?.status ?? 500, { error: msg + ' — si la cuenta es recién creada, espera 1–2 minutos y asígnala desde su ficha.', detail: (last as any)?.data })
     }
 
     if (op === 'removeLicense') {

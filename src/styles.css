@@ -3387,3 +3387,12 @@ body.light .s-open,body.light .s-pending{background:#dbe7fb;color:#2448a2}
 body.light .s-prog,body.light .s-review{background:#fdecc8;color:#96660d}
 body.light .s-solved,body.light .s-approved,body.light .s-delivered{background:#ddf2c5;color:#38700f}
 body.light .s-rejected{background:#fdd9d9;color:#a91717}
+/* "Entregada" con color propio (turquesa) para distinguirla de "Aprobada" (verde) */
+.s-delivered{background:#14343d;color:#5bd3e6}
+body.light .s-delivered{background:#d6eff5;color:#0b6f85}
+/* Con el panel de reserva abierto: cada bloque conserva un margen parejo arriba y abajo,
+   para que las tarjetas de reunión no se peguen ni invadan la fila siguiente */
+.sal-cols.with-form .sal-right .cal td .slot{height:calc(100% - 4px) !important;margin:2px 0;box-sizing:border-box}
+.sal-cols.with-form .sal-right .cal td .slot.busy,
+.sal-cols.with-form .sal-right .cal td .slot.pending{height:calc(100% - 4px) !important;margin:2px 0;overflow:hidden}
+.sal-cols.with-form .sal-right .cal tbody tr:not(.lunch){height:34px !important}
