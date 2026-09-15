@@ -3423,3 +3423,18 @@ body.light .s-delivered{background:#d6eff5;color:#0b6f85}
 .sal-cols.with-form .sal-right .cal td .slot{height:calc(100% - 6px) !important;max-height:none !important;min-height:26px !important;margin:3px 0 !important}
 .sal-cols.with-form .sal-right .cal td.spanned[rowspan="1"] .slot.busy,
 .sal-cols.with-form .sal-right .cal td.spanned[rowspan="1"] .slot.pending{height:calc(100% - 6px) !important;max-height:none !important}
+
+/* ===== Tarjeta de reserva (celda combinada): aire fijo contra la línea de la fila siguiente.
+   La tarjeta es position:absolute dentro del td, así que lo ÚNICO que define sus bordes es `inset`.
+   Reglas anteriores mezclaban height con inset y el borde inferior quedaba calzado con la línea.
+   Aquí se fija inset 4px arriba y abajo y height:auto — la separación queda garantizada siempre. */
+.sal-right .cal td.spanned{position:relative !important;padding:0 !important}
+.sal-right .cal td.spanned .slot.busy,
+.sal-right .cal td.spanned .slot.pending{position:absolute !important;inset:4px .4rem !important;height:auto !important;max-height:none !important;min-height:0 !important;margin:0 !important;box-sizing:border-box}
+.sal-right .cal td.spanned[rowspan="1"] .slot.busy,
+.sal-right .cal td.spanned[rowspan="1"] .slot.pending{inset:3px .4rem !important;height:auto !important;max-height:none !important;min-height:0 !important;margin:0 !important;padding-top:.1rem;padding-bottom:.1rem}
+/* Vista con formulario: mismas garantías (estas reglas van al final y ganan a las de arriba) */
+.sal-cols.with-form .sal-right .cal td.spanned .slot.busy,
+.sal-cols.with-form .sal-right .cal td.spanned .slot.pending{inset:4px .4rem !important;height:auto !important;max-height:none !important;min-height:0 !important;margin:0 !important}
+.sal-cols.with-form .sal-right .cal td.spanned[rowspan="1"] .slot.busy,
+.sal-cols.with-form .sal-right .cal td.spanned[rowspan="1"] .slot.pending{inset:3px .4rem !important;height:auto !important;max-height:none !important;min-height:0 !important;margin:0 !important}
