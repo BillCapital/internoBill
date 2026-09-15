@@ -86,7 +86,7 @@ export default function Home() {
   if (canManageOrders && req.pending > 0) todos.push({ k: 'p', ico: 'clock', n: req.pending, txt: 'Solicitud(es) por revisar', sub: agoTxt(req.oldPending), tone: 'warn', to: '/solicitudes' })
   if ((isTech || isAdmin) && req.manager_review > 0) todos.push({ k: 'm', ico: 'key', n: req.manager_review, txt: 'Compra(s) esperando tu autorización', sub: agoTxt(req.oldReview), tone: 'warn', to: '/solicitudes' })
   else if (isAreaManager && (req.reviewMine || 0) > 0) todos.push({ k: 'm', ico: 'key', n: req.reviewMine, txt: 'Compra(s) de tu área esperando tu autorización', sub: agoTxt(req.oldReviewMine), tone: 'warn', to: '/solicitudes' })
-  else if (canManageOrders && req.manager_review > 0) todos.push({ k: 'm2', ico: 'key', n: req.manager_review, txt: 'Compra(s) esperando autorización', sub: agoTxt(req.oldReview), tone: 'info', to: '/solicitudes' })
+  else if (canManageOrders && req.manager_review > 0) todos.push({ k: 'm2', ico: 'key', n: req.manager_review, txt: 'Compra(s) esperando la autorización de los firmantes', sub: agoTxt(req.oldReview), tone: 'info', to: '/solicitudes' })
   if (canManageOrders && req.approved > 0) todos.push({ k: 'a', ico: 'box', n: req.approved, txt: 'Aprobada(s) por entregar', sub: 'listas para coordinar entrega', tone: 'ok', to: '/solicitudes' })
   if (canManageRooms && resPend > 0) todos.push({ k: 'r', ico: 'calendar', n: resPend, txt: 'Reserva(s) de sala por aceptar', sub: '', tone: 'info', to: resPendDay ? `/salas?dia=${resPendDay}` : '/salas' })
   if (canManageInventory && equip.mant > 0) todos.push({ k: 'em', ico: 'wrench', n: equip.mant, txt: 'Equipo(s) en mantenimiento', sub: '', tone: '', to: '/inventario' })

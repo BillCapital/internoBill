@@ -3354,3 +3354,36 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
   .ins-table th,.ins-table td{padding:.55rem .5rem}
   .ins-table .ins-name strong{overflow-wrap:anywhere}
 }
+/* Acciones de insumos: al quitar el scroll, Eliminar quedaba fuera — ahora Editar y
+   Eliminar van apilados en su columna, siempre visibles */
+@media(min-width:761px){
+  .ins-table col.c-act{width:96px}
+  .ins-table col.c-stock{width:138px}
+  .ins-table td.actions{white-space:normal}
+  .ins-table td.actions .ins-act{display:flex;width:100%;justify-content:center;margin:0 0 .3rem;box-sizing:border-box}
+  .ins-table td.actions .ins-act:last-child{margin-bottom:0}
+}
+/* ===== Modo claro: colores más firmes (se veían lavados en varios apartados) ===== */
+/* Salas: bloques del horario con relleno y borde más marcados */
+body.light .slot{background:#dff3c0;color:#2f6a0e;border-color:#b9dd8b}
+body.light .slot:hover{background:#d2edaa;border-color:#9ccb6a}
+body.light .slot.busy{background:#dfe3fa;color:#26307a;border-color:#b7c0f0}
+body.light .cal td .slot.busy{background:#dfe3fa;color:#26307a;border-color:#b7c0f0}
+body.light .cal td .slot.busy:hover{background:#d2d8f6}
+body.light .slot.pending{background:#d8e6fd;color:#1d4fb8;border-color:#a9c4f5}
+body.light .day.sel{background:#a5d92e;border-color:#82b31a;color:#182405}
+/* Leyenda del día: puntos más saturados */
+body.light .rl-item .dot{filter:saturate(1.35) brightness(.92)}
+/* Inicio: tarjetas de pendientes con franja más ancha, ícono y fondo con tono visible */
+body.light .todo-card::before{width:5px}
+body.light .todo-card.warn{background:#fff8ec;border-color:#f2ddb0}
+body.light .todo-card.info{background:#eff4ff;border-color:#c8d8f5}
+body.light .todo-card.ok{background:#effae5;border-color:#cbe8ad}
+body.light .todo-card.warn .tc-ic{background:#ffe9c2;color:#a3690b}
+body.light .todo-card.info .tc-ic{background:#d8e4fb;color:#2b55b8}
+body.light .todo-card.ok .tc-ic{background:#dcf2c3;color:#3f7d16}
+/* Distintivos de estado con más cuerpo */
+body.light .s-open,body.light .s-pending{background:#dbe7fb;color:#2448a2}
+body.light .s-prog,body.light .s-review{background:#fdecc8;color:#96660d}
+body.light .s-solved,body.light .s-approved,body.light .s-delivered{background:#ddf2c5;color:#38700f}
+body.light .s-rejected{background:#fdd9d9;color:#a91717}

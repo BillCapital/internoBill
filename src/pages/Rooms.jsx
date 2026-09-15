@@ -612,10 +612,17 @@ export default function Rooms() {
               })()}</div>
             <Chat type="reservation" id={openObj.id} />
             <div className="modal-actions res-actions">
-              {canApproveRooms && openObj.status === 'pending' && <>
-                <button className="btn btn-lime" onClick={async () => { if (await confirmDialog('¿Aceptar la reserva?', { title: 'Aceptar reserva', okText: 'Aceptar' })) act('approve_reservation', openObj.id) }}>Aceptar</button>
-                <button className="btn btn-danger" onClick={async () => { if (await confirmDialog('¿Rechazar la reserva?', { title: 'Rechazar reserva', danger: true, okText: 'Rechazar' })) act('reject_reservation', openObj.id) }}>Rechazar</button>
-              </>}
+              {canApproveRooms && openObj.status === 'pending' && (() => {
+                // Confirmación con el detalle completo, para decidir con seguridad
+                const rm = rooms.find((x) => x.id === openObj.room_id)
+                const who = openObj.profiles?.full_name || openObj.profiles?.email || 'alguien'
+                const when = `${capFirst(dayLong(sclDateOf(openObj.starts_at, tzFor(openObj.room_id))))} · ${rangeTz(new Date(openObj.starts_at), new Date(openObj.ends_at), roomTz(rm))}`
+                const det = `"${openObj.title || 'Reunión'}" — pedida por ${who}\n${rm?.name || 'Sala'} · ${when}`
+                return <>
+                  <button className="btn btn-lime" onClick={async () => { if (await confirmDialog(`${det}\n\nAl aceptarla se confirma el horario, la cita se agenda en los calendarios de los convocados y se le avisa a ${who}.`, { title: 'Aceptar esta reserva', okText: 'Sí, aceptar' })) act('approve_reservation', openObj.id) }}>Aceptar</button>
+                  <button className="btn btn-danger" onClick={async () => { if (await confirmDialog(`${det}\n\nAl rechazarla el horario queda libre y se le avisa a ${who} para que busque otro.`, { title: 'Rechazar esta reserva', danger: true, okText: 'Sí, rechazar' })) act('reject_reservation', openObj.id) }}>Rechazar</button>
+                </>
+              })()}
               <span className="res-sep" />
               {(canApproveRooms || canManageRooms) && openObj.user_id !== profile?.id && new Date(openObj.ends_at).getTime() > Date.now() &&
                 <button className="btn" title="Avisar a quien la creó para que elija otro horario" onClick={async () => {
