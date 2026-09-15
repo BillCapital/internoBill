@@ -3332,3 +3332,10 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .img-viewer-x{background:rgba(10,14,22,.82);border:1.5px solid rgba(255,255,255,.35);box-shadow:0 4px 14px rgba(0,0,0,.45)}
 .img-viewer-x:hover{background:rgba(10,14,22,.95);border-color:rgba(255,255,255,.6)}
 .img-viewer-x .licon{display:block;width:1.05rem;height:1.05rem}
+/* Franja de datos de la cotización: en rejilla, cada dato en su celda alineada
+   (antes era una fila corrida y el segundo renglón quedaba descolgado) */
+.rp2-qi{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:.4rem 1rem;align-items:start}
+.rp2-qi-it{display:flex;align-items:baseline;white-space:normal}
+.rp2-qi-it .licon{flex:none;align-self:center}
+.rp2-qi-it.muted{grid-column:1 / -1}
+@media(max-width:600px){.rp2-qi{grid-template-columns:1fr}}
