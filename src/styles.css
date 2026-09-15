@@ -3344,3 +3344,13 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 /* Tarjetas de departamento del asistente: nombre de la solicitante designada bajo el área */
 .dept-pick .kpi{flex-direction:column;align-items:flex-start}
 .dept-pick .dept-who{font-size:.66rem;line-height:1.2;margin-top:.15rem;white-space:normal;text-align:left}
+/* Tabla de insumos en escritorio: todo cabe dentro de la tarjeta, sin barra de scroll
+   horizontal (columnas más contenidas y el contenedor deja de reservar el scroll) */
+@media(min-width:761px){
+  .table-wrap:has(> .ins-table){overflow-x:clip}
+  .ins-table{width:100%}
+  .ins-table col.c-dept{width:26%}
+  .ins-table col.c-stock{width:150px}
+  .ins-table th,.ins-table td{padding:.55rem .5rem}
+  .ins-table .ins-name strong{overflow-wrap:anywhere}
+}
