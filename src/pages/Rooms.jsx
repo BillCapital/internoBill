@@ -665,7 +665,7 @@ function ReservRow({ label, lunch, cells, durSlots, canManageRooms, profile, onR
             const isPend = c.res.status === 'pending'
             const clas = c.res.status === 'approved' ? 'slot busy' : 'slot pending'
             return <td key={c.room.id} rowSpan={durSlots(c.res)} className="spanned">
-              <button className={clas} style={{ height: '100%', width: '100%' }}
+              <button className={clas} style={{ width: '100%' }}
                 title={isPend && !canEdit ? 'Solicitud pendiente — toca para coordinar' : undefined}
                 onClick={() => { if (canEdit) onOpen(c.res.id); else if (isPend) onPendingInfo(c.res) }}>
                 {c.res.title}<br /><span className="muted">{c.res.profiles?.full_name || c.res.profiles?.email}{isPend ? ' · pendiente' : ''}</span>

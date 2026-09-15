@@ -3404,3 +3404,22 @@ body.light .s-delivered{background:#d6eff5;color:#0b6f85}
 .sal-cols.with-form .sal-right .cal tbody tr:not(.lunch){height:32px !important}
 .sal-cols.with-form .sal-right .cal td .slot{height:26px !important;min-height:26px;max-height:26px;margin:1px 0;box-sizing:border-box}
 .sal-cols.with-form .sal-right .cal td.spanned:not([rowspan="1"]) .slot{height:calc(100% - 4px) !important;max-height:none !important;margin:2px 0}
+/* ===== REGLA FINAL de los bloques del horario de salas (gana a todas las anteriores):
+   cada bloque mide 26px con 3px de aire arriba y abajo; una reunión larga llena sus
+   filas dejando el mismo aire — nunca pegada a la fila siguiente ===== */
+.sal-right .cal tbody tr:not(.lunch){height:32px !important}
+.sal-right .cal td .slot{height:26px !important;min-height:26px !important;max-height:26px !important;margin:3px 0 !important;box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+.sal-right .cal td.spanned .slot.busy,.sal-right .cal td.spanned .slot.pending{height:calc(100% - 6px) !important;max-height:none !important;min-height:26px !important;margin:3px 0 !important}
+.sal-right .cal td.spanned[rowspan="1"] .slot.busy,.sal-right .cal td.spanned[rowspan="1"] .slot.pending{height:26px !important;max-height:26px !important}
+.sal-right .cal td{padding-top:0 !important;padding-bottom:0 !important;vertical-align:middle}
+/* Con el panel abierto, el horario vuelve a extenderse hasta abajo — pero repartiendo el
+   alto en partes IGUALES (todas las filas al mismo %), y cada bloque llena su fila con
+   3px de aire arriba y abajo, incluidas las reservas */
+.sal-cols.with-form .sal-right{display:flex;flex-direction:column}
+.sal-cols.with-form .sal-right > div:last-child{flex:1;display:flex;flex-direction:column}
+.sal-cols.with-form .sal-right table.cal{height:100%;flex:1}
+.sal-cols.with-form .sal-right .cal tbody tr:not(.lunch){height:7.2% !important}
+.sal-cols.with-form .sal-right .cal tbody tr.lunch{height:26px !important}
+.sal-cols.with-form .sal-right .cal td .slot{height:calc(100% - 6px) !important;max-height:none !important;min-height:26px !important;margin:3px 0 !important}
+.sal-cols.with-form .sal-right .cal td.spanned[rowspan="1"] .slot.busy,
+.sal-cols.with-form .sal-right .cal td.spanned[rowspan="1"] .slot.pending{height:calc(100% - 6px) !important;max-height:none !important}
