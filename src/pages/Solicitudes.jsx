@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import Chat from '../components/Chat'
 import ActivityLog from '../components/ActivityLog'
-import { confirmDialog, promptDialog, alertDialog, viewImage } from '../lib/ui'
+import { confirmDialog, promptDialog, alertDialog, viewImage, chooseDialog } from '../lib/ui'
 import { loadDepts, rootDeptOf, NON_REQUESTING_DEPTS, DEFAULT_DEPTS } from '../lib/depts'
 import { fetchLinkPreview, fmtMoney } from '../lib/linkPreview'
 import { Icon } from '../lib/icons'
@@ -72,6 +72,29 @@ export default function Solicitudes() {
     })()
   }, [rows])
   useEffect(() => { supabase.from('providers').select('*').then(({ data }) => setProvDir(data ?? [])) }, [])
+  // Solicitantes designadas de insumos por departamento (solo ellas piden insumos)
+  const [supplyReq, setSupplyReq] = useState([])
+  useEffect(() => { supabase.from('supply_requesters').select('department, user_id, profiles(full_name)').then(({ data }) => setSupplyReq(data ?? [])) }, [])
+  // Oficina de cada departamento (dept_groups); si abarca varias, el usuario elige al enviar
+  const [deptOffice, setDeptOffice] = useState({})
+  useEffect(() => { supabase.from('dept_groups').select('department, group_name').then(({ data }) => setDeptOffice(Object.fromEntries((data ?? []).map((g) => [g.department, g.group_name || ''])))) }, [])
+  const officeFor = async (dept) => {
+    const g = deptOffice[dept] || ''
+    const many = (g.match(/\d+/g) || [])
+    if (many.length > 1) {
+      const pick = await chooseDialog('Tu departamento está en más de una oficina. ¿En cuál estás tú?', { title: 'Elige tu oficina', options: many.map((n) => ({ value: 'Oficina ' + n, label: 'Oficina ' + n })) })
+      return pick || null
+    }
+    return g || null
+  }
+  // Carritos sugeridos por usuarios, pendientes de que la designada los envíe
+  const [sugCarts, setSugCarts] = useState([])
+  const [takingCart, setTakingCart] = useState(null) // carrito sugerido que la designada está convirtiendo en solicitud
+  const loadCarts = useCallback(async () => {
+    const { data } = await supabase.from('supply_carts').select('id, department, office, items, custom, note, status, created_at, profiles!supply_carts_user_id_fkey(full_name,email)').eq('status', 'pending').order('created_at')
+    setSugCarts(data ?? [])
+  }, [])
+  useEffect(() => { loadCarts() }, [loadCarts])
   // Proveedor del directorio que calza con el producto (por nombre leído de la cotización o dominio del link)
   const provFor = (p) => {
     const norm = (x) => (x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
@@ -257,13 +280,20 @@ export default function Solicitudes() {
   const canChooseDept = isAdmin || profile?.is_it_manager || profile?.role === 'gerente_ti'
   // El departamento del usuario se resuelve a su departamento raíz (un subdepto pide "desde" su padre).
   const ownDept = rootDeptOf(profile?.department || '')
+  // Departamentos por los que YO estoy designado para pedir insumos
+  const mySupplyDepts = supplyReq.filter((r) => r.user_id === profile?.id).map((r) => r.department)
+  const canOrderSupplies = canChooseDept || canManageOrders || mySupplyDepts.length > 0
+  const supplyNamesFor = (dept) => [...new Set(supplyReq.filter((r) => r.department === dept).map((r) => r.profiles?.full_name).filter(Boolean))].join(' o ')
   const startWizard = () => {
     setCreating((v) => !v); setStep(1); setCart({}); setNote(''); setCustom(''); setWSection('')
     setWMode('catalogo'); setTecView('choose'); setProducts([]); setPUrl(''); setPErr('')
     setAvailSel({}); setAvailOpen({})
     setWImgs((cur) => { cur.forEach((im) => { try { URL.revokeObjectURL(im.preview) } catch { /* noop */ } }); return [] })
-    setWDept(canChooseDept ? '' : ownDept)
-    if (!canChooseDept && ownDept) setStep(2)
+    if (canChooseDept) { setWDept('') }
+    else if (mySupplyDepts.length > 1) { setWDept(''); setStep(1) }
+    else if (mySupplyDepts.length === 1) { setWDept(mySupplyDepts[0]); setStep(2) }
+    else { setWDept(ownDept); if (ownDept) setStep(2) }
+    setTakingCart(null)
   }
 
   // Insumos disponibles para un departamento: solo los asignados explícitamente a ese depto
@@ -323,11 +353,26 @@ export default function Solicitudes() {
     }
     const items = Object.entries(cart).filter(([, q]) => q > 0).map(([id, quantity]) => ({ item_id: id, quantity }))
     if (!items.length && !custom.trim()) return alertDialog('Agrega al menos un artículo del catálogo o describe el insumo que necesitas.')
+    // Usuario no designado: su carrito le llega como sugerencia a la solicitante del área
+    if (!canOrderSupplies) {
+      const dept = rootDeptOf(wDept || ownDept || '')
+      const withNames = items.map((x) => ({ ...x, name: catalog.find((i) => i.id === x.item_id)?.name || '' }))
+      const office = await officeFor(dept)
+      setTecBusy(true)
+      try {
+        const { error } = await supabase.from('supply_carts').insert({ department: dept, items: withNames, custom: custom.trim() || null, note: note.trim() || null, user_id: profile.id, office })
+        if (error) throw error
+        setCart({}); setNote(''); setCustom(''); setCreating(false); setStep(1)
+        alertDialog(`Tu carrito le llegó a ${supplyNamesFor(dept) || 'la solicitante designada'}. Ella lo revisa y lo envía a aprobación.`, { title: 'Pedido enviado a tu solicitante' })
+      } catch (e) { alertDialog(e.message) } finally { setTecBusy(false) }
+      return
+    }
     if (note.trim().length < 10) return alertDialog('La justificación debe tener al menos 10 caracteres.')
     setTecBusy(true)
     try {
       const newId = await api('create_request', { p_note: note.trim(), p_department: rootDeptOf(wDept || ownDept || ''), p_items: items, p_custom: custom.trim() || null, p_products: [] })
       await sendWizImgs(newId)
+      if (takingCart) { await supabase.from('supply_carts').update({ status: 'taken', taken_by: profile.id, taken_at: new Date().toISOString() }).eq('id', takingCart); setTakingCart(null); loadCarts() }
       setCart({}); setNote(''); setCustom(''); setWMode('catalogo'); setCreating(false); setStep(1); load()
     } catch (e) { alertDialog(e.message) } finally { setTecBusy(false) }
   }
@@ -508,6 +553,45 @@ export default function Solicitudes() {
         <button className="btn btn-lime" onClick={startWizard}>＋ Nueva solicitud</button>
       </div></div>
 
+      {/* Carritos sugeridos: pedidos que los usuarios armaron para que la designada los envíe */}
+      {(() => {
+        const mine = sugCarts.filter((c) => mySupplyDepts.includes(c.department) || canManageOrders || isAdmin)
+        if (!mine.length) return null
+        return (
+          <div className="conv" style={{ padding: '.8rem 1rem', marginBottom: '.8rem' }}>
+            <h3 style={{ margin: '0 0 .5rem', fontSize: '.95rem' }}><Icon n="cart" /> Carritos sugeridos por tu equipo ({mine.length})</h3>
+            {[...new Set(mine.map((c) => c.office || ''))].sort((a, b) => (a || '\uffff').localeCompare(b || '\uffff', 'es')).map((of) => (
+              <div key={of || 'sin-of'}>
+                <div className="muted" style={{ fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', margin: '.3rem 0 .2rem' }}>{of || 'Sin oficina'}</div>
+                {mine.filter((c) => (c.office || '') === of).map((c) => (
+              <div className="cat-row" key={c.id} style={{ alignItems: 'flex-start', gap: '.8rem' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <strong>{c.profiles?.full_name || c.profiles?.email}</strong> <span className="muted">· {c.department} · {new Date(c.created_at).toLocaleDateString('es-CL')}</span>
+                  <div className="muted" style={{ fontSize: '.82rem', marginTop: '.15rem' }}>
+                    {(c.items || []).map((x) => `${x.quantity} × ${x.name}`).join(' · ') || 'Sin artículos del catálogo'}
+                    {c.custom ? ` · Además: ${c.custom}` : ''}{c.note ? ` · Motivo: ${c.note}` : ''}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '.4rem', flex: 'none' }}>
+                  <button className="btn-sm btn-lime" onClick={() => {
+                    // Abre el asistente con el carrito ya cargado para revisarlo y enviarlo
+                    startWizard(); setCreating(true); setWMode('catalogo'); setWDept(c.department); setStep(2)
+                    const m = {}; (c.items || []).forEach((x) => { if (x.item_id) m[x.item_id] = x.quantity })
+                    setCart(m); setCustom(c.custom || ''); setNote(c.note || ''); setTakingCart(c.id)
+                  }}>Armar solicitud</button>
+                  <button className="btn-sm" onClick={async () => {
+                    if (!(await confirmDialog('¿Descartar este carrito sugerido? Quien lo envió no será notificado.', { title: 'Descartar carrito', okText: 'Descartar' }))) return
+                    await supabase.from('supply_carts').update({ status: 'dismissed', taken_by: profile.id, taken_at: new Date().toISOString() }).eq('id', c.id); loadCarts()
+                  }}>Descartar</button>
+                </div>
+              </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+
       {creating && (
         <div className="conv wizard" style={{ padding: '1rem' }}>
           <div className="wz-steps">
@@ -531,6 +615,13 @@ export default function Solicitudes() {
               <Icon n="cart" /> <span><strong>Producto tecnológico</strong><em>equipos y periféricos · aprueban RRHH, Gerente TI y tu jefe de área</em></span>
             </button>
           </div>
+
+          {/* Insumos: los usuarios arman el carrito y le llega a la solicitante designada */}
+          {wMode === 'catalogo' && !canOrderSupplies && (
+            <div className="tec-info" style={{ marginTop: '.6rem' }}>
+              <Icon n="bell" /> <span>Los pedidos de insumos de <strong>{ownDept || 'tu área'}</strong> los envía <strong>{supplyNamesFor(ownDept) || 'la solicitante designada'}</strong>. Arma tu carrito igual: al enviarlo le llega listo a ella para que lo revise y lo mande a aprobación.</span>
+            </div>
+          )}
 
           {/* Carrito del pedido (solo catálogo) */}
           {wMode === 'catalogo' && (
@@ -645,9 +736,9 @@ export default function Solicitudes() {
           {step === 1 && (
             <div>
               <h3 style={{ fontSize: '1rem' }}>¿Para qué departamento es la solicitud?</h3>
-              {canChooseDept ? (
+              {(canChooseDept || mySupplyDepts.length > 1) ? (
                 <div className="kpi-grid compact dept-pick">
-                  {topDepts.map((d) => (
+                  {(canChooseDept ? topDepts : mySupplyDepts).map((d) => (
                     <button key={d} className={`kpi ${wDept === d ? 'active' : ''}`} onClick={() => { if (d !== wDept) setCart({}); setWDept(d); setWSection(''); setStep(2) }}>
                       <div className="ico"><Icon n="building" /></div><div className="lbl">{d}</div>
                     </button>

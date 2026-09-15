@@ -3337,3 +3337,10 @@ label > .muted{text-transform:none;font-size:.82em;font-weight:400;letter-spacin
 .rp2-qi{display:flex;flex-wrap:wrap;gap:.35rem 1.1rem;align-items:center}
 .rp2-qi-it{white-space:nowrap}
 .rp2-qi-it.muted{flex:1 1 100%;white-space:normal}
+/* Insumos: resumen compacto de departamentos ("Todos", "Todos menos X", "+N más") */
+.dept-chip.all{background:color-mix(in srgb,var(--lime) 14%,var(--panel));border-color:color-mix(in srgb,var(--lime) 45%,var(--line));display:inline-flex;align-items:center;gap:.3rem}
+.dept-chip.all .licon{width:.8rem;height:.8rem}
+.dept-chip.more{color:var(--muted);cursor:help}
+/* Tarjetas de departamento del asistente: nombre de la solicitante designada bajo el área */
+.dept-pick .kpi{flex-direction:column;align-items:flex-start}
+.dept-pick .dept-who{font-size:.66rem;line-height:1.2;margin-top:.15rem;white-space:normal;text-align:left}

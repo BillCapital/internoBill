@@ -40,6 +40,41 @@ export default function Insumos() {
   const secRefs = useRef({})
   const toggleSel = (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
 
+  // Solicitantes designadas por área (quiénes piden insumos por cada departamento)
+  const [reqOpen, setReqOpen] = useState(false)
+  const [sReq, setSReq] = useState([])
+  const [people, setPeople] = useState([])
+  const [addSel, setAddSel] = useState({}) // { dept: user_id } selección del combo por área
+  const [dGroups, setDGroups] = useState({}) // { department: group_name } — agrupación administrativa
+  const loadSReq = useCallback(async () => {
+    const [{ data }, { data: gr }] = await Promise.all([
+      supabase.from('supply_requesters').select('department, user_id, profiles(full_name)'),
+      supabase.from('dept_groups').select('department, group_name'),
+    ])
+    setSReq(data ?? [])
+    setDGroups(Object.fromEntries((gr ?? []).map((g) => [g.department, g.group_name || ''])))
+  }, [])
+  const saveGroup = async (dept, name) => {
+    const v = (name || '').trim()
+    await supabase.from('dept_groups').upsert({ department: dept, group_name: v || null })
+    setDGroups((m) => ({ ...m, [dept]: v }))
+  }
+  useEffect(() => { loadSReq() }, [loadSReq])
+  useEffect(() => {
+    if (!reqOpen || people.length) return
+    supabase.from('profiles').select('id, full_name, email').eq('active', true).order('full_name').then(({ data }) => setPeople(data ?? []))
+  }, [reqOpen, people.length])
+  const addSReq = async (dept, uid) => {
+    if (!uid) return
+    const { error } = await supabase.from('supply_requesters').insert({ department: dept, user_id: uid })
+    if (error && !/duplicate/i.test(error.message)) alertDialog(error.message)
+    setAddSel((m) => ({ ...m, [dept]: '' })); loadSReq()
+  }
+  const delSReq = async (dept, uid, name) => {
+    if (!(await confirmDialog(`¿Quitar a ${name} como solicitante de ${dept}?`, { title: 'Quitar solicitante', okText: 'Quitar' }))) return
+    await supabase.from('supply_requesters').delete().eq('department', dept).eq('user_id', uid); loadSReq()
+  }
+
   const load = useCallback(async () => {
     const [{ data: it }, { data: cs }] = await Promise.all([
       supabase.from('inventory_items').select('id,name,category,category_id,stock,description,departments,is_active,image_url,created_at,country,requires_manager,purchase_url,orderable').eq('is_active', true).order('category').order('name'),
@@ -146,6 +181,51 @@ export default function Insumos() {
 
       {ro && <div className="ro-note"><Icon n="lock" /> Tienes acceso de solo lectura a este apartado: puedes consultar el stock, pero no editarlo.</div>}
 
+      {/* ==== Solicitantes designadas por área ==== */}
+      {!ro && (
+        <div className="conv" style={{ padding: '.7rem 1rem', margin: '.6rem 0' }}>
+          <button type="button" className="row" style={{ width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', font: 'inherit', display: 'flex', alignItems: 'center', gap: '.5rem' }} onClick={() => setReqOpen((v) => !v)}>
+            <Icon n="users" /> <strong>Solicitantes de insumos por área</strong>
+            <span className="muted" style={{ fontSize: '.78rem' }}>Solo estas personas piden insumos por cada departamento; el resto les envía su carrito.</span>
+            <span style={{ marginLeft: 'auto' }}>{reqOpen ? '▴' : '▾'}</span>
+          </button>
+          {reqOpen && (
+            <div style={{ marginTop: '.6rem', display: 'grid', gap: '.35rem' }}>
+              <datalist id="dg-list">{[...new Set(Object.values(dGroups).filter(Boolean))].map((g) => <option key={g} value={g} />)}</datalist>
+              {[...new Set(DEPTS.map((d) => dGroups[d] || ''))].sort((a, b) => (a || '\uffff').localeCompare(b || '\uffff', 'es')).map((g) => (
+                <div key={g || 'sin-grupo'} style={{ display: 'grid', gap: '.35rem' }}>
+                  <div className="muted" style={{ fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', marginTop: '.35rem' }}>{g || 'Sin grupo'}</div>
+                  {DEPTS.filter((d) => (dGroups[d] || '') === g).map((d) => {
+                    const rows = sReq.filter((r) => r.department === d)
+                    return (
+                      <div key={d} className="cat-row" style={{ alignItems: 'center', gap: '.6rem', flexWrap: 'wrap' }}>
+                        <strong style={{ flex: '0 0 240px' }}>{d}</strong>
+                        <div style={{ display: 'flex', gap: '.35rem', flexWrap: 'wrap', flex: 1 }}>
+                          {rows.length === 0 && <span className="dept-chip danger"><Icon n="alert" /> Sin solicitante</span>}
+                          {rows.map((r) => (
+                            <span key={r.user_id} className="dept-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}>
+                              {r.profiles?.full_name || '—'}
+                              <button type="button" title="Quitar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, display: 'flex' }} onClick={() => delSReq(d, r.user_id, r.profiles?.full_name || 'esta persona')}><Icon n="close" /></button>
+                            </span>
+                          ))}
+                        </div>
+                        <select value={addSel[d] || ''} style={{ maxWidth: 220 }} onChange={(e) => { setAddSel((m) => ({ ...m, [d]: e.target.value })); addSReq(d, e.target.value) }}>
+                          <option value="">＋ Agregar persona…</option>
+                          {people.filter((p) => !rows.some((r) => r.user_id === p.id)).map((p) => <option key={p.id} value={p.id}>{p.full_name || p.email}</option>)}
+                        </select>
+                        <input value={dGroups[d] ?? ''} placeholder="Grupo…" list="dg-list" style={{ maxWidth: 140 }} title="Nombre del grupo (solo para organizar; no cambia permisos)"
+                          onChange={(e) => setDGroups((m) => ({ ...m, [d]: e.target.value }))}
+                          onBlur={(e) => saveGroup(d, e.target.value)} />
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ==== Sector por país ==== */}
       <div className="country-tabs">
         {COUNTRIES.map(([c, flag]) => {
@@ -251,9 +331,19 @@ export default function Insumos() {
                       <td><div className="ins-depts">
                         {noped
                           ? <span className="dept-chip"><Icon n="folder" /> {i.category || 'Sin categoría'}</span>
-                          : (i.departments && i.departments.length)
-                            ? i.departments.map((d) => <span key={d} className="dept-chip">{d}</span>)
-                            : <span className="dept-chip danger"><Icon n="alert" /> Sin asignar</span>}
+                          : (() => {
+                              // Resumen compacto: "Todos", "Todos menos X" o primeros 2 + "+N más" (detalle al pasar el mouse)
+                              const ds = i.departments || []
+                              if (!ds.length) return <span className="dept-chip danger"><Icon n="alert" /> Sin asignar</span>
+                              const missing = DEPTS.filter((d) => !ds.includes(d))
+                              if (missing.length === 0) return <span className="dept-chip all" title={ds.join(' · ')}><Icon n="building" /> Todos los departamentos</span>
+                              if (missing.length <= 2 && ds.length >= 4) return <span className="dept-chip all" title={ds.join(' · ')}><Icon n="building" /> Todos menos {missing.join(' y ')}</span>
+                              const shown = ds.slice(0, 2), rest = ds.slice(2)
+                              return <>
+                                {shown.map((d) => <span key={d} className="dept-chip">{d}</span>)}
+                                {rest.length > 0 && <span className="dept-chip more" title={rest.join(' · ')}>+{rest.length} más</span>}
+                              </>
+                            })()}
                       </div><span className="ins-unit-mob muted">{i.description || 'Unidad'}</span></td>
                       <td><div className="stock-cell">
                         <span className={`stock-dot ${cur === 0 ? 'zero' : cur <= 5 ? 'low' : 'ok'}`} />
