@@ -84,6 +84,7 @@ export default function Solicitudes() {
   const showTransfer = (d, extra) => {
     const L = []
     if (d.nombre) L.push(`Proveedor: ${d.nombre}`)
+    if (d.titular) L.push(`Nombre de la cuenta: ${d.titular}`)
     if (d.rut) L.push(`RUT: ${d.rut}`)
     if (d.banco) L.push(`Banco: ${d.banco}`)
     if (d.tipo_cuenta) L.push(`Tipo de cuenta: ${d.tipo_cuenta}`)

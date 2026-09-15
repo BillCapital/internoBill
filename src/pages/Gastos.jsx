@@ -318,7 +318,7 @@ export default function Gastos() {
           <div className="conv gz-card">
             <div className="row" style={{ marginBottom: '.6rem' }}>
               <div><strong>Datos de transferencia por proveedor</strong><br /><span className="muted" style={{ fontSize: '.8rem' }}>Se muestran junto a cada producto cotizado de ese proveedor (botón "Transferencia").</span></div>
-              {!ro && <button className="btn btn-lime btn-sm" onClick={() => setProvEdit({ nombre: '', rut: '', banco: '', tipo_cuenta: 'Cuenta corriente', cuenta: '', correo: '', dominio: '', notas: '' })}>＋ Nuevo proveedor</button>}
+              {!ro && <button className="btn btn-lime btn-sm" onClick={() => setProvEdit({ nombre: '', titular: '', rut: '', banco: '', tipo_cuenta: 'Cuenta corriente', cuenta: '', correo: '', dominio: '', notas: '' })}>＋ Nuevo proveedor</button>}
             </div>
             {provs.length === 0
               ? <div className="empty">Aún no hay proveedores. Agrega Tecnomas, PC Factory, MyShop… con sus datos bancarios.</div>
@@ -327,7 +327,7 @@ export default function Gastos() {
                   <tbody>
                     {provs.map((pr) => (
                       <tr key={pr.id}>
-                        <td><strong>{pr.nombre}</strong>{pr.notas ? <><br /><span className="muted" style={{ fontSize: '.74rem' }}>{pr.notas}</span></> : null}</td>
+                        <td><strong>{pr.nombre}</strong>{(pr.titular || pr.notas) ? <><br /><span className="muted" style={{ fontSize: '.74rem' }}>{pr.titular || pr.notas}</span></> : null}</td>
                         <td className="nowrap">{pr.rut || <span className="muted">—</span>}</td>
                         <td>{pr.banco || <span className="muted">—</span>}</td>
                         <td className="nowrap">{pr.cuenta ? <>{pr.tipo_cuenta ? `${pr.tipo_cuenta} ` : ''}{pr.cuenta}</> : <span className="muted">—</span>}</td>
@@ -390,6 +390,7 @@ export default function Gastos() {
             <h3>{provEdit.id ? 'Editar proveedor' : 'Nuevo proveedor'}</h3>
             <div className="pf-fields">
               <div><label>Nombre</label><input value={provEdit.nombre} onChange={(e) => setProvEdit({ ...provEdit, nombre: e.target.value })} placeholder="Ej: Tecnomas" autoFocus /></div>
+              <div><label>Nombre de la cuenta <span className="muted">(titular / razón social)</span></label><input value={provEdit.titular || ''} onChange={(e) => setProvEdit({ ...provEdit, titular: e.target.value })} placeholder="Ej: Ingeniería e Informática Asociada Ltda." /></div>
               <div><label>RUT</label><input value={provEdit.rut} onChange={(e) => setProvEdit({ ...provEdit, rut: e.target.value })} placeholder="76.123.456-7" /></div>
               <div><label>Banco</label><input value={provEdit.banco} onChange={(e) => setProvEdit({ ...provEdit, banco: e.target.value })} placeholder="Banco de Chile" /></div>
               <div><label>Tipo de cuenta</label>
