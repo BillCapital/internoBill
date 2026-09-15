@@ -3396,3 +3396,11 @@ body.light .s-delivered{background:#d6eff5;color:#0b6f85}
 .sal-cols.with-form .sal-right .cal td .slot.busy,
 .sal-cols.with-form .sal-right .cal td .slot.pending{height:calc(100% - 4px) !important;margin:2px 0;overflow:hidden}
 .sal-cols.with-form .sal-right .cal tbody tr:not(.lunch){height:34px !important}
+/* El horario deja de estirarse al abrir el panel: mismas medidas SIEMPRE (filas de 32px,
+   bloques de 26px), que era lo que causaba los espacios disparejos */
+.sal-cols.with-form .sal-right{display:block}
+.sal-cols.with-form .sal-right > div:last-child{flex:none;display:block}
+.sal-cols.with-form .sal-right table.cal{height:auto;flex:none}
+.sal-cols.with-form .sal-right .cal tbody tr:not(.lunch){height:32px !important}
+.sal-cols.with-form .sal-right .cal td .slot{height:26px !important;min-height:26px;max-height:26px;margin:1px 0;box-sizing:border-box}
+.sal-cols.with-form .sal-right .cal td.spanned:not([rowspan="1"]) .slot{height:calc(100% - 4px) !important;max-height:none !important;margin:2px 0}
