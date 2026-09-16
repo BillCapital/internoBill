@@ -6,7 +6,8 @@ import { loadDeptNames, DEFAULT_DEPTS, deptIndentLabel } from '../lib/depts'
 import SortControl from '../components/SortControl'
 import FilterControl from '../components/FilterControl'
 import { Icon, sectionIconName } from '../lib/icons'
-import QRCode from 'qrcode'
+// QRCode se carga bajo demanda (import dinámico) al generar el primer QR:
+// así no pesa en la carga inicial de la página de Accesos.
 import { useAuth } from '../context/AuthContext'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
@@ -70,6 +71,7 @@ export default function AccesosClaves() {
     if (!pass) return alertDialog('Esta red no tiene contraseña guardada; complétala antes de generar el QR.')
     const payload = `WIFI:T:WPA;S:${escWifi(ssid)};P:${escWifi(pass)};;`
     try {
+      const { default: QRCode } = await import('qrcode')
       // margin 4 = zona blanca completa alrededor (la cámara de iOS la exige más que Android)
       const url = await QRCode.toDataURL(payload, { width: 720, margin: 4, errorCorrectionLevel: 'M' })
       // iOS lee mal los SSID con caracteres fuera del alfabeto básico (•, tildes, emojis):

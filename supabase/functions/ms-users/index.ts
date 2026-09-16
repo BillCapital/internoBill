@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
     }
 
     // ===== Correo de las personas: explorar, descargar, archivar, eliminar (SOLO Acceso total) =====
-    const mailOps = new Set(['mailboxUsage', 'mailFolders', 'mailMessages', 'mailDownload', 'mailMove', 'mailDelete', 'archiveFolders', 'archiveMessages', 'archiveExport', 'searchAll'])
+    const mailOps = new Set(['mailboxUsage', 'mailFolders', 'mailMessages', 'mailDownload', 'mailMove', 'mailDelete', 'archiveFolders', 'archiveMessages', 'archiveExport', 'archiveEml', 'searchAll', 'mailRead'])
     if (mailOps.has(op)) {
       if (perms.full_admin !== true) return json(403, { error: 'El correo de las personas solo lo puede revisar el rol con Acceso total.' })
       // Auditoría: cada acción sensible queda en el registro de actividades
@@ -309,6 +309,33 @@ Deno.serve(async (req) => {
         return json(200, { ok: true, messages: msgs })
       }
 
+      // ===== Vista previa de un correo dentro de la app (cuerpo completo + adjuntos) =====
+      if (op === 'mailRead') {
+        const mid = String(p.messageId || '')
+        if (!mid) return json(400, { error: 'Falta el correo.' })
+        const g = await graph(token, 'GET', `/users/${encodeURIComponent(uid)}/messages/${encodeURIComponent(mid)}?$select=subject,from,toRecipients,ccRecipients,receivedDateTime,body,hasAttachments`)
+        if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al leer el correo', detail: g.data })
+        const m = g.data
+        let atts: Record<string, unknown>[] = []
+        if (m.hasAttachments) {
+          const ga = await graph(token, 'GET', `/users/${encodeURIComponent(uid)}/messages/${encodeURIComponent(mid)}/attachments?$select=id,name,size,contentType`)
+          if (ga.ok) atts = (ga.data.value ?? []).map((a: Record<string, unknown>) => ({ id: (a as any).id, name: (a as any).name || 'adjunto', size: (a as any).size ?? 0 }))
+        }
+        const who = (x: Record<string, unknown>) => (x as any)?.emailAddress?.name || (x as any)?.emailAddress?.address || ''
+        await audit('Lectura de correo', `Buzón ${uid} · "${String(m.subject || '').slice(0, 60)}"`)
+        return json(200, {
+          ok: true,
+          subject: m.subject || '(sin asunto)',
+          from: who(m.from), fromAddr: m.from?.emailAddress?.address || '',
+          to: (m.toRecipients ?? []).map(who).filter(Boolean),
+          cc: (m.ccRecipients ?? []).map(who).filter(Boolean),
+          at: m.receivedDateTime || null,
+          bodyType: m.body?.contentType || 'text',
+          body: String(m.body?.content || '').slice(0, 2 * 1024 * 1024),
+          attachments: atts,
+        })
+      }
+
       // Archivo en línea (In-Place Archive), vía las APIs beta nuevas de Graph. SOLO LECTURA:
       // Microsoft aún no permite descargar (.eml), mover ni eliminar en el archivo por API.
       const archId = async (): Promise<string | null> => {
@@ -371,8 +398,50 @@ Deno.serve(async (req) => {
         })
         return json(200, { ok: true, messages: msgs })
       }
-      // Exportar un item del archivo: Microsoft lo entrega en su formato técnico FastTransfer
-      // (sirve como respaldo/reimportación; NO se abre en Outlook — la API no da .eml aquí)
+      // Descargar un correo del archivo como .eml legible. Microsoft NO expone el MIME ni el
+      // cuerpo completo del archivo en línea, así que se arma un .eml válido con lo disponible
+      // (encabezado + texto que sí entrega Graph). Se abre en Outlook y cualquier cliente.
+      if (op === 'archiveEml') {
+        const iid = String(p.itemId || '')
+        if (!iid) return json(400, { error: 'Falta el correo.' })
+        const arch = await archId()
+        if (!arch) return json(400, { error: 'Este buzón no tiene archivo en línea.' })
+        const exp = encodeURIComponent("singleValueExtendedProperties($filter=id eq 'String 0x0037' or id eq 'String 0x0C1A' or id eq 'String 0x0065' or id eq 'SystemTime 0x0E06' or id eq 'String 0x1000')")
+        const r = await fetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${encodeURIComponent(arch)}/items/${encodeURIComponent(iid)}?$expand=${exp}`, { headers: { Authorization: `Bearer ${token}` } })
+        const j = await r.json().catch(() => ({}))
+        // Si la ruta directa no está disponible, se cae a los datos que ya vinieron en la lista
+        const props: Record<string, string> = {}
+        for (const sp of (j?.singleValueExtendedProperties ?? [])) {
+          const pid = String((sp as any).id || '').toLowerCase()
+          if (/0x0?37$/.test(pid)) props.subject = (sp as any).value
+          else if (/0x0?c1a$/.test(pid)) props.sender = (sp as any).value
+          else if (/0x0?65$/.test(pid)) props.senderAddr = (sp as any).value
+          else if (/0x0?e06$/.test(pid)) props.at = (sp as any).value
+          else if (/0x0?1000$/.test(pid)) props.body = (sp as any).value
+        }
+        const subject = props.subject || String(p.subject || '(sin asunto)')
+        const senderName = props.sender || String(p.from || '')
+        const senderAddr = props.senderAddr || ''
+        const when = props.at || String(p.at || '')
+        const bodyTxt = props.body || String(p.preview || '')
+        const enc = (s: string) => `=?UTF-8?B?${btoa(unescape(encodeURIComponent(s)))}?=`
+        const fromHdr = senderAddr ? `${enc(senderName)} <${senderAddr}>` : enc(senderName || 'desconocido')
+        const dateHdr = when ? new Date(when).toUTCString() : new Date().toUTCString()
+        const truncated = bodyTxt.length >= 255
+        const note = truncated ? '\r\n\r\n----\r\n[Nota: correo recuperado del archivo en línea. Microsoft entrega solo el inicio del texto; para el original completo con adjuntos usa la Búsqueda de contenido de Purview.]' : ''
+        const eml = [
+          `Subject: ${enc(subject)}`,
+          `From: ${fromHdr}`,
+          `Date: ${dateHdr}`,
+          'MIME-Version: 1.0',
+          'Content-Type: text/plain; charset=UTF-8',
+          'Content-Transfer-Encoding: 8bit',
+          '', bodyTxt.replace(/\r?\n/g, '\r\n') + note, '',
+        ].join('\r\n')
+        await audit('Descarga de correo del archivo en línea', `Buzón ${uid} · item ${iid.slice(0, 24)}…`)
+        return json(200, { ok: true, eml, truncated })
+      }
+      // Exportar el original binario (FastTransfer .fts) — respaldo técnico, no se abre en Outlook
       if (op === 'archiveExport') {
         const iid = String(p.itemId || '')
         if (!iid) return json(400, { error: 'Falta el correo.' })

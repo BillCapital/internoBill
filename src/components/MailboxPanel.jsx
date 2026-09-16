@@ -178,9 +178,17 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
   const [search, setSearch] = useState(initialSearch)
   const [archFilter, setArchFilter] = useState('')
   const [openId, setOpenId] = useState('') // vista previa desplegada (archivo)
+  const [reading, setReading] = useState(null) // { m, data } — correo abierto en la vista previa
   const [busyId, setBusyId] = useState('')
   const [loading, setLoading] = useState(false)
   const uid = box.mail
+
+  // Vista previa completa de un correo del buzón en tiempo real (cuerpo + adjuntos)
+  const read = async (m) => {
+    setReading({ m, data: null })
+    try { setReading({ m, data: await msUsers('mailRead', { userId: uid, messageId: m.id }) }) }
+    catch (e) { alertDialog(e.message); setReading(null) }
+  }
 
   useEffect(() => {
     msUsers('mailFolders', { userId: uid }).then((r) => {
@@ -195,7 +203,7 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
   }, [uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMsgs = async (f, sk = 0, append = false) => {
-    setLoading(true); setOpenId('')
+    setLoading(true); setOpenId(''); setReading(null)
     try {
       let r
       if (f?.arch) r = await msUsers('archiveMessages', { userId: uid, folderId: f.id, skip: sk, filter: archFilter.trim() || undefined })
@@ -220,11 +228,13 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
     } catch (e) { alertDialog(e.message) }
     finally { setBusyId('') }
   }
-  const exportArch = async (m) => {
+  const downloadArchEml = async (m) => {
     setBusyId(m.id)
     try {
-      const r = await msUsers('archiveExport', { userId: uid, itemId: m.id })
-      saveBlob(Uint8Array.from(atob(r.b64), (c) => c.charCodeAt(0)), (m.subject || 'correo').replace(/[^\w.\- ]+/g, '_').slice(0, 80) + '.fts', 'application/octet-stream')
+      // Se pasan los datos ya conocidos como respaldo por si la ruta directa no los trae
+      const r = await msUsers('archiveEml', { userId: uid, itemId: m.id, subject: m.subject, from: m.from, at: m.at, preview: m.preview })
+      const bytes = new TextEncoder().encode(r.eml)
+      saveBlob(bytes, (m.subject || 'correo').replace(/[^\w.\- ]+/g, '_').slice(0, 80) + '.eml', 'message/rfc822')
     } catch (e) { alertDialog(e.message) }
     finally { setBusyId('') }
   }
@@ -280,9 +290,45 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
           </div>
           <div style={{ flex: '1 1 480px', minWidth: 0 }}>
             {inArch && <p className="muted" style={{ fontSize: '.76rem', margin: '0 0 .4rem' }}>
-              Toca un correo para ver su vista previa (Microsoft entrega solo el inicio del texto). La exportación descarga el correo completo en el formato técnico de Microsoft (.fts), útil como respaldo — no se abre en Outlook.
+              Toca un correo para ver su vista previa. El botón descarga un <b>.eml</b> que se abre en Outlook con el encabezado y el texto disponible; Microsoft limita el cuerpo del archivo, así que para el original completo con adjuntos usa la Búsqueda de contenido de Purview (ver Manuales).
             </p>}
-            <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
+
+            {/* Vista previa completa del correo, dentro de la app */}
+            {reading && (
+              <div>
+                <div className="row" style={{ gap: '.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '.45rem' }}>
+                  <button className="btn-sm" onClick={() => setReading(null)}>← Volver a la lista</button>
+                  <span style={{ flex: 1 }} />
+                  <button className="btn-sm btn-lime" disabled={!!busyId} onClick={() => download(reading.m)}><Icon n="download" /> Descargar .eml</button>
+                </div>
+                {!reading.data ? <p className="muted" style={{ fontSize: '.84rem' }}>Cargando correo…</p> : (
+                  <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+                    <div style={{ padding: '.6rem .75rem', borderBottom: '1px solid var(--line)' }}>
+                      <strong style={{ fontSize: '.95rem' }}>{reading.data.subject}</strong>
+                      <div className="muted" style={{ fontSize: '.78rem', marginTop: 2 }}>
+                        De: {reading.data.from}{reading.data.fromAddr ? ` <${reading.data.fromAddr}>` : ''} · {fD(reading.data.at)}
+                      </div>
+                      {reading.data.to?.length > 0 && <div className="muted" style={{ fontSize: '.74rem' }}>Para: {reading.data.to.join(', ')}</div>}
+                      {reading.data.cc?.length > 0 && <div className="muted" style={{ fontSize: '.74rem' }}>CC: {reading.data.cc.join(', ')}</div>}
+                      {reading.data.attachments?.length > 0 && (
+                        <div style={{ marginTop: '.35rem', display: 'flex', gap: '.35rem', flexWrap: 'wrap' }}>
+                          {reading.data.attachments.map((a) => (
+                            <span key={a.id} className="badge s-closed" style={{ fontSize: '.7rem' }} title="Los adjuntos van dentro del .eml al descargarlo"><Icon n="link" size={11} /> {a.name}{a.size ? ` · ${fmtGB(a.size)}` : ''}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* El cuerpo se muestra en un iframe aislado (sandbox): el HTML del correo no puede ejecutar nada en la app */}
+                    {String(reading.data.bodyType).toLowerCase() === 'html'
+                      ? <iframe title="correo" sandbox="" style={{ width: '100%', height: 360, border: 0, background: '#fff' }}
+                          srcDoc={`<base target="_blank"><style>body{font:14px/1.5 -apple-system,Segoe UI,Arial,sans-serif;margin:12px;color:#111}img{max-width:100%}</style>${reading.data.body}`} />
+                      : <pre style={{ margin: 0, padding: '.7rem .75rem', maxHeight: 360, overflow: 'auto', whiteSpace: 'pre-wrap', fontSize: '.84rem', fontFamily: 'inherit' }}>{reading.data.body}</pre>}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto', display: reading ? 'none' : undefined }}>
               <table className="tbl-compact">
                 <thead><tr><th>Fecha</th><th>De</th><th>Asunto</th><th></th></tr></thead>
                 <tbody>
@@ -290,14 +336,15 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
                   {msgs?.length === 0 && <tr><td colSpan={4} className="muted" style={{ padding: '.6rem' }}>Sin correos aquí.</td></tr>}
                   {(msgs || []).map((m) => (
                     <Fragment key={m.id}>
-                      <tr style={busyId === m.id ? { opacity: .5 } : inArch ? { cursor: 'pointer' } : undefined}
-                        onClick={inArch ? () => setOpenId(openId === m.id ? '' : m.id) : undefined}>
+                      <tr style={busyId === m.id ? { opacity: .5 } : { cursor: 'pointer' }}
+                        title={inArch ? 'Ver vista previa' : 'Abrir el correo'}
+                        onClick={inArch ? () => setOpenId(openId === m.id ? '' : m.id) : () => read(m)}>
                         <td style={{ whiteSpace: 'nowrap', fontSize: '.78rem' }}>{fD(m.at)}</td>
                         <td style={{ fontSize: '.82rem' }} title={m.fromAddr}>{m.from}</td>
                         <td style={{ fontSize: '.84rem' }}>{m.hasAttachments && <Icon n="link" size={12} />} {m.subject}</td>
                         <td className="actions" style={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                           {inArch ? (
-                            <button className="btn-sm" disabled={!!busyId} title="Exportar (formato técnico .fts, para respaldo)" onClick={() => exportArch(m)}><Icon n="download" /></button>
+                            <button className="btn-sm" disabled={!!busyId} title="Descargar como .eml (abre en Outlook)" onClick={() => downloadArchEml(m)}><Icon n="download" /></button>
                           ) : (
                             <>
                               <button className="btn-sm" disabled={!!busyId} title="Descargar como archivo .eml" onClick={() => download(m)}><Icon n="download" /></button>
@@ -316,7 +363,7 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
                 </tbody>
               </table>
             </div>
-            {more && <button className="btn-sm" style={{ marginTop: '.5rem' }} disabled={loading} onClick={() => loadMsgs(folder, skip, true)}>{loading ? 'Cargando…' : 'Cargar más'}</button>}
+            {more && !reading && <button className="btn-sm" style={{ marginTop: '.5rem' }} disabled={loading} onClick={() => loadMsgs(folder, skip, true)}>{loading ? 'Cargando…' : 'Cargar más'}</button>}
             {!inArch && <p className="muted" style={{ fontSize: '.72rem', margin: '.5rem 0 0' }}>Toda descarga o eliminación queda en el registro de actividades.</p>}
           </div>
         </div>
