@@ -315,7 +315,7 @@ export default function Usuarios() {
         catch (e) { licErr = e.message }
       }
       const lic = (wizSkus || []).find((x) => x.skuId === n.licSku)
-      setNewUser({ ...n, busy: false, done: { upn, password: n.password, showPwd: false, copied: false, licName: lic ? skuName(lic.skuPartNumber) : '', licErr } })
+      setNewUser({ ...n, busy: false, done: { upn, password: n.password, showPwd: true, copied: false, licName: lic ? skuName(lic.skuPartNumber) : '', licErr } })
       load()
     } catch (e) { setNewUser({ ...n, busy: false }); alertDialog('No se pudo crear: ' + e.message) }
   }
@@ -494,13 +494,15 @@ export default function Usuarios() {
     const active = sortField === f
     const up = active && sortDir === 'asc'
     const col = active ? 'var(--lime)' : 'var(--muted)'
+    // Flecha en línea, a continuación del texto: nunca se monta sobre el título
+    // aunque la columna quede angosta (antes iba en posición absoluta y se superponía).
     const tri = {
-      position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-      width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-      [up ? 'borderBottom' : 'borderTop']: `9px solid ${col}`,
+      display: 'inline-block', marginLeft: 6, verticalAlign: 'middle',
+      width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+      [up ? 'borderBottom' : 'borderTop']: `7px solid ${col}`,
     }
     return (
-      <th onClick={() => setSort(f)} style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', position: 'relative', paddingRight: '1.4rem' }}>
+      <th onClick={() => setSort(f)} style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
         {label}
         <span style={tri} />
       </th>
@@ -942,7 +944,14 @@ export default function Usuarios() {
               </div>
               {d.licErr ? <p className="wiz-warn">La cuenta se creó, pero la licencia no se pudo asignar: {d.licErr}. Asígnala desde su ficha.</p> : null}
               <p className="muted wiz-hint">Copia la contraseña ahora: no se vuelve a mostrar. Entrégasela por un canal seguro.{n.forceChange ? ' Deberá cambiarla al iniciar sesión.' : ' Queda como su contraseña definitiva.'}</p>
-              <div className="modal-actions"><button className="btn btn-primary" onClick={close}>Cerrar</button></div>
+              <div className="modal-actions">
+                {/* Copia los tres datos juntos, listos para pegar al entregar las credenciales */}
+                <button className="btn" onClick={() => {
+                  const txt = [`Correo: ${d.upn}`, `Contraseña: ${d.password}`, d.licName ? `Licencia: ${d.licName}` : null].filter(Boolean).join('\n')
+                  try { navigator.clipboard?.writeText(txt); setNewUser({ ...n, done: { ...d, copiedAll: true } }) } catch { /* noop */ }
+                }}><Icon n="copy" /> {d.copiedAll ? 'Credenciales copiadas' : 'Copiar credenciales'}</button>
+                <button className="btn btn-primary" onClick={close}>Cerrar</button>
+              </div>
             </div></div>
           )
         }
