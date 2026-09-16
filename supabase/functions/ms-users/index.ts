@@ -200,6 +200,105 @@ Deno.serve(async (req) => {
       return json(200, { ok: true, rows })
     }
 
+    // ===== Correo de las personas: explorar, descargar, archivar, eliminar (SOLO Acceso total) =====
+    const mailOps = new Set(['mailboxUsage', 'mailFolders', 'mailMessages', 'mailDownload', 'mailMove', 'mailDelete'])
+    if (mailOps.has(op)) {
+      if (perms.full_admin !== true) return json(403, { error: 'El correo de las personas solo lo puede revisar el rol con Acceso total.' })
+      // Auditoría: cada acción sensible queda en el registro de actividades
+      const audit = async (action: string, detail: string) => {
+        try {
+          const { data: me } = await admin.from('profiles').select('full_name').eq('id', caller.id).single()
+          await admin.from('activity_log').insert({ actor_id: caller.id, actor_name: me?.full_name || caller.email, kind: 'Correo', action, detail })
+        } catch (e) { console.error('ms-users: audit', String(e)) }
+      }
+
+      if (op === 'mailboxUsage') {
+        const r = await fetch(`https://graph.microsoft.com/v1.0/reports/getMailboxUsageDetail(period='D7')`, { headers: { Authorization: `Bearer ${token}` } })
+        if (!r.ok) return json(r.status, { error: 'Error al leer el informe de uso de buzones', detail: (await r.text()).slice(0, 300) })
+        const csv = await r.text()
+        const lines = csv.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim())
+        if (!lines.length) return json(200, { ok: true, rows: [] })
+        const splitCsv = (l: string) => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map((x) => x.replace(/^"|"$/g, ''))
+        const head = splitCsv(lines[0]).map((h) => h.trim().toLowerCase())
+        const col = (n: string) => head.indexOf(n)
+        const iUpn = col('user principal name'), iStor = col('storage used (byte)'), iQuota = col('prohibit send quota (byte)'),
+          iItems = col('item count'), iArch = col('has archive'), iLast = col('last activity date')
+        const rows = lines.slice(1).map(splitCsv).map((c) => ({
+          upn: (c[iUpn] || '').toLowerCase(),
+          storageBytes: Number(c[iStor] || 0), quotaBytes: Number(c[iQuota] || 0),
+          items: Number(c[iItems] || 0), hasArchive: /^true$/i.test(c[iArch] || ''), lastActivity: c[iLast] || null,
+        })).filter((r2) => r2.upn)
+        return json(200, { ok: true, rows })
+      }
+
+      const uid = String(p.userId || '')
+      if (!uid) return json(400, { error: 'Falta el usuario.' })
+
+      if (op === 'mailFolders') {
+        const g = await graph(token, 'GET', `/users/${encodeURIComponent(uid)}/mailFolders?$top=100&$select=id,displayName,totalItemCount,unreadItemCount`)
+        if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al listar carpetas', detail: g.data })
+        return json(200, { ok: true, folders: g.data.value ?? [] })
+      }
+
+      if (op === 'mailMessages') {
+        const sel = '$select=id,subject,from,receivedDateTime,hasAttachments'
+        let path: string
+        if (p.search) {
+          const q = String(p.search).replace(/["\\]/g, ' ').slice(0, 120)
+          path = `/users/${encodeURIComponent(uid)}/messages?$search="${encodeURIComponent(q)}"&$top=25&${sel}`
+        } else {
+          const folder = encodeURIComponent(String(p.folderId || 'inbox'))
+          path = `/users/${encodeURIComponent(uid)}/mailFolders/${folder}/messages?$top=25&$skip=${Number(p.skip) || 0}&$orderby=receivedDateTime desc&${sel}`
+        }
+        const g = await graph(token, 'GET', path)
+        if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al listar correos', detail: g.data })
+        const msgs = (g.data.value ?? []).map((m: Record<string, unknown>) => ({
+          id: (m as any).id, subject: (m as any).subject || '(sin asunto)',
+          from: (m as any).from?.emailAddress?.name || (m as any).from?.emailAddress?.address || '',
+          fromAddr: (m as any).from?.emailAddress?.address || '',
+          at: (m as any).receivedDateTime || null, hasAttachments: !!(m as any).hasAttachments,
+        }))
+        return json(200, { ok: true, messages: msgs })
+      }
+
+      if (op === 'mailDownload') {
+        const mid = String(p.messageId || '')
+        if (!mid) return json(400, { error: 'Falta el correo.' })
+        const r = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(uid)}/messages/${encodeURIComponent(mid)}/$value`, { headers: { Authorization: `Bearer ${token}` } })
+        if (!r.ok) return json(r.status, { error: 'No se pudo descargar el correo (' + r.status + ')' })
+        const buf = new Uint8Array(await r.arrayBuffer())
+        if (buf.byteLength > 25 * 1024 * 1024) return json(413, { error: 'El correo pesa más de 25 MB; descárgalo desde Outlook.' })
+        let bin = ''
+        for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000))
+        await audit('Descarga de correo', `Buzón ${uid} · mensaje ${mid.slice(0, 24)}…`)
+        return json(200, { ok: true, b64: btoa(bin) })
+      }
+
+      if (op === 'mailMove') {
+        const mid = String(p.messageId || '')
+        const dest = String(p.dest || 'archive') // 'archive' | 'deleteditems' | id de carpeta
+        if (!mid) return json(400, { error: 'Falta el correo.' })
+        const g = await graph(token, 'POST', `/users/${encodeURIComponent(uid)}/messages/${encodeURIComponent(mid)}/move`, { destinationId: dest })
+        if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al mover el correo', detail: g.data })
+        return json(200, { ok: true, id: g.data?.id ?? null })
+      }
+
+      if (op === 'mailDelete') {
+        const mid = String(p.messageId || '')
+        if (!mid) return json(400, { error: 'Falta el correo.' })
+        if (p.permanent === true) {
+          const g = await graph(token, 'DELETE', `/users/${encodeURIComponent(uid)}/messages/${encodeURIComponent(mid)}`)
+          if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al eliminar', detail: g.data })
+          await audit('Eliminación definitiva de correo', `Buzón ${uid} · mensaje ${mid.slice(0, 24)}…`)
+        } else {
+          const g = await graph(token, 'POST', `/users/${encodeURIComponent(uid)}/messages/${encodeURIComponent(mid)}/move`, { destinationId: 'deleteditems' })
+          if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al eliminar', detail: g.data })
+          await audit('Correo enviado a Elementos eliminados', `Buzón ${uid} · mensaje ${mid.slice(0, 24)}…`)
+        }
+        return json(200, { ok: true })
+      }
+    }
+
     if (op === 'list') {
       const sel = '$select=id,displayName,userPrincipalName,mail,accountEnabled,userType,jobTitle,department,mobilePhone,createdDateTime'
       const g = await graph(token, 'GET', `/users?${sel}&$top=999&$orderby=displayName`)
