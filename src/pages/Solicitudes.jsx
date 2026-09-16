@@ -9,7 +9,7 @@ import { loadDepts, rootDeptOf, NON_REQUESTING_DEPTS, DEFAULT_DEPTS } from '../l
 import { fetchLinkPreview, fmtMoney } from '../lib/linkPreview'
 import { Icon } from '../lib/icons'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
-import ReqHistory from '../components/ReqHistory'
+import ReqHistory, { ReqEventsLog } from '../components/ReqHistory'
 
 const ST = [
   { key: 'pending', label: 'Pendientes', ico: 'clock', tone: 'pend' },
@@ -848,7 +848,7 @@ export default function Solicitudes() {
       {!creating && loading && <SkeletonRows n={3} />}
       {!creating && !loading && data.length === 0 && <div className="conv"><div className="empty">No hay solicitudes.</div></div>}
       {!creating && data.map((t) => (
-        <div className={`conv ${open === t.id ? 'open' : ''}`} key={t.id}>
+        <div className={`conv ${open === t.id ? 'open' : ''}`} key={t.id} id={`req-${t.id}`}>
           <button className="cv-head" onClick={() => setOpen(open === t.id ? null : t.id)}>
             <span className="ico"><Icon n="box" /></span>
             <span className="t">
@@ -1209,7 +1209,12 @@ export default function Solicitudes() {
         </div>
       ))}
 
-      {canManageOrders && <div style={{ marginTop: 'auto' }}><ActivityLog kinds={['Solicitud']} title="Registro de solicitudes" /></div>}
+      {/* Registro general: cada cambio con su solicitud (#folio); tocar el folio abre esa solicitud */}
+      {canManageOrders && !creating && <ReqEventsLog onOpen={(id) => {
+        setDeptFilter('')
+        setOpen(id)
+        setTimeout(() => document.getElementById(`req-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120)
+      }} />}
 
       {/* Glosario de términos (ventana superpuesta) */}
       {glossOpen && (

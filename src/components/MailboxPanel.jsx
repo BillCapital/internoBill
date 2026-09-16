@@ -177,17 +177,24 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
   const [more, setMore] = useState(false)
   const [search, setSearch] = useState(initialSearch)
   const [archFilter, setArchFilter] = useState('')
-  const [openId, setOpenId] = useState('') // vista previa desplegada (archivo)
   const [reading, setReading] = useState(null) // { m, data } — correo abierto en la vista previa
   const [busyId, setBusyId] = useState('')
   const [loading, setLoading] = useState(false)
   const uid = box.mail
 
-  // Vista previa completa de un correo del buzón en tiempo real (cuerpo + adjuntos)
+  // Vista completa de un correo del buzón en tiempo real (cuerpo + adjuntos)
   const read = async (m) => {
     setReading({ m, data: null })
     try { setReading({ m, data: await msUsers('mailRead', { userId: uid, messageId: m.id }) }) }
     catch (e) { alertDialog(e.message); setReading(null) }
+  }
+  // Vista completa de un correo del ARCHIVO en línea: el cuerpo entero se extrae del export de Microsoft
+  const readArch = async (m) => {
+    setReading({ m, arch: true, data: null })
+    try {
+      const r = await msUsers('archiveRead', { userId: uid, itemId: m.id, preview: m.preview })
+      setReading({ m, arch: true, data: { subject: m.subject, from: m.from, fromAddr: '', at: m.at, to: [], cc: [], bodyType: r.bodyType, body: r.body, attachments: [], full: r.full } })
+    } catch (e) { alertDialog(e.message); setReading(null) }
   }
 
   useEffect(() => {
@@ -203,7 +210,7 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
   }, [uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMsgs = async (f, sk = 0, append = false) => {
-    setLoading(true); setOpenId(''); setReading(null)
+    setLoading(true); setReading(null)
     try {
       let r
       if (f?.arch) r = await msUsers('archiveMessages', { userId: uid, folderId: f.id, skip: sk, filter: archFilter.trim() || undefined })
@@ -290,7 +297,7 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
           </div>
           <div style={{ flex: '1 1 480px', minWidth: 0 }}>
             {inArch && <p className="muted" style={{ fontSize: '.76rem', margin: '0 0 .4rem' }}>
-              Toca un correo para ver su vista previa. El botón descarga un <b>.eml</b> que se abre en Outlook con el encabezado y el texto disponible; Microsoft limita el cuerpo del archivo, así que para el original completo con adjuntos usa la Búsqueda de contenido de Purview (ver Manuales).
+              Toca un correo archivado para verlo <b>completo</b> aquí mismo (el contenido se extrae del respaldo de Microsoft; puede tardar unos segundos). La descarga .eml también incluye el correo completo. Los adjuntos de correos archivados solo se recuperan vía Búsqueda de contenido de Purview.
             </p>}
 
             {/* Vista previa completa del correo, dentro de la app */}
@@ -299,7 +306,7 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
                 <div className="row" style={{ gap: '.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '.45rem' }}>
                   <button className="btn-sm" onClick={() => setReading(null)}>← Volver a la lista</button>
                   <span style={{ flex: 1 }} />
-                  <button className="btn-sm btn-lime" disabled={!!busyId} onClick={() => download(reading.m)}><Icon n="download" /> Descargar .eml</button>
+                  <button className="btn-sm btn-lime" disabled={!!busyId} onClick={() => (reading.arch ? downloadArchEml(reading.m) : download(reading.m))}><Icon n="download" /> Descargar .eml</button>
                 </div>
                 {!reading.data ? <p className="muted" style={{ fontSize: '.84rem' }}>Cargando correo…</p> : (
                   <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
@@ -337,8 +344,8 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
                   {(msgs || []).map((m) => (
                     <Fragment key={m.id}>
                       <tr style={busyId === m.id ? { opacity: .5 } : { cursor: 'pointer' }}
-                        title={inArch ? 'Ver vista previa' : 'Abrir el correo'}
-                        onClick={inArch ? () => setOpenId(openId === m.id ? '' : m.id) : () => read(m)}>
+                        title="Abrir el correo"
+                        onClick={inArch ? () => readArch(m) : () => read(m)}>
                         <td style={{ whiteSpace: 'nowrap', fontSize: '.78rem' }}>{fD(m.at)}</td>
                         <td style={{ fontSize: '.82rem' }} title={m.fromAddr}>{m.from}</td>
                         <td style={{ fontSize: '.84rem' }}>{m.hasAttachments && <Icon n="link" size={12} />} {m.subject}</td>
@@ -353,11 +360,6 @@ function MailExplorer({ box, initialSearch = '', onClose }) {
                           )}
                         </td>
                       </tr>
-                      {inArch && openId === m.id && (
-                        <tr><td colSpan={4} style={{ background: 'var(--card, rgba(255,255,255,.03))', fontSize: '.82rem', padding: '.55rem .7rem' }}>
-                          {m.preview ? <>{m.preview}<span className="muted">{m.preview.length >= 255 ? '… (vista previa: Microsoft entrega solo el inicio del correo archivado)' : ''}</span></> : <span className="muted">Sin vista previa disponible.</span>}
-                        </td></tr>
-                      )}
                     </Fragment>
                   ))}
                 </tbody>

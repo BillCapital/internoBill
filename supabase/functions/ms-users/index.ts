@@ -40,6 +40,45 @@ async function graph(token: string, method: string, path: string, body?: unknown
   return { ok: r.ok, status: r.status, data }
 }
 function randPwd() { return 'Zt' + crypto.randomUUID().replace(/-/g, '').slice(0, 16) + '!9' }
+
+// ===== Extracción del cuerpo completo desde el export FastTransfer del archivo en línea =====
+// El export técnico de Microsoft (exportItems) trae el correo entero en binario MAPI.
+// Se escanea el stream buscando la propiedad PR_HTML (o PR_BODY) y se decodifica con el
+// codepage del mensaje (PR_INTERNET_CPID). Así el archivo también se puede LEER completo.
+function fxFindProp(buf: Uint8Array, t: number[]): { at: number; len: number } | null {
+  for (let i = 0; i + 8 < buf.length; i++) {
+    if (buf[i] === t[0] && buf[i + 1] === t[1] && buf[i + 2] === t[2] && buf[i + 3] === t[3]) {
+      const len = buf[i + 4] | (buf[i + 5] << 8) | (buf[i + 6] << 16) | (buf[i + 7] << 24)
+      if (len > 0 && len < 8 * 1024 * 1024 && i + 8 + len <= buf.length) return { at: i + 8, len }
+    }
+  }
+  return null
+}
+function fxExtractBody(b64: string): { bodyType: string; body: string } | null {
+  const bin = atob(b64)
+  const buf = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
+  // Codepage del mensaje (PR_INTERNET_CPID, PT_LONG): 03 00 DE 3F + valor
+  let cs = 'windows-1252'
+  for (let i = 0; i + 8 < buf.length; i++) {
+    if (buf[i] === 0x03 && buf[i + 1] === 0x00 && buf[i + 2] === 0xde && buf[i + 3] === 0x3f) {
+      const cp = buf[i + 4] | (buf[i + 5] << 8) | (buf[i + 6] << 16) | (buf[i + 7] << 24)
+      cs = cp === 65001 ? 'utf-8' : cp === 28591 ? 'iso-8859-1' : cp === 1200 ? 'utf-16le' : 'windows-1252'
+      break
+    }
+  }
+  // PR_HTML (0x1013, PT_BINARY) -> 02 01 13 10
+  const html = fxFindProp(buf, [0x02, 0x01, 0x13, 0x10])
+  if (html) {
+    const slice = buf.subarray(html.at, html.at + html.len)
+    try { return { bodyType: 'html', body: new TextDecoder(cs).decode(slice) } }
+    catch { return { bodyType: 'html', body: new TextDecoder('iso-8859-1').decode(slice) } }
+  }
+  // PR_BODY (0x1000, PT_UNICODE) -> 1F 00 00 10
+  const txt = fxFindProp(buf, [0x1f, 0x00, 0x00, 0x10])
+  if (txt) return { bodyType: 'text', body: new TextDecoder('utf-16le').decode(buf.subarray(txt.at, txt.at + txt.len)) }
+  return null
+}
 // Correo REAL de la cuenta según Graph (nunca confiar en el que envía el cliente)
 async function emailFromGraph(token: string, id: string): Promise<string | null> {
   const g = await graph(token, 'GET', `/users/${encodeURIComponent(id)}?$select=userPrincipalName,mail`)
@@ -201,7 +240,7 @@ Deno.serve(async (req) => {
     }
 
     // ===== Correo de las personas: explorar, descargar, archivar, eliminar (SOLO Acceso total) =====
-    const mailOps = new Set(['mailboxUsage', 'mailFolders', 'mailMessages', 'mailDownload', 'mailMove', 'mailDelete', 'archiveFolders', 'archiveMessages', 'archiveExport', 'archiveEml', 'searchAll', 'mailRead'])
+    const mailOps = new Set(['mailboxUsage', 'mailFolders', 'mailMessages', 'mailDownload', 'mailMove', 'mailDelete', 'archiveFolders', 'archiveMessages', 'archiveExport', 'archiveEml', 'archiveRead', 'searchAll', 'mailRead'])
     if (mailOps.has(op)) {
       if (perms.full_admin !== true) return json(403, { error: 'El correo de las personas solo lo puede revisar el rol con Acceso total.' })
       // Auditoría: cada acción sensible queda en el registro de actividades
@@ -398,9 +437,31 @@ Deno.serve(async (req) => {
         })
         return json(200, { ok: true, messages: msgs })
       }
-      // Descargar un correo del archivo como .eml legible. Microsoft NO expone el MIME ni el
-      // cuerpo completo del archivo en línea, así que se arma un .eml válido con lo disponible
-      // (encabezado + texto que sí entrega Graph). Se abre en Outlook y cualquier cliente.
+      // ===== Ver un correo del archivo COMPLETO dentro de la app =====
+      // Graph no lo expone directo, pero el export FastTransfer trae el correo entero:
+      // se extrae el HTML (o texto) del binario y se devuelve para renderizarlo.
+      if (op === 'archiveRead') {
+        const iid = String(p.itemId || '')
+        if (!iid) return json(400, { error: 'Falta el correo.' })
+        const arch = await archId()
+        if (!arch) return json(400, { error: 'Este buzón no tiene archivo en línea.' })
+        const r = await fetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${encodeURIComponent(arch)}/exportItems`, {
+          method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemIds: [iid] }),
+        })
+        const j = await r.json().catch(() => ({}))
+        if (!r.ok) return json(r.status, { error: j?.error?.message ?? 'Error al leer el correo del archivo' })
+        const data = j.value?.[0]?.data
+        if (!data) return json(500, { error: 'Microsoft no devolvió datos del correo.' })
+        if (String(data).length > 45 * 1024 * 1024) return json(413, { error: 'Este correo archivado es demasiado grande para abrirlo aquí.' })
+        const ext = fxExtractBody(data)
+        await audit('Lectura de correo del archivo en línea', `Buzón ${uid} · item ${iid.slice(0, 24)}…`)
+        if (!ext) return json(200, { ok: true, full: false, bodyType: 'text', body: String(p.preview || '(No se pudo extraer el contenido de este correo archivado.)') })
+        return json(200, { ok: true, full: true, bodyType: ext.bodyType, body: ext.body.slice(0, 3 * 1024 * 1024) })
+      }
+
+      // Descargar un correo del archivo como .eml legible: se arma con el encabezado y,
+      // cuando la extracción del export lo permite, con el CUERPO COMPLETO del correo.
       if (op === 'archiveEml') {
         const iid = String(p.itemId || '')
         if (!iid) return json(400, { error: 'Falta el correo.' })
@@ -423,20 +484,33 @@ Deno.serve(async (req) => {
         const senderName = props.sender || String(p.from || '')
         const senderAddr = props.senderAddr || ''
         const when = props.at || String(p.at || '')
+        // Cuerpo COMPLETO desde el export FastTransfer (HTML real del correo); si falla, el texto disponible
+        let full: { bodyType: string; body: string } | null = null
+        try {
+          const rx = await fetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${encodeURIComponent(arch)}/exportItems`, {
+            method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ itemIds: [iid] }),
+          })
+          const jx = await rx.json().catch(() => ({}))
+          const dx = jx.value?.[0]?.data
+          if (rx.ok && dx && String(dx).length <= 45 * 1024 * 1024) full = fxExtractBody(dx)
+        } catch (e) { console.error('archiveEml: export', String(e)) }
         const bodyTxt = props.body || String(p.preview || '')
         const enc = (s: string) => `=?UTF-8?B?${btoa(unescape(encodeURIComponent(s)))}?=`
         const fromHdr = senderAddr ? `${enc(senderName)} <${senderAddr}>` : enc(senderName || 'desconocido')
         const dateHdr = when ? new Date(when).toUTCString() : new Date().toUTCString()
-        const truncated = bodyTxt.length >= 255
-        const note = truncated ? '\r\n\r\n----\r\n[Nota: correo recuperado del archivo en línea. Microsoft entrega solo el inicio del texto; para el original completo con adjuntos usa la Búsqueda de contenido de Purview.]' : ''
+        const truncated = !full && bodyTxt.length >= 255
+        const note = truncated ? '\r\n\r\n----\r\n[Nota: correo recuperado del archivo en línea; solo se pudo obtener el inicio del texto. Para el original con adjuntos usa la Búsqueda de contenido de Purview.]' : ''
+        const isHtml = full?.bodyType === 'html'
+        const content = full ? full.body : (bodyTxt.replace(/\r?\n/g, '\r\n') + note)
         const eml = [
           `Subject: ${enc(subject)}`,
           `From: ${fromHdr}`,
           `Date: ${dateHdr}`,
           'MIME-Version: 1.0',
-          'Content-Type: text/plain; charset=UTF-8',
+          `Content-Type: ${isHtml ? 'text/html' : 'text/plain'}; charset=UTF-8`,
           'Content-Transfer-Encoding: 8bit',
-          '', bodyTxt.replace(/\r?\n/g, '\r\n') + note, '',
+          '', content, '',
         ].join('\r\n')
         await audit('Descarga de correo del archivo en línea', `Buzón ${uid} · item ${iid.slice(0, 24)}…`)
         return json(200, { ok: true, eml, truncated })
