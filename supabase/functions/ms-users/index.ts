@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
     }
 
     // ===== Correo de las personas: explorar, descargar, archivar, eliminar (SOLO Acceso total) =====
-    const mailOps = new Set(['mailboxUsage', 'mailFolders', 'mailMessages', 'mailDownload', 'mailMove', 'mailDelete'])
+    const mailOps = new Set(['mailboxUsage', 'mailFolders', 'mailMessages', 'mailDownload', 'mailMove', 'mailDelete', 'archiveFolders', 'archiveMessages'])
     if (mailOps.has(op)) {
       if (perms.full_admin !== true) return json(403, { error: 'El correo de las personas solo lo puede revisar el rol con Acceso total.' })
       // Auditoría: cada acción sensible queda en el registro de actividades
@@ -257,6 +257,49 @@ Deno.serve(async (req) => {
           from: (m as any).from?.emailAddress?.name || (m as any).from?.emailAddress?.address || '',
           fromAddr: (m as any).from?.emailAddress?.address || '',
           at: (m as any).receivedDateTime || null, hasAttachments: !!(m as any).hasAttachments,
+        }))
+        return json(200, { ok: true, messages: msgs })
+      }
+
+      // Archivo en línea (In-Place Archive), vía las APIs beta nuevas de Graph. SOLO LECTURA:
+      // Microsoft aún no permite descargar (.eml), mover ni eliminar en el archivo por API.
+      const archId = async (): Promise<string | null> => {
+        const r = await fetch(`https://graph.microsoft.com/beta/users/${encodeURIComponent(uid)}/settings/exchange`, { headers: { Authorization: `Bearer ${token}` } })
+        const j = await r.json().catch(() => ({}))
+        return j.inPlaceArchiveMailboxId ?? null
+      }
+      if (op === 'archiveFolders') {
+        const arch = await archId()
+        if (!arch) return json(200, { ok: true, archive: false, folders: [] })
+        const r = await fetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${encodeURIComponent(arch)}/folders?$top=100`, { headers: { Authorization: `Bearer ${token}` } })
+        const j = await r.json().catch(() => ({}))
+        if (!r.ok) {
+          const msg = r.status === 403
+            ? 'Para leer el archivo en línea falta conceder en Azure los permisos de aplicación MailboxFolder.Read.All y MailboxItem.Read.All (con consentimiento de administrador).'
+            : (j?.error?.message ?? 'Error al leer el archivo en línea')
+          return json(r.status, { error: msg })
+        }
+        const folders = (j.value ?? []).map((f: Record<string, unknown>) => ({
+          id: (f as any).id, displayName: (f as any).displayName || (f as any).name || '(carpeta)',
+          totalItemCount: (f as any).totalItemCount ?? (f as any).itemCount ?? null,
+        })).filter((f: Record<string, unknown>) => (f as any).id)
+        return json(200, { ok: true, archive: true, folders })
+      }
+      if (op === 'archiveMessages') {
+        const fid = String(p.folderId || '')
+        if (!fid) return json(400, { error: 'Falta la carpeta.' })
+        const arch = await archId()
+        if (!arch) return json(200, { ok: true, messages: [] })
+        const r = await fetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${encodeURIComponent(arch)}/folders/${encodeURIComponent(fid)}/items?$top=25&$skip=${Number(p.skip) || 0}`, { headers: { Authorization: `Bearer ${token}` } })
+        const j = await r.json().catch(() => ({}))
+        if (!r.ok) return json(r.status, { error: j?.error?.message ?? 'Error al leer el archivo en línea' })
+        const msgs = (j.value ?? []).map((m: Record<string, unknown>) => ({
+          id: (m as any).id,
+          subject: (m as any).subject || (m as any).displayName || '(sin asunto)',
+          from: (m as any).from?.emailAddress?.name || (m as any).from?.emailAddress?.address || (m as any).sender?.emailAddress?.name || '',
+          fromAddr: (m as any).from?.emailAddress?.address || '',
+          at: (m as any).receivedDateTime || (m as any).createdDateTime || (m as any).lastModifiedDateTime || null,
+          hasAttachments: !!(m as any).hasAttachments,
         }))
         return json(200, { ok: true, messages: msgs })
       }

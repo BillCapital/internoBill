@@ -19,6 +19,7 @@ const Listas = lazy(() => import('./pages/Listas'))
 const Roles = lazy(() => import('./pages/Roles'))
 const Perfil = lazy(() => import('./pages/Perfil'))
 const Gastos = lazy(() => import('./pages/Gastos'))
+const Buzones = lazy(() => import('./pages/Buzones'))
 
 function Protected({ children, need }) {
   const auth = useAuth()
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="equipo/:id" element={<Protected need="inventory"><EquipoDetalle /></Protected>} />
           <Route path="usuarios" element={<Protected need="users"><Usuarios /></Protected>} />
           <Route path="listas" element={<Protected need="lists"><Listas /></Protected>} />
+          <Route path="buzones" element={<Protected need="users"><Buzones /></Protected>} />
           <Route path="roles" element={<Protected need="roles"><Roles /></Protected>} />
           <Route path="perfil" element={<Perfil />} />
           <Route path="gastos" element={<Protected need="expenses"><Gastos /></Protected>} />

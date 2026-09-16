@@ -9,7 +9,6 @@ import { Icon, sectionIconName } from '../lib/icons'
 import QRCode from 'qrcode'
 import { useAuth } from '../context/AuthContext'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
-import MailboxPanel from '../components/MailboxPanel'
 
 // Secciones que son claves/credenciales
 const CRED_NAMES = ['Servicios y accesos admin', 'Redes WiFi', 'Correos y cuentas']
@@ -71,8 +70,12 @@ export default function AccesosClaves() {
     if (!pass) return alertDialog('Esta red no tiene contraseña guardada; complétala antes de generar el QR.')
     const payload = `WIFI:T:WPA;S:${escWifi(ssid)};P:${escWifi(pass)};;`
     try {
-      const url = await QRCode.toDataURL(payload, { width: 720, margin: 2, errorCorrectionLevel: 'M' })
-      setQr({ ssid, pass, tipo: e.attributes?.tipo_red || '', url })
+      // margin 4 = zona blanca completa alrededor (la cámara de iOS la exige más que Android)
+      const url = await QRCode.toDataURL(payload, { width: 720, margin: 4, errorCorrectionLevel: 'M' })
+      // iOS lee mal los SSID con caracteres fuera del alfabeto básico (•, tildes, emojis):
+      // se avisa en el modal para que el problema no parezca del teléfono
+      const nonAscii = /[^\x20-\x7E]/.test(ssid) || /[^\x20-\x7E]/.test(pass)
+      setQr({ ssid, pass, tipo: e.attributes?.tipo_red || '', url, nonAscii })
     } catch (err) { alertDialog('No se pudo generar el QR: ' + err.message) }
   }
   const downloadQr = () => {
@@ -257,9 +260,6 @@ export default function AccesosClaves() {
         </div>
       )}
 
-      {/* Buzones y alias del tenant, leídos desde Microsoft */}
-      {!loading && !roClaves && <MailboxPanel />}
-
       {/* Carpetas por tipo */}
       {sections.map((s) => {
         const all = bySection[s.id] || []
@@ -387,6 +387,10 @@ export default function AccesosClaves() {
               <div><span className="muted">Red (SSID)</span><strong>{qr.ssid}</strong></div>
               <div><span className="muted">Contraseña</span><strong className="qr-pass">{qr.pass}</strong></div>
             </div>
+            <p className="muted" style={{ fontSize: '.76rem', margin: '.5rem 0 0' }}>
+              En iPhone hay que escanearlo con la app Cámara (no con apps de QR) y tocar el aviso "Unirse a la red" que aparece arriba.
+              {qr.nonAscii ? ' Ojo: este nombre de red usa símbolos especiales (como "•") que la cámara de iOS a veces no interpreta — si no ofrece unirse, conéctate copiando la contraseña de aquí.' : ''}
+            </p>
             <div className="modal-actions">
               <button className="btn" onClick={() => setQr(null)}>Cerrar</button>
               <button className="btn btn-primary" onClick={downloadQr}><Icon n="download" /> Descargar PNG</button>
