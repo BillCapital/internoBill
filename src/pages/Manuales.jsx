@@ -19,6 +19,29 @@ const iconFor = (m, name = '') => {
 }
 const safeName = (n) => (n || 'archivo').replace(/[^\w.\-]+/g, '_')
 
+// Tarjeta de un manual (compartida entre la sección general y la de administración)
+function ManCard({ m, canManage, onView, onDownload, onDel, admin = false }) {
+  return (
+    <div className="man-card">
+      <div className="man-ico"><Icon n={iconFor(m.mime, m.file_name)} /></div>
+      <div className="man-body">
+        <strong>{m.title}</strong>
+        {m.description ? <p className="muted">{m.description}</p> : null}
+        <div className="man-meta">
+          <span className="badge">{m.category || 'General'}</span>
+          {admin && <span className="badge s-prog" style={{ marginLeft: '.3rem' }}><Icon n="lock" size={11} /> Administración</span>}
+          {m.size ? <span className="muted"> · {fmtSize(m.size)}</span> : null}
+        </div>
+        <div className="man-actions">
+          <button className="btn-sm" type="button" onClick={() => onView(m)}><Icon n="eye" /> Ver</button>
+          <button className="btn-sm btn-lime" type="button" onClick={() => onDownload(m)}><Icon n="download" /> Descargar</button>
+          {canManage && <button className="btn-sm btn-danger" onClick={() => onDel(m)}>Eliminar</button>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Manuales() {
   const { profile, canEdit } = useAuth()
   // Módulo propio: leer pueden todos; subir y borrar, quien tenga «Gestionar Manuales»
@@ -72,11 +95,15 @@ export default function Manuales() {
     } catch (e) { alertDialog(e.message || 'No se pudo descargar el archivo.') }
   }, [])
 
-  const cats = useMemo(() => [...new Set(rows.map((r) => r.category || 'General'))].sort((a, b) => a.localeCompare(b, 'es')), [rows])
-  const data = rows.filter((r) => (!cat || (r.category || 'General') === cat)
-    && (!q || (r.title || '').toLowerCase().includes(q.toLowerCase()) || (r.description || '').toLowerCase().includes(q.toLowerCase())))
+  // Sección de administración: manuales que la base solo entrega a quienes gestionan algo
+  const genRows = useMemo(() => rows.filter((r) => !r.admin_only), [rows])
+  const admRows = useMemo(() => rows.filter((r) => r.admin_only), [rows])
+  const matches = (r) => !q || (r.title || '').toLowerCase().includes(q.toLowerCase()) || (r.description || '').toLowerCase().includes(q.toLowerCase())
+  const cats = useMemo(() => [...new Set(genRows.map((r) => r.category || 'General'))].sort((a, b) => a.localeCompare(b, 'es')), [genRows])
+  const data = genRows.filter((r) => (!cat || (r.category || 'General') === cat) && matches(r))
+  const admData = admRows.filter(matches)
 
-  const startNew = () => setForm({ title: '', description: '', category: '', file: null })
+  const startNew = () => setForm({ title: '', description: '', category: '', file: null, admin_only: false })
 
   const submit = async () => {
     if (!form.title.trim()) return alertDialog('Ponle un título al manual.')
@@ -89,7 +116,8 @@ export default function Manuales() {
       const cc = await askCountryForCreate('el manual'); if (cc === null) return
       const { error: insErr } = await supabase.from('manuals').insert({
         title: form.title.trim(), description: form.description.trim(),
-        category: form.category.trim() || 'General', file_path: path,
+        category: form.category.trim() || (form.admin_only ? 'Administración' : 'General'), file_path: path,
+        admin_only: !!form.admin_only,
         file_name: form.file.name, mime: form.file.type || '', size: form.file.size || 0,
         created_by: profile?.id ?? null,
       })
@@ -122,11 +150,11 @@ export default function Manuales() {
       {/* Filtro por categoría */}
       <div className="kpi-grid compact kpi-sm">
         <button className={`kpi ${!cat ? 'active' : ''}`} onClick={() => setCat('')}>
-          <div className="ico"><Icon n="book" /></div><div className="num">{rows.length}</div><div className="lbl">Todos</div>
+          <div className="ico"><Icon n="book" /></div><div className="num">{genRows.length}</div><div className="lbl">Todos</div>
         </button>
         {cats.map((c) => (
           <button key={c} className={`kpi ${cat === c ? 'active' : ''}`} onClick={() => setCat(cat === c ? '' : c)}>
-            <div className="ico"><Icon n="folder" /></div><div className="num">{rows.filter((r) => (r.category || 'General') === c).length}</div><div className="lbl">{c}</div>
+            <div className="ico"><Icon n="folder" /></div><div className="num">{genRows.filter((r) => (r.category || 'General') === c).length}</div><div className="lbl">{c}</div>
           </button>
         ))}
       </div>
@@ -134,22 +162,22 @@ export default function Manuales() {
       {data.length === 0 && <div className="conv"><div className="empty">{rows.length === 0 ? 'Aún no hay manuales cargados.' : 'No hay manuales para este filtro.'}</div></div>}
 
       <div className="man-grid">
-        {data.map((m) => (
-          <div className="man-card" key={m.id}>
-            <div className="man-ico"><Icon n={iconFor(m.mime, m.file_name)} /></div>
-            <div className="man-body">
-              <strong>{m.title}</strong>
-              {m.description ? <p className="muted">{m.description}</p> : null}
-              <div className="man-meta"><span className="badge">{m.category || 'General'}</span>{m.size ? <span className="muted"> · {fmtSize(m.size)}</span> : null}</div>
-              <div className="man-actions">
-                <button className="btn-sm" type="button" onClick={() => setViewer(m)}><Icon n="eye" /> Ver</button>
-                <button className="btn-sm btn-lime" type="button" onClick={() => downloadFile(m)}><Icon n="download" /> Descargar</button>
-                {canManage && <button className="btn-sm btn-danger" onClick={() => del(m)}>Eliminar</button>}
-              </div>
-            </div>
-          </div>
-        ))}
+        {data.map((m) => <ManCard key={m.id} m={m} canManage={canManage} onView={setViewer} onDownload={downloadFile} onDel={del} />)}
       </div>
+
+      {/* Sección de administración: la base solo la entrega a quienes gestionan algo */}
+      {admData.length > 0 && (
+        <>
+          <div className="row" style={{ alignItems: 'center', gap: '.5rem', margin: '1.2rem 0 .5rem' }}>
+            <Icon n="lock" />
+            <h3 style={{ margin: 0 }}>Manuales de administración</h3>
+            <span className="muted" style={{ fontSize: '.78rem' }}>Visibles solo para quienes gestionan apartados del sistema.</span>
+          </div>
+          <div className="man-grid">
+            {admData.map((m) => <ManCard key={m.id} m={m} canManage={canManage} onView={setViewer} onDownload={downloadFile} onDel={del} admin />)}
+          </div>
+        </>
+      )}
 
       {viewer && (() => {
         const url = viewerUrl
@@ -191,6 +219,10 @@ export default function Manuales() {
             <datalist id="man-cats">{cats.map((c) => <option key={c} value={c} />)}</datalist>
             <label style={{ marginTop: '.6rem' }}>Descripción <span className="muted">(opcional)</span></label>
             <textarea style={{ width: '100%', minHeight: 60 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Breve resumen del contenido." />
+            <label className="perm-row" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginTop: '.6rem' }}>
+              <input type="checkbox" checked={!!form.admin_only} onChange={(e) => setForm({ ...form, admin_only: e.target.checked })} />
+              <span><Icon n="lock" /> <strong>Manual de administración</strong> — solo lo verán quienes gestionan apartados del sistema (gestoras, TI, gerencias). El resto del equipo no lo ve.</span>
+            </label>
             <label style={{ marginTop: '.6rem' }}>Archivo <span className="muted">(PDF, Word, Excel, imagen…)</span></label>
             <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,image/*,application/pdf" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} />
             {form.file && <p className="muted" style={{ margin: '.3rem 0 0' }}><Icon n={iconFor(form.file.type, form.file.name)} /> {form.file.name} · {fmtSize(form.file.size)}</p>}
