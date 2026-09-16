@@ -67,8 +67,8 @@ Deno.serve(async (req) => {
 
     const p = await req.json().catch(() => ({}))
     const op = p.op as string
-    // listDevices/securityReport son de solo lectura y sirven al inventario/TI: basta gestionar usuarios O inventario.
-    const readOnlyOps = new Set(['listDevices', 'securityReport'])
+    // Operaciones de solo lectura que sirven al inventario/TI: basta gestionar usuarios O inventario.
+    const readOnlyOps = new Set(['listDevices', 'securityReport', 'listMailboxes'])
     if (readOnlyOps.has(op) ? !(canUsers || canInv) : !canUsers) {
       return json(403, { error: 'No autorizado (requiere administración de usuarios)' })
     }
@@ -156,6 +156,48 @@ Deno.serve(async (req) => {
         }
       })
       return json(200, { ok: true, rows, mfaAvailable: mfaOk, signInAvailable: signInOk })
+    }
+
+    // ===== Buzones del tenant: tipo real (usuario/compartido/sala) y alias de cada uno =====
+    if (op === 'listMailboxes') {
+      const all: Record<string, unknown>[] = []
+      let path: string | null = '/users?$select=id,displayName,userPrincipalName,mail,proxyAddresses,assignedLicenses,accountEnabled,userType&$top=999'
+      while (path) {
+        const g = await graph(token, 'GET', path)
+        if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al listar buzones', detail: g.data })
+        for (const u of g.data.value ?? []) all.push(u as Record<string, unknown>)
+        const next = g.data['@odata.nextLink'] as string | undefined
+        path = next ? next.replace('https://graph.microsoft.com/v1.0', '') : null
+      }
+      const withMail = all.filter((u: Record<string, unknown>) => (u as any).mail && (u as any).userType !== 'Guest')
+      // El tipo de buzón (userPurpose) se consulta en lotes de 20 vía $batch
+      const purpose: Record<string, string> = {}
+      for (let i = 0; i < withMail.length; i += 20) {
+        const chunk = withMail.slice(i, i + 20)
+        const g = await graph(token, 'POST', '/$batch', {
+          requests: chunk.map((u: Record<string, unknown>) => ({
+            id: (u as any).id, method: 'GET', url: `/users/${(u as any).id}/mailboxSettings?$select=userPurpose`,
+          })),
+        })
+        if (g.ok) for (const r of g.data?.responses ?? []) {
+          if ((r as any).status === 200 && (r as any).body?.userPurpose) purpose[(r as any).id] = (r as any).body.userPurpose
+        }
+      }
+      const rows = withMail.map((u: Record<string, unknown>) => {
+        const primary = String((u as any).mail || '').toLowerCase()
+        const aliases = ((u as any).proxyAddresses ?? [])
+          .filter((a: string) => /^smtp:/i.test(a))
+          .map((a: string) => a.slice(5).toLowerCase())
+          .filter((a: string) => a !== primary)
+        return {
+          id: (u as any).id, name: (u as any).displayName || '', mail: primary,
+          purpose: purpose[(u as any).id] || 'user',
+          enabled: (u as any).accountEnabled !== false,
+          licensed: ((u as any).assignedLicenses ?? []).length > 0,
+          aliases,
+        }
+      })
+      return json(200, { ok: true, rows })
     }
 
     if (op === 'list') {

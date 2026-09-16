@@ -9,6 +9,7 @@ import { Icon, sectionIconName } from '../lib/icons'
 import QRCode from 'qrcode'
 import { useAuth } from '../context/AuthContext'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
+import MailboxPanel from '../components/MailboxPanel'
 
 // Secciones que son claves/credenciales
 const CRED_NAMES = ['Servicios y accesos admin', 'Redes WiFi', 'Correos y cuentas']
@@ -255,6 +256,9 @@ export default function AccesosClaves() {
           </div>
         </div>
       )}
+
+      {/* Buzones y alias del tenant, leídos desde Microsoft */}
+      {!loading && !roClaves && <MailboxPanel />}
 
       {/* Carpetas por tipo */}
       {sections.map((s) => {
