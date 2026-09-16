@@ -11,6 +11,7 @@ import FilterControl from '../components/FilterControl'
 import { loadDeptNames, DEFAULT_DEPTS, deptIndentLabel } from '../lib/depts'
 import { Icon, sectionIconName } from '../lib/icons'
 import LicensesPanel from '../components/LicensesPanel'
+import MsDevicesPanel from '../components/MsDevicesPanel'
 import { exportCsv } from '../lib/export'
 import { SkeletonKpis, SkeletonRows } from '../components/Skeleton'
 
@@ -249,7 +250,7 @@ export default function Inventario() {
   const credCards = useMemo(() => Object.values(credGaps).sort((a, b) => b.items.length - a.items.length).map((g) => ({ key: g.key, icon: 'alert', label: g.label, n: g.items.length })), [credGaps])
   // Secciones visibles según la carpeta seleccionada (Equipos vs Accesos y claves; vacío en Mantenimientos)
   const visibleSections = useMemo(
-    () => ((view === 'mant' || view === 'perif' || view === 'stock' || view === 'lic') ? [] : sections.filter((s) => !CRED.has(s.name))),
+    () => ((view === 'mant' || view === 'perif' || view === 'stock' || view === 'lic' || view === 'msdev') ? [] : sections.filter((s) => !CRED.has(s.name))),
     [sections, view, CRED]
   )
   // Stock: equipos DISPONIBLES (liberados y listos para entregar) agrupados por su tipo (sección).
@@ -456,11 +457,14 @@ export default function Inventario() {
           <button className={`seg-btn ${view === 'stock' ? 'on' : ''}`} onClick={() => switchView('stock')}><Icon n="layers" /> Stock</button>
           {canManageInventory && <button className={`seg-btn ${view === 'lic' ? 'on' : ''}`} onClick={() => switchView('lic')}><Icon n="shield" /> Licencias</button>}
           {canManageInventory && <button className={`seg-btn ${view === 'mant' ? 'on' : ''}`} onClick={() => switchView('mant')}><Icon n="wrench" /> <span className="lbl-desk">Mantenimientos</span><span className="lbl-mob">Mantención</span></button>}
+          {canManageInventory && <button className={`seg-btn ${view === 'msdev' ? 'on' : ''}`} onClick={() => switchView('msdev')} title="Equipos registrados en Microsoft Entra ID"><Icon n="globe" /> Microsoft</button>}
         </div>
       </div>
 
       {/* ==== Pestaña Mantenimientos ==== */}
       {view === 'lic' && canManageInventory && <LicensesPanel defaultOpen />}
+
+      {view === 'msdev' && canManageInventory && <MsDevicesPanel comps={comps} />}
 
       {view === 'mant' && (() => {
         const sinLote = comps.filter((e) => !loteOf(e))

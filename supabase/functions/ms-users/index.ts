@@ -61,15 +61,102 @@ Deno.serve(async (req) => {
     const { data: roleRow } = await admin.from('roles').select('permissions').eq('key', prof?.role ?? 'user').single()
     const perms = roleRow?.permissions ?? {}
     const canUsers = perms.full_admin === true || perms.manage_users === true
-    if (!canUsers) return json(403, { error: 'No autorizado (requiere administración de usuarios)' })
+    const canInv = perms.full_admin === true || perms.manage_inventory === true
     // Restablecer contraseñas es aparte: solo Acceso total o el permiso explícito de contraseñas.
     const canPwd = perms.full_admin === true || perms.manage_passwords === true
+
+    const p = await req.json().catch(() => ({}))
+    const op = p.op as string
+    // listDevices/securityReport son de solo lectura y sirven al inventario/TI: basta gestionar usuarios O inventario.
+    const readOnlyOps = new Set(['listDevices', 'securityReport'])
+    if (readOnlyOps.has(op) ? !(canUsers || canInv) : !canUsers) {
+      return json(403, { error: 'No autorizado (requiere administración de usuarios)' })
+    }
 
     const token = await graphToken()
     if (!token) return json(500, { error: 'No se pudo obtener token de Microsoft Graph. Revisa MS_TENANT_ID/MS_CLIENT_ID/MS_CLIENT_SECRET.' })
 
-    const p = await req.json().catch(() => ({}))
-    const op = p.op as string
+    // ===== Dispositivos registrados en Entra ID (gratis, sin licencia Intune) =====
+    if (op === 'listDevices') {
+      const all: Record<string, unknown>[] = []
+      let path: string | null = '/devices?$select=id,displayName,operatingSystem,operatingSystemVersion,approximateLastSignInDateTime,accountEnabled,trustType,registrationDateTime,model,manufacturer&$expand=registeredOwners($select=displayName,userPrincipalName)&$top=999'
+      while (path) {
+        const g = await graph(token, 'GET', path)
+        if (!g.ok) {
+          const msg = g.status === 403
+            ? 'Microsoft aún no autoriza la lectura de dispositivos: falta conceder el permiso de aplicación Device.Read.All (con consentimiento de administrador) al registro de la app en Azure.'
+            : (g.data?.error?.message ?? 'Error al listar dispositivos')
+          return json(g.status, { error: msg, detail: g.data })
+        }
+        for (const d of g.data.value ?? []) all.push(d as Record<string, unknown>)
+        const next = g.data['@odata.nextLink'] as string | undefined
+        path = next ? next.replace('https://graph.microsoft.com/v1.0', '') : null
+      }
+      const devices = all.map((d: Record<string, unknown>) => {
+        const o = ((d as any).registeredOwners ?? [])[0] ?? {}
+        return {
+          id: (d as any).id, name: (d as any).displayName || '',
+          os: (d as any).operatingSystem || '', osVersion: (d as any).operatingSystemVersion || '',
+          lastActivity: (d as any).approximateLastSignInDateTime || null,
+          enabled: (d as any).accountEnabled !== false, trustType: (d as any).trustType || '',
+          registered: (d as any).registrationDateTime || null,
+          model: (d as any).model || '', manufacturer: (d as any).manufacturer || '',
+          owner: o.displayName || '', ownerEmail: String(o.userPrincipalName || '').toLowerCase(),
+        }
+      })
+      return json(200, { ok: true, devices })
+    }
+
+    // ===== Informe de seguridad: MFA, actividad y licencias por cuenta =====
+    if (op === 'securityReport') {
+      // 1) Registro de métodos de autenticación (quién tiene MFA). Puede no estar disponible en todos los planes.
+      const mfaByUpn: Record<string, { registered: boolean; methods: string[] }> = {}
+      let mfaOk = false
+      {
+        let path: string | null = '/reports/authenticationMethods/userRegistrationDetails?$top=999'
+        while (path) {
+          const g = await graph(token, 'GET', path)
+          if (!g.ok) { console.error('securityReport: mfa', g.status, JSON.stringify(g.data?.error ?? {})); break }
+          mfaOk = true
+          for (const r of g.data.value ?? []) {
+            const upn = String((r as any).userPrincipalName || '').toLowerCase()
+            if (upn) mfaByUpn[upn] = { registered: (r as any).isMfaRegistered === true, methods: (r as any).methodsRegistered ?? [] }
+          }
+          const next = g.data['@odata.nextLink'] as string | undefined
+          path = next ? next.replace('https://graph.microsoft.com/v1.0', '') : null
+        }
+      }
+      // 2) Cuentas con licencias y última actividad (signInActivity requiere Entra P1: si falla, se repite sin él)
+      const users: Record<string, unknown>[] = []
+      let signInOk = true
+      const base = '/users?$select=id,displayName,userPrincipalName,accountEnabled,assignedLicenses,userType,createdDateTime'
+      let path2: string | null = base + ',signInActivity&$top=999'
+      while (path2) {
+        const g = await graph(token, 'GET', path2)
+        if (!g.ok) {
+          if (signInOk) { signInOk = false; path2 = base + '&$top=999'; users.length = 0; continue }
+          return json(g.status, { error: g.data?.error?.message ?? 'Error al listar cuentas', detail: g.data })
+        }
+        for (const u of g.data.value ?? []) users.push(u as Record<string, unknown>)
+        const next = g.data['@odata.nextLink'] as string | undefined
+        path2 = next ? next.replace('https://graph.microsoft.com/v1.0', '') : null
+      }
+      const rows = users.map((u: Record<string, unknown>) => {
+        const upn = String((u as any).userPrincipalName || '').toLowerCase()
+        const guest = (u as any).userType === 'Guest' || upn.includes('#ext#')
+        const lic = ((u as any).assignedLicenses ?? []).length > 0
+        const si = (u as any).signInActivity ?? null
+        const last = si?.lastSignInDateTime || si?.lastNonInteractiveSignInDateTime || null
+        const mfa = mfaByUpn[upn] ?? null
+        return {
+          id: (u as any).id, name: (u as any).displayName || '', upn, guest,
+          enabled: (u as any).accountEnabled !== false, licensed: lic,
+          mfaRegistered: mfa ? mfa.registered : null, mfaMethods: mfa?.methods ?? [],
+          lastSignIn: last, created: (u as any).createdDateTime || null,
+        }
+      })
+      return json(200, { ok: true, rows, mfaAvailable: mfaOk, signInAvailable: signInOk })
+    }
 
     if (op === 'list') {
       const sel = '$select=id,displayName,userPrincipalName,mail,accountEnabled,userType,jobTitle,department,mobilePhone,createdDateTime'

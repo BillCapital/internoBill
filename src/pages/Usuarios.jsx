@@ -11,6 +11,7 @@ import { Icon } from '../lib/icons'
 import { SkeletonKpis, SkeletonTableRows } from '../components/Skeleton'
 import { exportCsv } from '../lib/export'
 import { skuName, buyUrl, msUsers, M365_SUBS_URL } from '../lib/m365'
+import SecurityPanel from '../components/SecurityPanel'
 
 const initials = (n) => (n || '?').split(' ').slice(0, 2).map((x) => x[0]).join('').toUpperCase()
 // Búsqueda sin distinguir acentos ni mayúsculas ("maria" encuentra "María")
@@ -46,6 +47,7 @@ export default function Usuarios() {
   const inGeneral = activeCountry === '*'
   const canResetPwd = canEdit('passwords')   // solo Administrador y Gerente TI
   const ro = !canManageUsers   // solo lectura: consulta el directorio pero no lo edita
+  const [secOpen, setSecOpen] = useState(false) // panel de seguridad (MFA/actividad desde Microsoft)
   const nav = useNavigate()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -524,11 +526,14 @@ export default function Usuarios() {
             { label: 'Estado', value: (u) => u.active === false ? 'Deshabilitado' : 'Activo' },
           ], data)} title="Descarga la lista visible (respeta filtros) a Excel/CSV"><Icon n="download" /> Exportar</button>
           {!ro && inGeneral && <button className="btn" disabled={syncBusy} onClick={syncM365} title="Trae de Microsoft 365 los usuarios que aún no están en la app (solo desde la vista General)">{syncBusy ? 'Sincronizando…' : <><Icon n="refresh" /> Sincronizar M365</>}</button>}
+          {!ro && <button className={`btn ${secOpen ? 'btn-lime' : ''}`} onClick={() => setSecOpen((v) => !v)} title="MFA, actividad y licencias de cada cuenta, leído desde Microsoft"><Icon n="shield" /> Seguridad</button>}
           {!ro && <button className="btn btn-lime" onClick={() => setNewUser({ step: 1, firstName: '', lastName: '', displayName: '', nameEdited: false, upnLocal: '', domain: 'billcapital.com', upnEdited: false, autoPwd: true, password: genPwd(), showPwd: false, forceChange: false, jobTitle: '', department: '', phone: '', country: (activeCountry && activeCountry !== '*' && activeCountry !== '—') ? activeCountry : 'Chile', licSku: '', role: 'user', appAccess: true, busy: false, done: null })}>＋ Crear usuario (M365)</button>}
         </div>
       </div></div>
 
       {ro && <div className="ro-note"><Icon n="lock" /> Acceso de solo lectura: puedes consultar el directorio, pero no editar personas ni roles.</div>}
+
+      {secOpen && !ro && <SecurityPanel />}
 
       {loading && <SkeletonKpis n={10} />}
       {!loading && <div className="kpi-cats">
