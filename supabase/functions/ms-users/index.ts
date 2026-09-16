@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
     }
 
     // ===== Correo de las personas: explorar, descargar, archivar, eliminar (SOLO Acceso total) =====
-    const mailOps = new Set(['mailboxUsage', 'mailFolders', 'mailMessages', 'mailDownload', 'mailMove', 'mailDelete', 'archiveFolders', 'archiveMessages'])
+    const mailOps = new Set(['mailboxUsage', 'mailFolders', 'mailMessages', 'mailDownload', 'mailMove', 'mailDelete', 'archiveFolders', 'archiveMessages', 'archiveExport', 'searchAll'])
     if (mailOps.has(op)) {
       if (perms.full_admin !== true) return json(403, { error: 'El correo de las personas solo lo puede revisar el rol con Acceso total.' })
       // Auditoría: cada acción sensible queda en el registro de actividades
@@ -229,6 +229,54 @@ Deno.serve(async (req) => {
           items: Number(c[iItems] || 0), hasArchive: /^true$/i.test(c[iArch] || ''), lastActivity: c[iLast] || null,
         })).filter((r2) => r2.upn)
         return json(200, { ok: true, rows })
+      }
+
+      // ===== Búsqueda transversal: un término sobre TODOS los buzones a la vez =====
+      if (op === 'searchAll') {
+        const q = String(p.q || '').trim().slice(0, 120)
+        if (q.length < 3) return json(400, { error: 'Escribe al menos 3 caracteres para buscar.' })
+        const safe = q.replace(/["\\]/g, ' ')
+        // Buzones internos con correo
+        const boxes: { id: string; mail: string; name: string }[] = []
+        let path: string | null = '/users?$select=id,displayName,mail,userType&$top=999'
+        while (path) {
+          const g = await graph(token, 'GET', path)
+          if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al listar buzones' })
+          for (const u of g.data.value ?? []) {
+            if ((u as any).mail && (u as any).userType !== 'Guest') {
+              boxes.push({ id: (u as any).id, mail: String((u as any).mail).toLowerCase(), name: (u as any).displayName || '' })
+            }
+          }
+          const next = g.data['@odata.nextLink'] as string | undefined
+          path = next ? next.replace('https://graph.microsoft.com/v1.0', '') : null
+        }
+        // Búsqueda por lotes de 15 (límite de $batch: 20)
+        const rows: Record<string, unknown>[] = []
+        let failed = 0
+        for (let i = 0; i < boxes.length; i += 15) {
+          const chunk = boxes.slice(i, i + 15)
+          const g = await graph(token, 'POST', '/$batch', {
+            requests: chunk.map((b2) => ({
+              id: b2.id, method: 'GET',
+              url: `/users/${b2.id}/messages?$search="${encodeURIComponent(safe)}"&$top=4&$select=id,subject,from,receivedDateTime`,
+            })),
+          })
+          if (!g.ok) { failed += chunk.length; continue }
+          for (const r of g.data?.responses ?? []) {
+            const b2 = chunk.find((x) => x.id === (r as any).id)
+            if (!b2) continue
+            if ((r as any).status !== 200) { failed++; continue }
+            const hits = ((r as any).body?.value ?? []).map((m: Record<string, unknown>) => ({
+              id: (m as any).id, subject: (m as any).subject || '(sin asunto)',
+              from: (m as any).from?.emailAddress?.name || (m as any).from?.emailAddress?.address || '',
+              at: (m as any).receivedDateTime || null,
+            }))
+            if (hits.length) rows.push({ mail: b2.mail, name: b2.name, hits })
+          }
+        }
+        await audit('Búsqueda transversal de correo', `Término: "${q}" · ${rows.length} buzones con resultados`)
+        rows.sort((a: Record<string, unknown>, b2: Record<string, unknown>) => String((a as any).name).localeCompare(String((b2 as any).name), 'es'))
+        return json(200, { ok: true, term: q, total: boxes.length, withHits: rows.length, failed, rows })
       }
 
       const uid = String(p.userId || '')
@@ -290,18 +338,57 @@ Deno.serve(async (req) => {
         if (!fid) return json(400, { error: 'Falta la carpeta.' })
         const arch = await archId()
         if (!arch) return json(200, { ok: true, messages: [] })
-        const r = await fetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${encodeURIComponent(arch)}/folders/${encodeURIComponent(fid)}/items?$top=25&$skip=${Number(p.skip) || 0}`, { headers: { Authorization: `Bearer ${token}` } })
+        // El item del archivo no trae asunto/remitente: se piden como propiedades MAPI extendidas
+        // (0x0037 asunto, 0x0C1A remitente, 0x0E06 fecha, 0x1000 cuerpo — Microsoft lo limita a 255 caracteres)
+        const exp = encodeURIComponent("singleValueExtendedProperties($filter=id eq 'String 0x0037' or id eq 'String 0x0C1A' or id eq 'SystemTime 0x0E06' or id eq 'String 0x1000')")
+        // Filtro opcional por asunto o remitente (contains sobre las propiedades extendidas)
+        let fq = ''
+        if (p.filter) {
+          const t = String(p.filter).replace(/'/g, "''").slice(0, 80)
+          fq = '&$filter=' + encodeURIComponent(`singleValueExtendedProperties/any(ep: ep/id eq 'String 0x0037' and contains(ep/value, '${t}')) or singleValueExtendedProperties/any(ep2: ep2/id eq 'String 0x0C1A' and contains(ep2/value, '${t}'))`)
+        }
+        const r = await fetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${encodeURIComponent(arch)}/folders/${encodeURIComponent(fid)}/items?$top=25&$skip=${Number(p.skip) || 0}${fq}&$expand=${exp}`, { headers: { Authorization: `Bearer ${token}` } })
         const j = await r.json().catch(() => ({}))
         if (!r.ok) return json(r.status, { error: j?.error?.message ?? 'Error al leer el archivo en línea' })
-        const msgs = (j.value ?? []).map((m: Record<string, unknown>) => ({
-          id: (m as any).id,
-          subject: (m as any).subject || (m as any).displayName || '(sin asunto)',
-          from: (m as any).from?.emailAddress?.name || (m as any).from?.emailAddress?.address || (m as any).sender?.emailAddress?.name || '',
-          fromAddr: (m as any).from?.emailAddress?.address || '',
-          at: (m as any).receivedDateTime || (m as any).createdDateTime || (m as any).lastModifiedDateTime || null,
-          hasAttachments: !!(m as any).hasAttachments,
-        }))
+        const msgs = (j.value ?? []).map((m: Record<string, unknown>) => {
+          const props: Record<string, string> = {}
+          for (const sp of ((m as any).singleValueExtendedProperties ?? [])) {
+            const pid = String((sp as any).id || '').toLowerCase()
+            if (/0x0?37$/.test(pid)) props.subject = (sp as any).value
+            else if (/0x0?c1a$/.test(pid)) props.sender = (sp as any).value
+            else if (/0x0?e06$/.test(pid)) props.at = (sp as any).value
+            else if (/0x0?1000$/.test(pid)) props.preview = (sp as any).value
+          }
+          return {
+            id: (m as any).id,
+            subject: props.subject || '(sin asunto)',
+            from: props.sender || '', fromAddr: '',
+            at: props.at || (m as any).createdDateTime || null,
+            hasAttachments: false,
+            preview: (props.preview || '').slice(0, 255),
+            size: (m as any).size ?? null,
+          }
+        })
         return json(200, { ok: true, messages: msgs })
+      }
+      // Exportar un item del archivo: Microsoft lo entrega en su formato técnico FastTransfer
+      // (sirve como respaldo/reimportación; NO se abre en Outlook — la API no da .eml aquí)
+      if (op === 'archiveExport') {
+        const iid = String(p.itemId || '')
+        if (!iid) return json(400, { error: 'Falta el correo.' })
+        const arch = await archId()
+        if (!arch) return json(400, { error: 'Este buzón no tiene archivo en línea.' })
+        const r = await fetch(`https://graph.microsoft.com/beta/admin/exchange/mailboxes/${encodeURIComponent(arch)}/exportItems`, {
+          method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemIds: [iid] }),
+        })
+        const j = await r.json().catch(() => ({}))
+        if (!r.ok) return json(r.status, { error: j?.error?.message ?? 'Error al exportar del archivo' })
+        const data = j.value?.[0]?.data
+        if (!data) return json(500, { error: 'Microsoft no devolvió datos del correo.' })
+        if (String(data).length > 35 * 1024 * 1024) return json(413, { error: 'El correo es demasiado grande para exportarlo desde aquí.' })
+        await audit('Exportación desde archivo en línea', `Buzón ${uid} · item ${iid.slice(0, 24)}…`)
+        return json(200, { ok: true, b64: data })
       }
 
       if (op === 'mailDownload') {
