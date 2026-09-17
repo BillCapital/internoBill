@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { msUsers } from '../lib/m365'
 import { Icon } from '../lib/icons'
 import { SkeletonRows } from './Skeleton'
+import { confirmDialog } from '../lib/ui'
 
 // Equipos registrados en Microsoft Entra ID (gratis, sin licencia Intune).
 // Aparecen automáticamente cuando alguien inicia sesión con su cuenta corporativa en un computador.
@@ -56,6 +57,39 @@ export default function MsDevicesPanel({ comps }) {
         : x)))
       setLinking(null); setFq('')
     } catch (e) { setErr(e.message || 'No se pudo guardar el vínculo') }
+    finally { setSaving('') }
+  }
+
+  // Registros duplicados: mismo nombre de equipo registrado más de una vez (máquina
+  // formateada o re-registrada). Se marca como antiguo todo registro que no sea el
+  // más reciente de su nombre, para poder limpiarlo.
+  const dupOld = useMemo(() => {
+    const byName = {}
+    ;(rows || []).forEach((d) => {
+      const k = (d.name || '').trim().toLowerCase()
+      if (!k) return
+      ;(byName[k] = byName[k] || []).push(d)
+    })
+    const old = new Set()
+    Object.values(byName).forEach((arr) => {
+      if (arr.length < 2) return
+      const sorted = [...arr].sort((a, b) => new Date(b.lastActivity || b.registered || 0) - new Date(a.lastActivity || a.registered || 0))
+      sorted.slice(1).forEach((d) => old.add(d.id))
+    })
+    return old
+  }, [rows])
+
+  const doDelete = async (d) => {
+    const ok = await confirmDialog(
+      `¿Eliminar el registro de “${d.name || d.id}” en Microsoft?\n\nSolo se borra el registro del directorio (útil para equipos formateados, duplicados o dados de baja). Si la máquina sigue en uso, se volverá a registrar sola en el próximo inicio de sesión.`,
+      { danger: true, okText: 'Eliminar registro' },
+    )
+    if (!ok) return
+    setSaving(d.id); setErr('')
+    try {
+      await msUsers('deleteDevice', { deviceId: d.id, name: d.name })
+      setRows((rs) => (rs || []).filter((x) => x.id !== d.id))
+    } catch (e) { setErr(e.message || 'No se pudo eliminar el registro') }
     finally { setSaving('') }
   }
 
@@ -122,6 +156,7 @@ export default function MsDevicesPanel({ comps }) {
                   <tr key={d.id}>
                     <td>
                       <strong>{d.name || '(sin nombre)'}</strong>{!d.enabled && <span className="muted" style={{ fontSize: '.72rem' }}> · deshabilitado</span>}
+                      {dupOld.has(d.id) && <span className="badge s-pending" style={{ fontSize: '.68rem', marginLeft: '.35rem' }} title="Este equipo aparece registrado más de una vez; este es un registro antiguo (probablemente se formateó o se volvió a configurar)">Registro antiguo</span>}
                       {d.serial && !ficha && <div className="muted" style={{ fontSize: '.72rem' }}>Serie {d.serial}</div>}
                     </td>
                     <td>{d.os}{d.osVersion ? <span className="muted" style={{ fontSize: '.74rem' }}> {d.osVersion}</span> : null}</td>
@@ -168,6 +203,7 @@ export default function MsDevicesPanel({ comps }) {
                       )}
                       {!ficha && !open && <button className="btn-sm" disabled={saving === d.id} onClick={() => { setLinking(d.id); setFq('') }}>Vincular…</button>}
                       {open && <button className="btn-sm" onClick={() => { setLinking(null); setFq('') }}>Cancelar</button>}
+                      {!open && <button className="btn-sm" disabled={saving === d.id} title="Eliminar este registro del directorio de Microsoft (equipos formateados, duplicados o dados de baja)" onClick={() => doDelete(d)} style={{ marginLeft: '.3rem' }}><Icon n="trash" /></button>}
                     </td>
                   </tr>
                 )
@@ -179,7 +215,7 @@ export default function MsDevicesPanel({ comps }) {
       {rows && stats && (
         <p className="muted" style={{ fontSize: '.74rem', margin: '.5rem 0 0' }}>
           {stats.linked} vinculado{stats.linked !== 1 ? 's' : ''} · {stats.unlinked} sin vincular · {stats.orphanFichas} ficha{stats.orphanFichas !== 1 ? 's' : ''} de computador sin equipo detectado en Microsoft.
-          El vínculo se guarda dentro del dispositivo en Microsoft, así que se conserva aunque se recargue la app. La fecha de actividad es aproximada: Microsoft la actualiza con algunos días de desfase.
+          El vínculo se guarda dentro del dispositivo en Microsoft, así que se conserva aunque se recargue la app. La fecha de actividad es aproximada: Microsoft la actualiza con días de desfase, por lo que un equipo en uso puede figurar con actividad de hace 1–2 días. “Registro antiguo” marca duplicados de equipos formateados o re-registrados: se pueden eliminar con el botón de papelera (si la máquina sigue viva, se vuelve a registrar sola).
         </p>
       )}
     </div>

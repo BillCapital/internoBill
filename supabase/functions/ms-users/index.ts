@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     const p = await req.json().catch(() => ({}))
     const op = p.op as string
     // Operaciones de solo lectura que sirven al inventario/TI: basta gestionar usuarios O inventario.
-    const readOnlyOps = new Set(['listDevices', 'securityReport', 'listMailboxes', 'linkDevice'])
+    const readOnlyOps = new Set(['listDevices', 'securityReport', 'listMailboxes', 'linkDevice', 'deleteDevice'])
     if (readOnlyOps.has(op) ? !(canUsers || canInv) : !canUsers) {
       return json(403, { error: 'No autorizado (requiere administración de usuarios)' })
     }
@@ -168,6 +168,24 @@ Deno.serve(async (req) => {
           detail: `Dispositivo ${did}` + (serial ? ` · Serie ${serial}` : ''),
         })
       } catch (e) { console.error('ms-users: audit linkDevice', String(e)) }
+      return json(200, { ok: true })
+    }
+
+    // ===== Eliminar un registro de equipo obsoleto en Entra =====
+    // Solo borra el REGISTRO del directorio (equipos formateados, duplicados o dados de baja).
+    // Si la máquina sigue existiendo y alguien inicia sesión en ella, se vuelve a registrar sola.
+    if (op === 'deleteDevice') {
+      const did = String(p.deviceId || '')
+      if (!did) return json(400, { error: 'Falta deviceId' })
+      const g = await graph(token, 'DELETE', `/devices/${did}`)
+      if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'No se pudo eliminar el registro en Microsoft' })
+      try {
+        const { data: me } = await admin.from('profiles').select('full_name').eq('id', caller.id).single()
+        await admin.from('activity_log').insert({
+          actor_id: caller.id, actor_name: me?.full_name || caller.email, kind: 'Inventario',
+          action: 'Registro de equipo eliminado en Entra', detail: `Dispositivo ${String(p.name || did)}`,
+        })
+      } catch (e) { console.error('ms-users: audit deleteDevice', String(e)) }
       return json(200, { ok: true })
     }
 

@@ -1212,6 +1212,7 @@ export default function Solicitudes() {
       {/* Registro general: cada cambio con su solicitud (#folio); tocar el folio abre esa solicitud */}
       {canManageOrders && !creating && <ReqEventsLog onOpen={(id) => {
         setDeptFilter('')
+        setStatus(null)
         setOpen(id)
         setTimeout(() => document.getElementById(`req-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120)
       }} />}
