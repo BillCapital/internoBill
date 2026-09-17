@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     const p = await req.json().catch(() => ({}))
     const op = p.op as string
     // Operaciones de solo lectura que sirven al inventario/TI: basta gestionar usuarios O inventario.
-    const readOnlyOps = new Set(['listDevices', 'securityReport', 'listMailboxes'])
+    const readOnlyOps = new Set(['listDevices', 'securityReport', 'listMailboxes', 'linkDevice'])
     if (readOnlyOps.has(op) ? !(canUsers || canInv) : !canUsers) {
       return json(403, { error: 'No autorizado (requiere administración de usuarios)' })
     }
@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     // ===== Dispositivos registrados en Entra ID (gratis, sin licencia Intune) =====
     if (op === 'listDevices') {
       const all: Record<string, unknown>[] = []
-      let path: string | null = '/devices?$select=id,displayName,operatingSystem,operatingSystemVersion,approximateLastSignInDateTime,accountEnabled,trustType,registrationDateTime,model,manufacturer&$expand=registeredOwners($select=displayName,userPrincipalName)&$top=999'
+      let path: string | null = '/devices?$select=id,displayName,operatingSystem,operatingSystemVersion,approximateLastSignInDateTime,accountEnabled,trustType,registrationDateTime,model,manufacturer,extensionAttributes&$expand=registeredOwners($select=displayName,userPrincipalName)&$top=999'
       while (path) {
         const g = await graph(token, 'GET', path)
         if (!g.ok) {
@@ -141,9 +141,34 @@ Deno.serve(async (req) => {
           registered: (d as any).registrationDateTime || null,
           model: (d as any).model || '', manufacturer: (d as any).manufacturer || '',
           owner: o.displayName || '', ownerEmail: String(o.userPrincipalName || '').toLowerCase(),
+          serial: ((d as any).extensionAttributes?.extensionAttribute1 ?? '') || '',
+          fichaId: ((d as any).extensionAttributes?.extensionAttribute2 ?? '') || '',
         }
       })
       return json(200, { ok: true, devices })
+    }
+
+    // ===== Vincular un dispositivo de Entra con una ficha del inventario =====
+    // La serie y el id de la ficha se guardan en el propio objeto del dispositivo en Microsoft
+    // (extensionAttribute1/2), asi el cruce persiste aunque se reinstale la app.
+    if (op === 'linkDevice') {
+      const did = String(p.deviceId || '')
+      if (!did) return json(400, { error: 'Falta deviceId' })
+      const serial = p.serial ? String(p.serial).slice(0, 250) : null
+      const fichaId = p.fichaId ? String(p.fichaId).slice(0, 64) : null
+      const g = await graph(token, 'PATCH', `/devices/${did}`, {
+        extensionAttributes: { extensionAttribute1: serial, extensionAttribute2: fichaId },
+      })
+      if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'No se pudo actualizar el dispositivo en Microsoft' })
+      try {
+        const { data: me } = await admin.from('profiles').select('full_name').eq('id', caller.id).single()
+        await admin.from('activity_log').insert({
+          actor_id: caller.id, actor_name: me?.full_name || caller.email, kind: 'Inventario',
+          action: fichaId ? 'Equipo Microsoft vinculado a ficha de inventario' : 'Equipo Microsoft desvinculado de su ficha',
+          detail: `Dispositivo ${did}` + (serial ? ` · Serie ${serial}` : ''),
+        })
+      } catch (e) { console.error('ms-users: audit linkDevice', String(e)) }
+      return json(200, { ok: true })
     }
 
     // ===== Informe de seguridad: MFA, actividad y licencias por cuenta =====
