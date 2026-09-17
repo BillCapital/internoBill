@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     const p = await req.json().catch(() => ({}))
     const op = p.op as string
     // Operaciones de solo lectura que sirven al inventario/TI: basta gestionar usuarios O inventario.
-    const readOnlyOps = new Set(['listDevices', 'securityReport', 'listMailboxes', 'linkDevice', 'deleteDevice'])
+    const readOnlyOps = new Set(['listDevices', 'securityReport', 'listMailboxes', 'linkDevice', 'deleteDevice', 'deviceKind', 'dirAudit', 'serviceActivity', 'bitlockerKeys', 'bitlockerKey'])
     if (readOnlyOps.has(op) ? !(canUsers || canInv) : !canUsers) {
       return json(403, { error: 'No autorizado (requiere administración de usuarios)' })
     }
@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     // ===== Dispositivos registrados en Entra ID (gratis, sin licencia Intune) =====
     if (op === 'listDevices') {
       const all: Record<string, unknown>[] = []
-      let path: string | null = '/devices?$select=id,displayName,operatingSystem,operatingSystemVersion,approximateLastSignInDateTime,accountEnabled,trustType,registrationDateTime,model,manufacturer,extensionAttributes&$expand=registeredOwners($select=displayName,userPrincipalName)&$top=999'
+      let path: string | null = '/devices?$select=id,deviceId,displayName,operatingSystem,operatingSystemVersion,approximateLastSignInDateTime,accountEnabled,trustType,registrationDateTime,model,manufacturer,extensionAttributes&$expand=registeredOwners($select=displayName,userPrincipalName)&$top=999'
       while (path) {
         const g = await graph(token, 'GET', path)
         if (!g.ok) {
@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
       const devices = all.map((d: Record<string, unknown>) => {
         const o = ((d as any).registeredOwners ?? [])[0] ?? {}
         return {
-          id: (d as any).id, name: (d as any).displayName || '',
+          id: (d as any).id, devId: (d as any).deviceId || '', name: (d as any).displayName || '',
           os: (d as any).operatingSystem || '', osVersion: (d as any).operatingSystemVersion || '',
           lastActivity: (d as any).approximateLastSignInDateTime || null,
           enabled: (d as any).accountEnabled !== false, trustType: (d as any).trustType || '',
@@ -143,6 +143,7 @@ Deno.serve(async (req) => {
           owner: o.displayName || '', ownerEmail: String(o.userPrincipalName || '').toLowerCase(),
           serial: ((d as any).extensionAttributes?.extensionAttribute1 ?? '') || '',
           fichaId: ((d as any).extensionAttributes?.extensionAttribute2 ?? '') || '',
+          kind: ((d as any).extensionAttributes?.extensionAttribute3 ?? '') || '',
         }
       })
       return json(200, { ok: true, devices })
@@ -169,6 +170,84 @@ Deno.serve(async (req) => {
         })
       } catch (e) { console.error('ms-users: audit linkDevice', String(e)) }
       return json(200, { ok: true })
+    }
+
+    // ===== Clasificar un equipo: corporativo o personal =====
+    // Se guarda en el propio dispositivo en Microsoft (extensionAttribute3).
+    if (op === 'deviceKind') {
+      const did = String(p.deviceId || '')
+      const kind = ['corp', 'personal'].includes(p.kind) ? p.kind : null
+      if (!did) return json(400, { error: 'Falta deviceId' })
+      const g = await graph(token, 'PATCH', `/devices/${did}`, {
+        extensionAttributes: { extensionAttribute3: kind },
+      })
+      if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'No se pudo clasificar el dispositivo' })
+      return json(200, { ok: true })
+    }
+
+    // ===== Claves de recuperación BitLocker (solo Acceso total; cada consulta queda auditada) =====
+    if (op === 'bitlockerKeys' || op === 'bitlockerKey') {
+      if (perms.full_admin !== true) return json(403, { error: 'Las claves BitLocker solo las puede ver el rol con Acceso total.' })
+      if (op === 'bitlockerKeys') {
+        const devId = String(p.devId || '')
+        if (!devId) return json(400, { error: 'Falta el dispositivo.' })
+        const g = await graph(token, 'GET', `/informationProtection/bitlocker/recoveryKeys?$filter=deviceId eq '${devId.replace(/[^a-fA-F0-9-]/g, '')}'`)
+        if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al listar claves BitLocker' })
+        const rows = (g.data.value ?? []).map((k: Record<string, unknown>) => ({ id: (k as any).id, created: (k as any).createdDateTime || null, volumeType: (k as any).volumeType ?? null }))
+        return json(200, { ok: true, rows })
+      }
+      const kid = String(p.keyId || '')
+      if (!kid) return json(400, { error: 'Falta la clave.' })
+      const g = await graph(token, 'GET', `/informationProtection/bitlocker/recoveryKeys/${encodeURIComponent(kid)}?$select=key,deviceId`)
+      if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al leer la clave BitLocker' })
+      try {
+        const { data: me } = await admin.from('profiles').select('full_name').eq('id', caller.id).single()
+        await admin.from('activity_log').insert({
+          actor_id: caller.id, actor_name: me?.full_name || caller.email, kind: 'Inventario',
+          action: 'Clave BitLocker consultada', detail: `Equipo ${String(p.deviceName || g.data?.deviceId || kid)}`,
+        })
+      } catch (e) { console.error('ms-users: audit bitlocker', String(e)) }
+      return json(200, { ok: true, key: g.data?.key ?? '' })
+    }
+
+    // ===== Auditoría del directorio (Entra): quién hizo qué y cuándo (últimos ~7 días) =====
+    if (op === 'dirAudit') {
+      const cat = String(p.category || '').replace(/[^A-Za-z]/g, '')
+      const filt = cat ? `&$filter=${encodeURIComponent(`category eq '${cat}'`)}` : ''
+      const g = await graph(token, 'GET', `/auditLogs/directoryAudits?$top=${Math.min(Number(p.top) || 60, 200)}${filt}`)
+      if (!g.ok) return json(g.status, { error: g.data?.error?.message ?? 'Error al leer la auditoría de Microsoft' })
+      const rows = (g.data.value ?? []).map((a: Record<string, unknown>) => {
+        const ini = (a as any).initiatedBy ?? {}
+        const by = ini.user?.userPrincipalName || ini.user?.displayName || ini.app?.displayName || ''
+        const tg = ((a as any).targetResources ?? [])[0] ?? {}
+        return {
+          at: (a as any).activityDateTime || null,
+          activity: (a as any).activityDisplayName || '',
+          category: (a as any).category || '',
+          by, target: tg.displayName || tg.userPrincipalName || '',
+          ok: (a as any).result === 'success',
+        }
+      })
+      return json(200, { ok: true, rows })
+    }
+
+    // ===== Actividad real por servicio (Exchange/OneDrive/SharePoint/Teams) por usuario =====
+    if (op === 'serviceActivity') {
+      const r = await fetch(`https://graph.microsoft.com/v1.0/reports/getOffice365ActiveUserDetail(period='D30')`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!r.ok) return json(r.status, { error: 'Error al leer el informe de actividad', detail: (await r.text()).slice(0, 300) })
+      const csv = await r.text()
+      const lines = csv.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim())
+      if (!lines.length) return json(200, { ok: true, rows: [] })
+      const splitCsv = (l: string) => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map((x) => x.replace(/^"|"$/g, ''))
+      const head = splitCsv(lines[0]).map((h) => h.trim().toLowerCase())
+      const col = (n: string) => head.indexOf(n)
+      const iUpn = col('user principal name'), iEx = col('exchange last activity date'), iOd = col('onedrive last activity date'),
+        iSp = col('sharepoint last activity date'), iTm = col('teams last activity date')
+      const rows = lines.slice(1).map(splitCsv).map((c) => ({
+        upn: (c[iUpn] || '').toLowerCase(),
+        exchange: c[iEx] || null, oneDrive: c[iOd] || null, sharePoint: c[iSp] || null, teams: c[iTm] || null,
+      })).filter((r2) => r2.upn)
+      return json(200, { ok: true, rows })
     }
 
     // ===== Eliminar un registro de equipo obsoleto en Entra =====

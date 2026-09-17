@@ -3,6 +3,7 @@ import { msUsers } from '../lib/m365'
 import { Icon } from '../lib/icons'
 import { SkeletonRows } from './Skeleton'
 import { confirmDialog } from '../lib/ui'
+import { useAuth } from '../context/AuthContext'
 
 // Equipos registrados en Microsoft Entra ID (gratis, sin licencia Intune).
 // Aparecen automáticamente cuando alguien inicia sesión con su cuenta corporativa en un computador.
@@ -10,6 +11,7 @@ import { confirmDialog } from '../lib/ui'
 // guardados en el propio dispositivo dentro de Microsoft (extensionAttributes), así el cruce
 // persiste y desde aquí se ve la info completa de cada PC (serie, marca/modelo, ubicación, persona).
 export default function MsDevicesPanel({ comps }) {
+  const { isAdmin } = useAuth()
   const [rows, setRows] = useState(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -56,6 +58,8 @@ export default function MsDevicesPanel({ comps }) {
         ? { ...x, fichaId: ficha ? ficha.id : '', serial: ficha ? (ficha.serial_number || ficha.asset_tag || '') : '' }
         : x)))
       setLinking(null); setFq('')
+      // Un equipo vinculado a una ficha del inventario es de la empresa: se clasifica solo
+      if (ficha && d.kind !== 'corp') { try { await msUsers('deviceKind', { deviceId: d.id, kind: 'corp' }); setRows((rs) => (rs || []).map((x) => (x.id === d.id ? { ...x, kind: 'corp' } : x))) } catch { /* opcional */ } }
     } catch (e) { setErr(e.message || 'No se pudo guardar el vínculo') }
     finally { setSaving('') }
   }
@@ -93,6 +97,35 @@ export default function MsDevicesPanel({ comps }) {
     finally { setSaving('') }
   }
 
+  // Claves BitLocker respaldadas en Entra (solo Acceso total; cada clave vista queda auditada)
+  const [blk, setBlk] = useState(null) // { devId, name, rows|null, keys: {id: clave} }
+  const openBlk = async (d) => {
+    if (blk?.devId === d.devId) { setBlk(null); return }
+    setBlk({ devId: d.devId, name: d.name, rows: null, keys: {} })
+    try {
+      const r = await msUsers('bitlockerKeys', { devId: d.devId })
+      setBlk((b) => (b && b.devId === d.devId ? { ...b, rows: r.rows || [] } : b))
+    } catch (e) {
+      setErr(e.message || 'No se pudieron listar las claves BitLocker')
+      setBlk(null)
+    }
+  }
+  const revealBlk = async (k) => {
+    try {
+      const r = await msUsers('bitlockerKey', { keyId: k.id, deviceName: blk?.name })
+      setBlk((b) => (b ? { ...b, keys: { ...b.keys, [k.id]: r.key || '(vacía)' } } : b))
+    } catch (e) { setErr(e.message || 'No se pudo leer la clave') }
+  }
+
+  const setKind = async (d, kind) => {
+    setSaving(d.id); setErr('')
+    try {
+      await msUsers('deviceKind', { deviceId: d.id, kind })
+      setRows((rs) => (rs || []).map((x) => (x.id === d.id ? { ...x, kind } : x)))
+    } catch (e) { setErr(e.message || 'No se pudo clasificar el equipo') }
+    finally { setSaving('') }
+  }
+
   const list = useMemo(() => {
     const t = q.trim().toLowerCase()
     const base = (rows || []).filter((d) => {
@@ -110,7 +143,9 @@ export default function MsDevicesPanel({ comps }) {
     const linked = rows.filter((d) => d.fichaId && byFicha[d.fichaId]).length
     const usedFichas = new Set(rows.map((d) => d.fichaId).filter(Boolean))
     const orphanFichas = (comps || []).filter((e) => !e.returned_at && !usedFichas.has(e.id)).length
-    return { linked, unlinked: rows.length - linked, orphanFichas }
+    const personal = rows.filter((d) => d.kind === 'personal').length
+    const sinClase = rows.filter((d) => !d.kind).length
+    return { linked, unlinked: rows.length - linked, orphanFichas, personal, sinClase }
   }, [rows, byFicha, comps])
 
   const fichaOptions = useMemo(() => {
@@ -157,6 +192,18 @@ export default function MsDevicesPanel({ comps }) {
                     <td>
                       <strong>{d.name || '(sin nombre)'}</strong>{!d.enabled && <span className="muted" style={{ fontSize: '.72rem' }}> · deshabilitado</span>}
                       {dupOld.has(d.id) && <span className="badge s-pending" style={{ fontSize: '.68rem', marginLeft: '.35rem' }} title="Este equipo aparece registrado más de una vez; este es un registro antiguo (probablemente se formateó o se volvió a configurar)">Registro antiguo</span>}
+                      <div style={{ marginTop: '.2rem' }}>
+                        {d.kind === 'corp' ? (
+                          <button className="badge s-approved" style={{ fontSize: '.68rem', cursor: 'pointer', border: 'none' }} disabled={saving === d.id} title="Equipo de la empresa · toca para marcarlo como personal" onClick={() => setKind(d, 'personal')}>Corporativo</button>
+                        ) : d.kind === 'personal' ? (
+                          <button className="badge s-pending" style={{ fontSize: '.68rem', cursor: 'pointer', border: 'none' }} disabled={saving === d.id} title="Equipo personal (BYOD) · toca para marcarlo como corporativo" onClick={() => setKind(d, 'corp')}>Personal</button>
+                        ) : (
+                          <span style={{ display: 'inline-flex', gap: '.25rem' }}>
+                            <button className="btn-sm" style={{ fontSize: '.68rem', padding: '.1rem .4rem' }} disabled={saving === d.id} title="Marcar como equipo de la empresa" onClick={() => setKind(d, 'corp')}>Empresa</button>
+                            <button className="btn-sm" style={{ fontSize: '.68rem', padding: '.1rem .4rem' }} disabled={saving === d.id} title="Marcar como equipo personal (BYOD)" onClick={() => setKind(d, 'personal')}>Personal</button>
+                          </span>
+                        )}
+                      </div>
                       {d.serial && !ficha && <div className="muted" style={{ fontSize: '.72rem' }}>Serie {d.serial}</div>}
                     </td>
                     <td>{d.os}{d.osVersion ? <span className="muted" style={{ fontSize: '.74rem' }}> {d.osVersion}</span> : null}</td>
@@ -203,7 +250,22 @@ export default function MsDevicesPanel({ comps }) {
                       )}
                       {!ficha && !open && <button className="btn-sm" disabled={saving === d.id} onClick={() => { setLinking(d.id); setFq('') }}>Vincular…</button>}
                       {open && <button className="btn-sm" onClick={() => { setLinking(null); setFq('') }}>Cancelar</button>}
+                      {isAdmin && d.devId && !open && <button className="btn-sm" title="Claves de recuperación BitLocker respaldadas en Microsoft" onClick={() => openBlk(d)} style={{ marginLeft: '.3rem' }}><Icon n="key" /></button>}
                       {!open && <button className="btn-sm" disabled={saving === d.id} title="Eliminar este registro del directorio de Microsoft (equipos formateados, duplicados o dados de baja)" onClick={() => doDelete(d)} style={{ marginLeft: '.3rem' }}><Icon n="trash" /></button>}
+                      {blk?.devId === d.devId && (
+                        <div style={{ marginTop: '.35rem', textAlign: 'left' }}>
+                          {blk.rows === null ? <span className="muted" style={{ fontSize: '.74rem' }}>Consultando…</span>
+                          : blk.rows.length === 0 ? <span className="muted" style={{ fontSize: '.74rem' }}>Sin claves BitLocker respaldadas para este equipo.</span>
+                          : blk.rows.map((k) => (
+                            <div key={k.id} style={{ fontSize: '.76rem', marginTop: '.2rem' }}>
+                              <span className="muted">{k.created ? new Date(k.created).toLocaleDateString('es-CL') : ''} · </span>
+                              {blk.keys[k.id]
+                                ? <code style={{ userSelect: 'all', fontSize: '.74rem' }}>{blk.keys[k.id]}</code>
+                                : <button className="btn-sm" style={{ fontSize: '.7rem', padding: '.05rem .35rem' }} onClick={() => revealBlk(k)} title="Mostrar la clave (queda registrado en el historial de actividades)"><Icon n="eye" /> Ver clave</button>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )
@@ -214,7 +276,7 @@ export default function MsDevicesPanel({ comps }) {
       )}
       {rows && stats && (
         <p className="muted" style={{ fontSize: '.74rem', margin: '.5rem 0 0' }}>
-          {stats.linked} vinculado{stats.linked !== 1 ? 's' : ''} · {stats.unlinked} sin vincular · {stats.orphanFichas} ficha{stats.orphanFichas !== 1 ? 's' : ''} de computador sin equipo detectado en Microsoft.
+          {stats.linked} vinculado{stats.linked !== 1 ? 's' : ''} · {stats.unlinked} sin vincular · {stats.personal} personal{stats.personal !== 1 ? 'es' : ''} · {stats.sinClase} sin clasificar · {stats.orphanFichas} ficha{stats.orphanFichas !== 1 ? 's' : ''} de computador sin equipo detectado en Microsoft.
           El vínculo se guarda dentro del dispositivo en Microsoft, así que se conserva aunque se recargue la app. La fecha de actividad es aproximada: Microsoft la actualiza con días de desfase, por lo que un equipo en uso puede figurar con actividad de hace 1–2 días. “Registro antiguo” marca duplicados de equipos formateados o re-registrados: se pueden eliminar con el botón de papelera (si la máquina sigue viva, se vuelve a registrar sola).
         </p>
       )}

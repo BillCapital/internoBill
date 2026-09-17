@@ -15,16 +15,42 @@ export default function SecurityPanel() {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [filter, setFilter] = useState('') // '' | 'nomfa' | 'inactive' | 'disabledlic'
+  const [tab, setTab] = useState('cuentas') // 'cuentas' | 'auditoria'
+  const [act, setAct] = useState(null) // actividad por servicio, por upn
+  const [audit, setAudit] = useState(null)
+  const [auditCat, setAuditCat] = useState('')
 
   const load = async () => {
     setBusy(true); setErr('')
     try { setData(await msUsers('securityReport')) }
     catch (e) { setErr(e.message || 'Error al consultar Microsoft') }
     finally { setBusy(false) }
+    // La actividad por servicio llega aparte para no frenar la tabla principal
+    try {
+      const r = await msUsers('serviceActivity')
+      const m = {}
+      ;(r.rows || []).forEach((x) => { m[x.upn] = x })
+      setAct(m)
+    } catch { /* opcional */ }
   }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const loadAudit = async (cat) => {
+    setAudit(null)
+    try { const r = await msUsers('dirAudit', cat ? { category: cat } : {}); setAudit(r.rows || []) }
+    catch (e) { setErr(e.message || 'Error al leer la auditoría'); setAudit([]) }
+  }
+  useEffect(() => { if (tab === 'auditoria' && audit === null) loadAudit(auditCat) }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const daysAgo = (iso) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) : null)
+  // Última actividad REAL en M365 (Exchange/OneDrive/SharePoint/Teams): compensa que los
+  // inicios de sesión detallados requieran Entra P1.
+  const lastAct = (upn) => {
+    const a = act?.[upn]
+    if (!a) return null
+    const ds = [a.exchange, a.oneDrive, a.sharePoint, a.teams].filter(Boolean).sort()
+    return ds.length ? ds[ds.length - 1] : null
+  }
   const fDate = (iso) => (iso ? new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—')
 
   // Solo cuentas internas del dominio (los invitados externos no son responsabilidad de TI)
@@ -32,7 +58,7 @@ export default function SecurityPanel() {
 
   const flags = useMemo(() => {
     const noMfa = rows.filter((r) => r.enabled && r.licensed && r.mfaRegistered === false)
-    const inactive = rows.filter((r) => { const d = daysAgo(r.lastSignIn); return r.enabled && d !== null && d > 60 })
+    const inactive = rows.filter((r) => { const d = daysAgo(r.lastSignIn ?? lastAct(r.upn)); return r.enabled && d !== null && d > 60 })
     const disabledLic = rows.filter((r) => !r.enabled && r.licensed)
     return { noMfa, inactive, disabledLic }
   }, [rows])
@@ -58,8 +84,49 @@ export default function SecurityPanel() {
       <div className="row" style={{ alignItems: 'center', gap: '.6rem', flexWrap: 'wrap', marginBottom: '.55rem' }}>
         <h3 style={{ margin: 0 }}>Seguridad de cuentas</h3>
         <span className="muted" style={{ fontSize: '.78rem', flex: '1 1 auto' }}>Leído desde Microsoft. Cuentas internas del dominio.</span>
-        <button className="btn btn-sm" onClick={load} disabled={busy}><Icon n="refresh" /> Actualizar</button>
+        <button className={`btn-sm ${tab === 'cuentas' ? 'btn btn-sm' : ''}`} onClick={() => setTab('cuentas')}>Cuentas</button>
+        <button className={`btn-sm ${tab === 'auditoria' ? 'btn btn-sm' : ''}`} onClick={() => setTab('auditoria')} title="Registro de auditoría de Entra: quién hizo qué y cuándo (últimos ~7 días)">Auditoría Microsoft</button>
+        <button className="btn btn-sm" onClick={() => (tab === 'cuentas' ? load() : loadAudit(auditCat))} disabled={busy}><Icon n="refresh" /> Actualizar</button>
       </div>
+
+      {tab === 'auditoria' && (
+        <>
+          <div className="row" style={{ gap: '.45rem', flexWrap: 'wrap', marginBottom: '.5rem', alignItems: 'center' }}>
+            <label className="sort-ctl">Categoría:
+              <select value={auditCat} onChange={(e) => { setAuditCat(e.target.value); loadAudit(e.target.value) }}>
+                <option value="">Todas</option>
+                <option value="Device">Equipos</option>
+                <option value="UserManagement">Usuarios</option>
+                <option value="GroupManagement">Grupos</option>
+                <option value="ApplicationManagement">Aplicaciones</option>
+                <option value="RoleManagement">Roles</option>
+              </select>
+            </label>
+            <span className="muted" style={{ fontSize: '.74rem' }}>Microsoft conserva estos eventos ~7 días en el plan actual.</span>
+          </div>
+          {audit === null ? <SkeletonRows n={3} /> : audit.length === 0 ? <p className="muted" style={{ fontSize: '.8rem' }}>Sin eventos en esta categoría.</p> : (
+            <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
+              <table className="tbl-compact">
+                <thead><tr><th>Fecha</th><th>Actividad</th><th>Categoría</th><th>Por</th><th>Objetivo</th><th>Resultado</th></tr></thead>
+                <tbody>
+                  {audit.map((a, i) => (
+                    <tr key={i}>
+                      <td style={{ whiteSpace: 'nowrap', fontSize: '.76rem' }}>{a.at ? new Date(a.at).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                      <td style={{ fontSize: '.8rem' }}>{a.activity}</td>
+                      <td className="muted" style={{ fontSize: '.76rem' }}>{a.category}</td>
+                      <td style={{ fontSize: '.78rem' }}>{a.by || '—'}</td>
+                      <td style={{ fontSize: '.78rem' }}>{a.target || '—'}</td>
+                      <td>{a.ok ? <span className="badge s-approved" style={{ fontSize: '.68rem' }}>OK</span> : <span className="badge s-rejected" style={{ fontSize: '.68rem' }}>Falló</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {tab !== 'auditoria' && <>
 
       {busy && !data && <SkeletonRows n={3} />}
       {err && <div className="ro-note"><Icon n="alert" /> {err}</div>}
@@ -73,14 +140,15 @@ export default function SecurityPanel() {
             {filter && <button className="btn btn-sm" onClick={() => setFilter('')}>Ver todas</button>}
           </div>
           {!data.mfaAvailable && <p className="muted" style={{ fontSize: '.76rem' }}>Microsoft no entregó el informe de MFA para este plan: la columna MFA puede aparecer vacía.</p>}
-          {!data.signInAvailable && <p className="muted" style={{ fontSize: '.76rem' }}>El detalle de últimos inicios de sesión requiere una licencia Entra ID P1 en el tenant: esa columna puede aparecer vacía.</p>}
+          {!data.signInAvailable && !act && <p className="muted" style={{ fontSize: '.76rem' }}>Cargando la actividad real por servicio…</p>}
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Persona</th><th>Cuenta</th><th>Estado</th><th>Licencia</th><th>MFA</th><th>Último inicio de sesión</th></tr></thead>
+              <thead><tr><th>Persona</th><th>Cuenta</th><th>Estado</th><th>Licencia</th><th>MFA</th><th>Última actividad</th></tr></thead>
               <tbody>
                 {list.length === 0 && <tr><td colSpan={6} className="muted" style={{ padding: '.7rem' }}>Sin cuentas en esta vista.</td></tr>}
                 {list.map((r) => {
-                  const d = daysAgo(r.lastSignIn)
+                  const when = r.lastSignIn ?? lastAct(r.upn)
+                  const d = daysAgo(when)
                   const methods = (r.mfaMethods || []).map((m) => MFA_NAMES[m] || m).join(', ')
                   return (
                     <tr key={r.id}>
@@ -93,7 +161,7 @@ export default function SecurityPanel() {
                         : r.mfaRegistered === false
                           ? (r.enabled && r.licensed ? <span className="badge s-rejected">Sin MFA</span> : <span className="muted">Sin MFA</span>)
                           : <span className="muted">—</span>}</td>
-                      <td>{fDate(r.lastSignIn)}{d !== null && <span className="muted" style={{ fontSize: '.74rem', color: d > 60 && r.enabled ? 'var(--warn, #f5b13d)' : undefined }}> · {d === 0 ? 'hoy' : `hace ${d} día${d !== 1 ? 's' : ''}`}</span>}</td>
+                      <td>{fDate(when)}{d !== null && <span className="muted" style={{ fontSize: '.74rem', color: d > 60 && r.enabled ? 'var(--warn, #f5b13d)' : undefined }}> · {d === 0 ? 'hoy' : `hace ${d} día${d !== 1 ? 's' : ''}`}</span>}</td>
                     </tr>
                   )
                 })}
@@ -101,10 +169,11 @@ export default function SecurityPanel() {
             </table>
           </div>
           <p className="muted" style={{ fontSize: '.74rem', margin: '.5rem 0 0' }}>
-            "Sin MFA" marca cuentas activas y con licencia que no han registrado un segundo factor: son las prioritarias. Las deshabilitadas con licencia siguen pagando licencia sin usarse.
+            "Sin MFA" marca cuentas activas y con licencia que no han registrado un segundo factor: son las prioritarias. Las deshabilitadas con licencia siguen pagando licencia sin usarse. La última actividad viene del uso real de Exchange, OneDrive, SharePoint y Teams (informe de 30 días de Microsoft).
           </p>
         </>
       )}
+      </>}
     </div>
   )
 }
